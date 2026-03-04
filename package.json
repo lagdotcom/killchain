@@ -4,21 +4,34 @@
   "packageManager": "yarn@4.11.0",
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "test": "vitest"
   },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.0.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-redux": "^9.1.0",
+    "simplex-noise": "^4.0.3"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "globals": "^17.4.0",
     "prettier": "^3.8.1",
+    "sass-embedded": "^1.97.3",
     "ts-essentials": "^10.1.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
+    "vite": "^7.3.1",
     "vitest": "^4.0.18"
   }
 }

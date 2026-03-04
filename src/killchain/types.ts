@@ -17,6 +17,7 @@ export interface Unit {
   moved: number;
   status: MoraleStatus;
   acted: boolean;
+  side: number;
 }
 
 export type MoraleStatus = "Normal" | "Shaken" | "Rout";

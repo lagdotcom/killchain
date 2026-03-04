@@ -36,6 +36,7 @@ export const lightHorse: UnitType = {
   name: "Light Horse",
   hits: 2,
   armour: "Light",
+  mounted: true,
   move: 24,
   morale: 9,
 };
@@ -44,6 +45,7 @@ export const mediumHorse: UnitType = {
   name: "Medium Horse",
   hits: 2,
   armour: "Medium",
+  mounted: true,
   move: 18,
   morale: 10,
 };
@@ -52,6 +54,7 @@ export const heavyHorse: UnitType = {
   name: "Heavy Horse",
   hits: 2,
   armour: "Heavy",
+  mounted: true,
   move: 12,
   morale: 11,
 };
