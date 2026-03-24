@@ -1,6 +1,9 @@
+import { useSelector } from "react-redux";
+
 import type { Pixels } from "../flavours.js";
+import { selectBattle } from "../state/selectors.js";
 import type { UnitState } from "../state/units.js";
-import { moraleColours, sideColours } from "../styles.js";
+import { moraleColours } from "../styles.js";
 
 interface UnitTokenProps {
   unit: UnitState;
@@ -8,11 +11,13 @@ interface UnitTokenProps {
 }
 
 function UnitToken({ unit, cellSize }: UnitTokenProps) {
+  const battle = useSelector(selectBattle);
+
   const cx = unit.x * cellSize + cellSize / 2;
   const cy = unit.y * cellSize + cellSize / 2;
   const radius = cellSize * 0.4;
 
-  const sideColor = sideColours[unit.side % 4];
+  const sideColor = battle.sides[unit.side]?.colour;
   const moraleColor = moraleColours[unit.status];
 
   const label = unit.name
@@ -78,7 +83,7 @@ function UnitToken({ unit, cellSize }: UnitTokenProps) {
         {label}
       </text>
 
-      <title>{`${unit.name} (${unit.type.name}) - Side ${unit.side + 1}`}</title>
+      <title>{`${unit.name} (${unit.type.name}) - ${battle.sides[unit.side]?.name}`}</title>
     </g>
   );
 }

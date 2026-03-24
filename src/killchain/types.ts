@@ -1,3 +1,5 @@
+import type { Side } from "../flavours.js";
+
 export interface UnitType {
   name: string;
   hits: number;
@@ -17,7 +19,7 @@ export interface Unit {
   moved: number;
   status: MoraleStatus;
   acted: boolean;
-  side: number;
+  side: Side;
 }
 
 export type MoraleStatus = "Normal" | "Shaken" | "Rout";

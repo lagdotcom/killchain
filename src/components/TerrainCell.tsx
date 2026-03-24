@@ -10,6 +10,7 @@ interface TerrainCellProps {
   east: Terrain;
   south: Terrain;
   west: Terrain;
+  onDrop?: (x: Cells, y: Cells, unitId: string) => void;
 }
 
 function TerrainCell({
@@ -20,6 +21,7 @@ function TerrainCell({
   east,
   south,
   west,
+  onDrop,
 }: TerrainCellProps) {
   const px = x * cellSize;
   const py = y * cellSize;
@@ -30,8 +32,26 @@ function TerrainCell({
       ? `rgba(255, 255, 255, ${terrain.elevation * 0.05})`
       : null;
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const unitId = e.dataTransfer.getData("text/plain");
+    if (unitId && onDrop) {
+      onDrop(x, y, unitId);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
   return (
-    <g transform={`translate(${px}, ${py})`} className="cell">
+    <g
+      transform={`translate(${px}, ${py})`}
+      className="cell"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       <rect
         className="fill"
         x={0}

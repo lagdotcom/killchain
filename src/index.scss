@@ -5,12 +5,7 @@
 }
 
 html,
-body {
-  width: 100%;
-  height: 100%;
-  font-family: serif;
-}
-
+body,
 #root {
   width: 100%;
   height: 100%;
@@ -38,9 +33,35 @@ body {
   height: 100%;
   position: relative;
   background: var(--container-bg);
+  display: flex;
+}
+
+.sidebar {
+  width: 300px;
+  background: var(--panel-bg);
+  padding: var(--padding);
+  flex-shrink: 0;
+  color: white;
+
+  .tokens {
+    display: flex;
+    flex-direction: column;
+    row-gap: 4px;
+
+    .dragToken {
+      display: flex;
+      align-items: center;
+      padding: 4px;
+
+      .name {
+        flex-grow: 1;
+      }
+    }
+  }
 }
 
 .map {
+  flex: 1;
   cursor: grab;
   background: var(--svg-bg);
 

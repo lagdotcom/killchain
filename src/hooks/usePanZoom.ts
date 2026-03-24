@@ -24,20 +24,20 @@ class PanZoomController {
     this.svg = svg;
     this.g = g;
 
-    this.svg.addEventListener("wheel", this.onWheel);
-    this.svg.addEventListener("mousedown", this.onMouseDown);
-    this.svg.addEventListener("mousemove", this.onMouseMove);
-    this.svg.addEventListener("mouseup", this.onMouseUp);
-    this.svg.addEventListener("mouseleave", this.onMouseUp);
-    this.svg.addEventListener("contextmenu", this.onContext);
+    svg.addEventListener("wheel", this.onWheel);
+    svg.addEventListener("mousedown", this.onMouseDown);
+    svg.addEventListener("mousemove", this.onMouseMove);
+    svg.addEventListener("mouseup", this.onMouseUp);
+    svg.addEventListener("mouseleave", this.onMouseUp);
+    svg.addEventListener("contextmenu", this.onContext);
 
     return () => {
-      this.svg.removeEventListener("wheel", this.onWheel);
-      this.svg.removeEventListener("mousedown", this.onMouseDown);
-      this.svg.removeEventListener("mousemove", this.onMouseMove);
-      this.svg.removeEventListener("mouseup", this.onMouseUp);
-      this.svg.removeEventListener("mouseleave", this.onMouseUp);
-      this.svg.removeEventListener("contextmenu", this.onContext);
+      svg.removeEventListener("wheel", this.onWheel);
+      svg.removeEventListener("mousedown", this.onMouseDown);
+      svg.removeEventListener("mousemove", this.onMouseMove);
+      svg.removeEventListener("mouseup", this.onMouseUp);
+      svg.removeEventListener("mouseleave", this.onMouseUp);
+      svg.removeEventListener("contextmenu", this.onContext);
     };
   }
 

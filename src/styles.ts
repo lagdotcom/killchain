@@ -13,8 +13,6 @@ export const terrainColours: Record<TerrainType, string> = {
   Marsh: "#666",
 };
 
-export const sideColours = ["#f66", "#49e", "#fa0", "#7b6"];
-
 export const moraleColours: Record<MoraleStatus, string> = {
   Normal: "#2d7",
   Shaken: "#fa0",

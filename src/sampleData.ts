@@ -1,5 +1,6 @@
 import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 
+import type { Side } from "./flavours.js";
 import type { TerrainType, UnitType } from "./killchain/types.js";
 import {
   heavyFoot,
@@ -7,15 +8,14 @@ import {
   lightHorse,
   mediumFoot,
 } from "./killchain/units.js";
+import type { SideInit } from "./state/battle.js";
 import type { TerrainState } from "./state/terrain.js";
 import type { UnitState } from "./state/units.js";
 
 function makeUnit(
-  side: number,
+  side: Side,
   name: string,
   type: UnitType,
-  x: number,
-  y: number,
   missile: boolean = false,
 ): UnitState {
   return {
@@ -24,8 +24,8 @@ function makeUnit(
     type,
     missile,
     side,
-    x,
-    y,
+    x: NaN,
+    y: NaN,
     damage: 0,
     moved: 0,
     status: "Normal",
@@ -33,16 +33,32 @@ function makeUnit(
   };
 }
 
-export function getDefaultUnits(): UnitState[] {
-  return [
-    makeUnit(0, "Heralds of Mikius", heavyFoot, 5, 5, true),
-    makeUnit(0, "Bakhtavornery", lightFoot, 7, 5, true),
-    makeUnit(0, "Eyin Eweko", lightFoot, 9, 4, true),
-    makeUnit(1, "Chosen of Grund", mediumFoot, 12, 12, true),
-    makeUnit(1, "Beloved of Grund", mediumFoot, 14, 13, true),
-    makeUnit(1, "Outriders of Grund", lightHorse, 16, 11),
-  ];
-}
+export const defaultUnits = [
+  makeUnit(0, "Heralds of Mikius", heavyFoot, true),
+  makeUnit(0, "Bakhtavornery", lightFoot, true),
+  makeUnit(0, "Eyin Eweko", lightFoot, true),
+  makeUnit(1, "Chosen of Grund", mediumFoot, true),
+  makeUnit(1, "Beloved of Grund", mediumFoot, true),
+  makeUnit(1, "Outriders of Grund", lightHorse),
+];
+
+const unitsForSide = (side: Side) =>
+  defaultUnits.filter((u) => u.side === side).map((u) => u.id);
+
+export const defaultSides: SideInit[] = [
+  {
+    id: 0,
+    name: "Regnum-Fey Alliance",
+    colour: "#49e",
+    unplacedIds: unitsForSide(0),
+  },
+  {
+    id: 1,
+    name: "Horde of Grund",
+    colour: "#f66",
+    unplacedIds: unitsForSide(1),
+  },
+];
 
 const noiseView =
   (noise: NoiseFunction2D, scale: number, offset: number = 0) =>

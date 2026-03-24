@@ -9,3 +9,5 @@ export const {
 
 export const { selectAll: selectAllUnits, selectEntities: selectUnitEntities } =
   unitsAdapter.getSelectors<RootState>((state) => state.units);
+
+export const selectBattle = (state: RootState) => state.battle;
