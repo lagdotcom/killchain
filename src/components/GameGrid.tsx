@@ -1,22 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import type { Cells } from "../flavours.js";
+import type { Cells, Side } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
-import { placeUnit } from "../state/battle.js";
-import { selectAllUnits, selectTerrainEntities } from "../state/selectors.js";
+import { placeUnitAction } from "../state/actions.js";
+import {
+  selectAllSides,
+  selectPlacedUnits,
+  selectTerrainEntities,
+  selectUnitEntities,
+} from "../state/selectors.js";
 import type { TerrainState } from "../state/terrain.js";
-import { updateUnit } from "../state/units.js";
 import { cellSize, mapHeight, mapWidth } from "../styles.js";
 import { enumerate } from "../tools.js";
-import TerrainCell from "./TerrainCell.js";
+import TerrainCell, { type TerrainCellProps } from "./TerrainCell.js";
 import UnitToken from "./UnitToken.js";
 
 function getTerrainCells(
   width: Cells,
   height: Cells,
   getTerrain: (x: Cells, y: Cells, e: number) => TerrainState,
-  onDrop: (x: Cells, y: Cells, unitId: string) => void,
+  onDrop?: TerrainCellProps["onDrop"],
 ) {
   return enumerate(height)
     .flatMap((y) => enumerate(width).map((x) => getTerrain(x, y, -1)))
@@ -37,21 +41,23 @@ function getTerrainCells(
 
 function GameGrid() {
   const dispatch = useDispatch();
-  const units = useSelector(selectAllUnits);
+  const sides = useSelector(selectAllSides);
   const terrain = useSelector(selectTerrainEntities);
+  const units = useSelector(selectUnitEntities);
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
 
   const { goto } = usePanZoom(svgRef, gRef);
 
-  const placedUnits = units.filter((u) => u.x >= 0 && u.y >= 0);
+  const placedUnits = useSelector(selectPlacedUnits);
 
   const handleDrop = useCallback(
-    (x: Cells, y: Cells, id: string) => {
-      dispatch(updateUnit({ id, changes: { x, y } }));
-      dispatch(placeUnit(id));
+    (x: Cells, y: Cells, unitId: string, sideId: Side) => {
+      dispatch(
+        placeUnitAction({ side: sides[sideId]!, unit: units[unitId]!, x, y }),
+      );
     },
-    [dispatch],
+    [dispatch, sides, units],
   );
 
   const getTerrain = useCallback(

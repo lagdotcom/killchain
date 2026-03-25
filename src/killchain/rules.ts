@@ -54,3 +54,32 @@ export function getMovementCost<P>(g: KillChain<P>, from: P, to: P) {
 
   return cost;
 }
+
+export enum Phase {
+  Placement,
+  Surprise,
+  Initiative,
+  Missile,
+  Move,
+  Melee,
+  Morale,
+}
+
+export interface PassData {
+  oldPhase: Phase;
+  phase: Phase;
+  turn: number;
+}
+
+export const phaseChanges: Record<
+  Phase,
+  { phase: Phase; nextTurn?: boolean; useSides?: boolean }
+> = {
+  [Phase.Placement]: { phase: Phase.Surprise },
+  [Phase.Surprise]: { phase: Phase.Initiative, nextTurn: true },
+  [Phase.Initiative]: { phase: Phase.Missile, useSides: true },
+  [Phase.Missile]: { phase: Phase.Move, useSides: true },
+  [Phase.Move]: { phase: Phase.Melee, useSides: true },
+  [Phase.Melee]: { phase: Phase.Morale },
+  [Phase.Morale]: { phase: Phase.Initiative, nextTurn: true },
+};

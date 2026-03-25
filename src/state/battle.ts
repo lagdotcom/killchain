@@ -1,102 +1,77 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import shuffle from "knuth-shuffle-seeded";
 
 import type { Side } from "../flavours.js";
-
-export enum BattlePhase {
-  Placement,
-  PreBattle,
-  Surprise,
-  Initiative,
-  Missile,
-  Move,
-  Melee,
-  Morale,
-}
-
-export interface SideData {
-  id: Side;
-  colour: string;
-  name: string;
-  unplacedIds: string[];
-  casualties: number;
-  initiative: number;
-}
-
-export type SideInit = Omit<SideData, "casualties" | "initiative">;
+import { Phase } from "../killchain/rules.js";
+import { without } from "../tools.js";
+import {
+  changePhaseAction,
+  placeUnitAction,
+  setupBattleAction,
+} from "./actions.js";
 
 export interface BattleState {
   turn: number;
-  phase: BattlePhase;
-  sides: Record<Side, SideData>;
-  placementOrder: Side[];
-  sidePlacing: Side | undefined;
+  phase: Phase;
+  sideOrder: Side[];
+  sideIndex: number;
+  messages: string[];
 }
 
 const initialState: BattleState = {
   turn: 0,
-  phase: BattlePhase.Placement,
-  sides: {},
-  placementOrder: [],
-  sidePlacing: undefined,
+  phase: Phase.Placement,
+  sideOrder: [],
+  sideIndex: NaN,
+  messages: [],
 };
 
 export const battleSlice = createSlice({
   name: "battle",
   initialState,
   reducers: {
-    setPhase(state, { payload }: PayloadAction<BattlePhase>) {
-      state.phase = payload;
+    addMessage(state, { payload }: PayloadAction<string>) {
+      state.messages.push(payload);
     },
-    setTurn(
-      state,
-      { payload }: PayloadAction<{ turn: number; phase: BattlePhase }>,
-    ) {
-      state.turn = payload.turn;
-      state.phase = payload.phase;
-    },
-    startPlacement(state, { payload }: PayloadAction<SideInit[]>) {
-      // Roll initiative for each side
-      const sides = payload
-        .map((init) => ({
-          ...init,
-          initiative: Math.floor(Math.random() * 6) + 1,
-          casualties: 0,
-        }))
-        .sort((a, b) => b.initiative - a.initiative);
-
-      state.placementOrder = sides.map((s) => s.id);
-      state.sides = Object.fromEntries(sides.map((side) => [side.id, side]));
-      state.phase = BattlePhase.Placement;
-      state.sidePlacing = state.placementOrder[0]!;
-    },
-    placeUnit(state, { payload }: PayloadAction<string>) {
-      const currentIndex = state.placementOrder.findIndex(
-        (value) => value === state.sidePlacing,
-      );
-
-      const side = state.sides[state.sidePlacing!]!;
-      side.unplacedIds = side.unplacedIds.filter((id) => id !== payload);
-      if (side.unplacedIds.length === 0) {
-        state.placementOrder = state.placementOrder.filter(
-          (value) => value !== side.id,
-        );
-        if (state.placementOrder.length === 0) {
-          state.phase = BattlePhase.PreBattle;
-          state.sidePlacing = undefined;
-        }
-
-        state.sidePlacing = state.placementOrder[currentIndex];
-        return;
-      }
-
-      // Move to next side that has unplaced units
-      const nextIndex = (currentIndex + 1) % state.placementOrder.length;
-      state.sidePlacing = state.placementOrder[nextIndex];
+    nextSide(state) {
+      state.sideIndex++;
     },
   },
+  extraReducers: (builder) =>
+    builder
+      .addCase(setupBattleAction, (state, { payload: { sides } }) => {
+        state.sideOrder = shuffle(sides.map((side) => side.id));
+        state.sideIndex = 0;
+        state.phase = Phase.Placement;
+      })
+      .addCase(placeUnitAction, (state, { payload: { side } }) => {
+        if (side.unplacedIds.length === 1) {
+          state.messages.push(`${side.name} has placed all units.`);
+
+          if (state.sideOrder.length === 1) {
+            state.sideOrder = [];
+            state.sideIndex = NaN;
+            return;
+          }
+          state.sideOrder = without(state.sideOrder, side.id);
+        }
+
+        state.sideIndex = (state.sideIndex + 1) % state.sideOrder.length;
+      })
+      .addCase(
+        changePhaseAction,
+        (state, { payload: { phase, turn, sideOrder } }) => {
+          state.phase = phase;
+          state.turn = turn;
+
+          if (sideOrder) {
+            state.sideOrder = sideOrder;
+            state.sideIndex = 0;
+          }
+        },
+      ),
 });
 
-export const { setPhase, setTurn, startPlacement, placeUnit } =
-  battleSlice.actions;
+export const { addMessage, nextSide } = battleSlice.actions;
 
 export default battleSlice.reducer;

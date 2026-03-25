@@ -8,7 +8,7 @@ import {
   lightHorse,
   mediumFoot,
 } from "./killchain/units.js";
-import type { SideInit } from "./state/battle.js";
+import type { SideSetup } from "./state/actions.js";
 import type { TerrainState } from "./state/terrain.js";
 import type { UnitState } from "./state/units.js";
 
@@ -42,22 +42,9 @@ export const defaultUnits = [
   makeUnit(1, "Outriders of Grund", lightHorse),
 ];
 
-const unitsForSide = (side: Side) =>
-  defaultUnits.filter((u) => u.side === side).map((u) => u.id);
-
-export const defaultSides: SideInit[] = [
-  {
-    id: 0,
-    name: "Regnum-Fey Alliance",
-    colour: "#49e",
-    unplacedIds: unitsForSide(0),
-  },
-  {
-    id: 1,
-    name: "Horde of Grund",
-    colour: "#f66",
-    unplacedIds: unitsForSide(1),
-  },
+export const defaultSides: SideSetup[] = [
+  { id: 0, name: "Regnum-Fey Alliance", colour: "#49e" },
+  { id: 1, name: "Horde of Grund", colour: "#f66" },
 ];
 
 const noiseView =

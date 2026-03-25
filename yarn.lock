@@ -779,6 +779,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/knuth-shuffle-seeded@npm:^1":
+  version: 1.0.2
+  resolution: "@types/knuth-shuffle-seeded@npm:1.0.2"
+  checksum: 10c0/37b0542b133981ec2f8d3c5926686bb207ee72622a398653a5ebe3710dd3bb4565db75afd66948e7d7a411544c5e2e271487762531716534bb9fd8d04dedb37b
+  languageName: node
+  linkType: hard
+
 "@types/react-dom@npm:^19.2.3":
   version: 19.2.3
   resolution: "@types/react-dom@npm:19.2.3"
@@ -794,6 +801,13 @@ __metadata:
   dependencies:
     csstype: "npm:^3.2.2"
   checksum: 10c0/7d25bf41b57719452d86d2ac0570b659210402707313a36ee612666bf11275a1c69824f8c3ee1fdca077ccfe15452f6da8f1224529b917050eb2d861e52b59b7
+  languageName: node
+  linkType: hard
+
+"@types/seed-random@npm:^2":
+  version: 2.2.4
+  resolution: "@types/seed-random@npm:2.2.4"
+  checksum: 10c0/99b32d9207b0ef81d349f425b32cbd3af840808596bb5ea04cb3a72d6fac3147ebd6216ceb3e734d3504e6c36a53a9dc9eb1d8d79d4995ccf3003c852eae4651
   languageName: node
   linkType: hard
 
@@ -2644,8 +2658,10 @@ __metadata:
   dependencies:
     "@eslint/js": "npm:^10.0.1"
     "@reduxjs/toolkit": "npm:^2.0.1"
+    "@types/knuth-shuffle-seeded": "npm:^1"
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"
+    "@types/seed-random": "npm:^2"
     "@vitejs/plugin-react": "npm:^6.0.1"
     eslint: "npm:^10.1.0"
     eslint-config-prettier: "npm:^10.1.8"
@@ -2655,11 +2671,13 @@ __metadata:
     eslint-plugin-react-redux: "npm:^4.2.2"
     eslint-plugin-simple-import-sort: "npm:^12.1.1"
     globals: "npm:^17.4.0"
+    knuth-shuffle-seeded: "npm:^1.0.6"
     prettier: "npm:^3.8.1"
     react: "npm:^19.2.4"
     react-dom: "npm:^19.2.4"
     react-redux: "npm:^9.1.0"
     sass-embedded: "npm:^1.98.0"
+    seed-random: "npm:^2.2.0"
     simplex-noise: "npm:^4.0.3"
     ts-essentials: "npm:^10.1.1"
     typescript: "npm:^6.0.2"
@@ -2668,6 +2686,15 @@ __metadata:
     vitest: "npm:^4.1.1"
   languageName: unknown
   linkType: soft
+
+"knuth-shuffle-seeded@npm:^1.0.6":
+  version: 1.0.6
+  resolution: "knuth-shuffle-seeded@npm:1.0.6"
+  dependencies:
+    seed-random: "npm:~2.2.0"
+  checksum: 10c0/c8a3085fec79a3bac24bcccd0be7bf757f881e023d587ce858afc684c1a6c979ae6d9493e5efc6dc331527a8af0e4fe512d66e34ac39e79f45ae967ac8a60d6e
+  languageName: node
+  linkType: hard
 
 "levn@npm:^0.4.1":
   version: 0.4.1
@@ -3775,6 +3802,13 @@ __metadata:
   version: 0.27.0
   resolution: "scheduler@npm:0.27.0"
   checksum: 10c0/4f03048cb05a3c8fddc45813052251eca00688f413a3cee236d984a161da28db28ba71bd11e7a3dd02f7af84ab28d39fb311431d3b3772fed557945beb00c452
+  languageName: node
+  linkType: hard
+
+"seed-random@npm:^2.2.0, seed-random@npm:~2.2.0":
+  version: 2.2.0
+  resolution: "seed-random@npm:2.2.0"
+  checksum: 10c0/5d48dedf312e8075faa899664ec5867e3b088a11d0e955d7c6bcfffcd7fc6de5dbb51c41c24ef48060ee6a9592cad607e5c44306b4fd4828667451afe16b09a5
   languageName: node
   linkType: hard
 

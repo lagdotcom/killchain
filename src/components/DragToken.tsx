@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 
-import { selectBattle } from "../state/selectors.js";
+import { selectSideEntities } from "../state/selectors.js";
 import type { UnitState } from "../state/units.js";
 
 interface DragTokenProps {
@@ -10,20 +10,21 @@ interface DragTokenProps {
 }
 
 function DragToken({ unit, isDraggable = false }: DragTokenProps) {
-  const battle = useSelector(selectBattle);
+  const sides = useSelector(selectSideEntities);
   const [dragging, setDragging] = useState(false);
 
-  const sideColor = battle.sides[unit.side]?.colour;
+  const backgroundColor = sides[unit.side]?.colour ?? "black";
 
   const handleDragStart = (e: React.DragEvent) => {
     if (!isDraggable) return;
 
     setDragging(true);
-    e.dataTransfer.setData("text/plain", unit.id);
+    e.dataTransfer.setData("unitId", unit.id);
+    e.dataTransfer.setData("sideId", unit.side.toString());
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const cursor = useMemo(() => {
+  const cursor = useMemo<CSSProperties["cursor"]>(() => {
     if (dragging) return "grabbing";
     else if (isDraggable) return "grab";
   }, [dragging, isDraggable]);
@@ -35,7 +36,7 @@ function DragToken({ unit, isDraggable = false }: DragTokenProps) {
       onDragStart={handleDragStart}
       style={{
         cursor,
-        backgroundColor: sideColor,
+        backgroundColor,
         opacity: isDraggable ? 1 : 0.6,
       }}
     >

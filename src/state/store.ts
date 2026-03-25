@@ -2,10 +2,11 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { useDispatch } from "react-redux";
 
 import battle from "./battle.js";
+import sides from "./sides.js";
 import terrain from "./terrain.js";
 import units from "./units.js";
 
-const reducer = combineReducers({ battle, terrain, units });
+const reducer = combineReducers({ battle, sides, terrain, units });
 
 export type RootState = ReturnType<typeof reducer>;
 

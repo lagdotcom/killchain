@@ -2,6 +2,7 @@ import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 
 import type { Cells } from "../flavours.js";
 import type { Unit } from "../killchain/types.js";
+import { placeUnitAction, setupBattleAction } from "./actions.js";
 
 export interface UnitState extends Unit {
   id: string;
@@ -19,6 +20,14 @@ const unitsSlice = createSlice({
     updateUnit: unitsAdapter.updateOne,
     removeUnit: unitsAdapter.removeOne,
   },
+  extraReducers: (builder) =>
+    builder
+      .addCase(setupBattleAction, (state, { payload: { units } }) =>
+        unitsAdapter.setAll(state, units),
+      )
+      .addCase(placeUnitAction, (state, { payload: { unit, x, y } }) =>
+        unitsAdapter.updateOne(state, { id: unit.id, changes: { x, y } }),
+      ),
 });
 
 export const { addUnit, addUnits, updateUnit, removeUnit } = unitsSlice.actions;

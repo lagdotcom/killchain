@@ -37,6 +37,18 @@ body,
   flex-shrink: 0;
   color: white;
 
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+
+  .main {
+    flex: 1;
+  }
+
+  .messages {
+    height: 400px;
+  }
+
   .tokens {
     display: flex;
     flex-direction: column;

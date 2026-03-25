@@ -5,21 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "test": "vitest"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
+    "knuth-shuffle-seeded": "^1.0.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-redux": "^9.1.0",
+    "seed-random": "^2.2.0",
     "simplex-noise": "^4.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/knuth-shuffle-seeded": "^1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/seed-random": "^2",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
