@@ -32,7 +32,7 @@ export function UnplacedUnits() {
   }, [battle.phase, battle.sidePlacing, unplacedUnits]);
 
   return (
-    <div className="sidebar">
+    <div className="unplaced">
       <h3>Unplaced Units</h3>
       {isDefined(battle.sidePlacing) && (
         <p>Current turn: {battle.sides[battle.sidePlacing]?.name}</p>

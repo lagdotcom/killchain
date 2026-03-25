@@ -1,6 +1,7 @@
 import { Provider } from "react-redux";
 
 import GameGrid from "./components/GameGrid.js";
+import { Sidebar } from "./components/Sidebar.js";
 import { defaultSides, defaultUnits, generateTerrain } from "./sampleData.js";
 import { startPlacement } from "./state/battle.js";
 import { makeStore } from "./state/store.js";
@@ -18,6 +19,7 @@ function App() {
   return (
     <Provider store={store}>
       <div className="app">
+        <Sidebar />
         <GameGrid />
       </div>
     </Provider>

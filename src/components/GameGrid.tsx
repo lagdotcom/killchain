@@ -3,19 +3,14 @@ import { useDispatch, useSelector } from "react-redux";
 
 import type { Cells } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
-import { BattlePhase, placeUnit } from "../state/battle.js";
-import {
-  selectAllUnits,
-  selectBattle,
-  selectTerrainEntities,
-} from "../state/selectors.js";
+import { placeUnit } from "../state/battle.js";
+import { selectAllUnits, selectTerrainEntities } from "../state/selectors.js";
 import type { TerrainState } from "../state/terrain.js";
 import { updateUnit } from "../state/units.js";
 import { cellSize, mapHeight, mapWidth } from "../styles.js";
 import { enumerate } from "../tools.js";
 import TerrainCell from "./TerrainCell.js";
 import UnitToken from "./UnitToken.js";
-import { UnplacedUnits } from "./UnplacedUnits.js";
 
 function getTerrainCells(
   width: Cells,
@@ -43,7 +38,6 @@ function getTerrainCells(
 function GameGrid() {
   const dispatch = useDispatch();
   const units = useSelector(selectAllUnits);
-  const battle = useSelector(selectBattle);
   const terrain = useSelector(selectTerrainEntities);
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
@@ -88,20 +82,18 @@ function GameGrid() {
       const offsetY = (rect.height - mapH) / 2;
       goto(offsetX, offsetY);
     }
-  }, [goto]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="container">
-      {battle.phase === BattlePhase.Placement && <UnplacedUnits />}
-      <svg ref={svgRef} width="100%" height="100%" className="map">
-        <g ref={gRef}>
-          {terrainCells}
-          {placedUnits.map((unit) => (
-            <UnitToken key={unit.id} unit={unit} cellSize={cellSize} />
-          ))}
-        </g>
-      </svg>
-    </div>
+    <svg ref={svgRef} width="100%" height="100%" className="map">
+      <g ref={gRef}>
+        {terrainCells}
+        {placedUnits.map((unit) => (
+          <UnitToken key={unit.id} unit={unit} cellSize={cellSize} />
+        ))}
+      </g>
+    </svg>
   );
 }
 
