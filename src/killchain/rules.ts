@@ -28,6 +28,8 @@ export function getAttackModifiers<P>(
   };
 }
 
+export type AttackModifiers = ReturnType<typeof getAttackModifiers>;
+
 export function getAttackRollTarget<P>(
   g: KillChain<P>,
   missile: boolean,

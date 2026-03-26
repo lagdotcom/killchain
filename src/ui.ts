@@ -1,5 +1,12 @@
 import type { Cells, Pixels } from "./flavours.js";
-import type { MoraleStatus, TerrainType } from "./killchain/types.js";
+import type { Armour, MoraleStatus, TerrainType } from "./killchain/types.js";
+
+export const armourAbbreviation: Record<Armour, string> = {
+  Unarmoured: "-",
+  Light: "L",
+  Medium: "M",
+  Heavy: "H",
+};
 
 export const cellSize: Pixels = 64;
 export const shadowSize: Pixels = 8;

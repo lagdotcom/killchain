@@ -1,6 +1,6 @@
-import type { Cells, Side } from "../flavours.js";
+import type { Cells, SideId, UnitId } from "../flavours.js";
 import type { Terrain } from "../killchain/types.js";
-import { cellSize, shadowSize, terrainColours } from "../styles.js";
+import { cellSize, shadowSize, terrainColours } from "../ui.js";
 
 export interface TerrainCellProps {
   x: Cells;
@@ -10,8 +10,9 @@ export interface TerrainCellProps {
   east: Terrain;
   south: Terrain;
   west: Terrain;
+  onClick: ((x: Cells, y: Cells) => void) | undefined;
   onDrop:
-    | ((x: Cells, y: Cells, unitId: string, sideId: Side) => void)
+    | ((x: Cells, y: Cells, unitId: UnitId, sideId: SideId) => void)
     | undefined;
 }
 
@@ -23,6 +24,7 @@ function TerrainCell({
   east,
   south,
   west,
+  onClick,
   onDrop,
 }: TerrainCellProps) {
   const px = x * cellSize;
@@ -50,6 +52,7 @@ function TerrainCell({
     <g
       transform={`translate(${px}, ${py})`}
       className="cell"
+      onClick={() => onClick?.(x, y)}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >

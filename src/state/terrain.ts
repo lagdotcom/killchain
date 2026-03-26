@@ -1,15 +1,15 @@
 import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 
-import type { Cells } from "../flavours.js";
+import type { Cells, TerrainId } from "../flavours.js";
 import type { Terrain } from "../killchain/types.js";
 
-export interface TerrainState extends Terrain {
+export interface TerrainEntity extends Terrain {
+  id: TerrainId;
   x: Cells;
   y: Cells;
-  id: string;
 }
 
-export const terrainAdapter = createEntityAdapter<TerrainState>();
+export const terrainAdapter = createEntityAdapter<TerrainEntity>();
 const terrainSlice = createSlice({
   name: "terrain",
   initialState: terrainAdapter.getInitialState(),

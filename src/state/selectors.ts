@@ -35,3 +35,28 @@ export const selectActiveSide = createSelector(
   [selectActiveSideId, selectSideEntities],
   (id, sides) => (isDefined(id) ? sides[id] : undefined),
 );
+
+export const selectActiveUnitId = createSelector(
+  [selectBattle],
+  (battle) => battle.activeUnitId,
+);
+
+export const selectActiveUnit = createSelector(
+  [selectActiveUnitId, selectUnitEntities],
+  (id, units) => (isDefined(id) ? units[id] : undefined),
+);
+
+export const selectLogMessages = createSelector(
+  [selectBattle],
+  (battle) => battle.messages,
+);
+
+export const selectPhase = createSelector(
+  [selectBattle],
+  (battle) => battle.phase,
+);
+
+export const selectTurn = createSelector(
+  [selectBattle],
+  (battle) => battle.turn,
+);

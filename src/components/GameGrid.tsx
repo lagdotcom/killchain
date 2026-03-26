@@ -1,25 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import type { Cells, Side } from "../flavours.js";
+import type { Cells, SideId, UnitId } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
-import { placeUnitAction } from "../state/actions.js";
+import { xyId } from "../killchain/EuclideanEngine.js";
+import { Phase } from "../killchain/rules.js";
+import { getTints } from "../logic.js";
+import { attack, moveAction, placeUnitAction } from "../state/actions.js";
+import { setActiveUnitId } from "../state/battle.js";
 import {
+  selectActiveSide,
+  selectActiveUnit,
   selectAllSides,
+  selectPhase,
   selectPlacedUnits,
   selectTerrainEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
-import type { TerrainState } from "../state/terrain.js";
-import { cellSize, mapHeight, mapWidth } from "../styles.js";
-import { enumerate } from "../tools.js";
+import type { TerrainEntity } from "../state/terrain.js";
+import type { UnitEntity } from "../state/units.js";
+import { enumerate, manhattanDistance } from "../tools.js";
+import { cellSize, mapHeight, mapWidth } from "../ui.js";
+import { GridOverlay } from "./GridOverlay.js";
 import TerrainCell, { type TerrainCellProps } from "./TerrainCell.js";
 import UnitToken from "./UnitToken.js";
 
 function getTerrainCells(
   width: Cells,
   height: Cells,
-  getTerrain: (x: Cells, y: Cells, e: number) => TerrainState,
+  getTerrain: (x: Cells, y: Cells, e: number) => TerrainEntity,
+  onClick?: TerrainCellProps["onClick"],
   onDrop?: TerrainCellProps["onDrop"],
 ) {
   return enumerate(height)
@@ -34,16 +44,32 @@ function getTerrainCells(
         south={getTerrain(data.x, data.y + 1, data.elevation)}
         east={getTerrain(data.x + 1, data.y, data.elevation)}
         west={getTerrain(data.x - 1, data.y, data.elevation)}
+        onClick={onClick}
         onDrop={onDrop}
       />
     ));
 }
 
+function canAttack(attacker: UnitEntity | undefined, target: UnitEntity) {
+  if (!attacker) return false;
+
+  const maxRange = attacker.missile ? 15 : 1;
+  return (
+    !attacker.acted &&
+    attacker.side !== target.side &&
+    manhattanDistance(attacker, target) <= maxRange
+  );
+}
+
 function GameGrid() {
   const dispatch = useDispatch();
+  const activeSide = useSelector(selectActiveSide);
+  const activeUnit = useSelector(selectActiveUnit);
+  const phase = useSelector(selectPhase);
   const sides = useSelector(selectAllSides);
   const terrain = useSelector(selectTerrainEntities);
   const units = useSelector(selectUnitEntities);
+
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
 
@@ -52,7 +78,7 @@ function GameGrid() {
   const placedUnits = useSelector(selectPlacedUnits);
 
   const handleDrop = useCallback(
-    (x: Cells, y: Cells, unitId: string, sideId: Side) => {
+    (x: Cells, y: Cells, unitId: UnitId, sideId: SideId) => {
       dispatch(
         placeUnitAction({ side: sides[sideId]!, unit: units[unitId]!, x, y }),
       );
@@ -61,9 +87,9 @@ function GameGrid() {
   );
 
   const getTerrain = useCallback(
-    (x: Cells, y: Cells, defaultElevation: number = 0): TerrainState =>
-      terrain[`${x},${y}`] ?? {
-        id: `${x},${y}`,
+    (x: Cells, y: Cells, defaultElevation: number = 0): TerrainEntity =>
+      terrain[xyId(x, y)] ?? {
+        id: xyId(x, y),
         x,
         y,
         type: "Open",
@@ -72,9 +98,76 @@ function GameGrid() {
     [terrain],
   );
 
+  const canSelect = useCallback(
+    (unit: UnitEntity) => {
+      switch (phase) {
+        case Phase.Missile:
+        case Phase.Melee:
+          return (
+            (unit.acted === false &&
+              unit.side === activeSide?.id &&
+              (phase === Phase.Melee || unit.missile)) ||
+            canAttack(activeUnit, unit)
+          );
+
+        case Phase.Move:
+          return unit.moved < unit.type.move && unit.side === activeSide?.id;
+      }
+
+      return false;
+    },
+    [activeSide?.id, activeUnit, phase],
+  );
+
+  const tints = useMemo(
+    () => getTints(activeUnit, phase, terrain, units),
+    [activeUnit, phase, terrain, units],
+  );
+
+  const handleClickTerrain = useCallback(
+    (x: Cells, y: Cells) => {
+      const tint = tints.find((t) => t.x === x && t.y === y);
+      console.log(activeUnit, tint);
+
+      switch (phase) {
+        case Phase.Move:
+          if (activeUnit && tint?.reason === "reachable")
+            return dispatch(
+              moveAction({ unit: activeUnit, x, y, cost: tint.cost }),
+            );
+      }
+
+      dispatch(setActiveUnitId(undefined));
+    },
+    [activeUnit, dispatch, phase, tints],
+  );
+
+  const handleClickUnit = useCallback(
+    (unit: UnitEntity) => {
+      switch (phase) {
+        case Phase.Missile:
+        case Phase.Melee:
+          if (canAttack(activeUnit, unit))
+            return dispatch(attack(activeUnit!, unit, terrain, units));
+      }
+
+      dispatch(
+        setActiveUnitId(activeUnit?.id === unit.id ? undefined : unit.id),
+      );
+    },
+    [activeUnit, dispatch, phase, terrain, units],
+  );
+
   const terrainCells = useMemo(
-    () => getTerrainCells(mapWidth, mapHeight, getTerrain, handleDrop),
-    [getTerrain, handleDrop],
+    () =>
+      getTerrainCells(
+        mapWidth,
+        mapHeight,
+        getTerrain,
+        handleClickTerrain,
+        handleDrop,
+      ),
+    [getTerrain, handleClickTerrain, handleDrop],
   );
 
   // centre map on mount
@@ -96,8 +189,14 @@ function GameGrid() {
       <g ref={gRef}>
         {terrainCells}
         {placedUnits.map((unit) => (
-          <UnitToken key={unit.id} unit={unit} cellSize={cellSize} />
+          <UnitToken
+            key={unit.id}
+            unit={unit}
+            cellSize={cellSize}
+            onClick={canSelect(unit) ? handleClickUnit : undefined}
+          />
         ))}
+        <GridOverlay tints={tints} />
       </g>
     </svg>
   );

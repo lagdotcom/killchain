@@ -1,29 +1,33 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import shuffle from "knuth-shuffle-seeded";
 
-import type { Side } from "../flavours.js";
+import type { SideId, UnitId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import { without } from "../tools.js";
 import {
+  attackAction,
   changePhaseAction,
+  moveAction,
   placeUnitAction,
   setupBattleAction,
 } from "./actions.js";
 
 export interface BattleState {
-  turn: number;
-  phase: Phase;
-  sideOrder: Side[];
-  sideIndex: number;
+  activeUnitId: UnitId | undefined;
   messages: string[];
+  phase: Phase;
+  sideOrder: SideId[];
+  sideIndex: number;
+  turn: number;
 }
 
 const initialState: BattleState = {
-  turn: 0,
+  activeUnitId: undefined,
+  messages: [],
   phase: Phase.Placement,
   sideOrder: [],
   sideIndex: NaN,
-  messages: [],
+  turn: 0,
 };
 
 export const battleSlice = createSlice({
@@ -35,6 +39,10 @@ export const battleSlice = createSlice({
     },
     nextSide(state) {
       state.sideIndex++;
+      state.activeUnitId = undefined;
+    },
+    setActiveUnitId(state, { payload }: PayloadAction<UnitId | undefined>) {
+      state.activeUnitId = payload;
     },
   },
   extraReducers: (builder) =>
@@ -63,15 +71,31 @@ export const battleSlice = createSlice({
         (state, { payload: { phase, turn, sideOrder } }) => {
           state.phase = phase;
           state.turn = turn;
+          state.activeUnitId = undefined;
 
           if (sideOrder) {
             state.sideOrder = sideOrder;
             state.sideIndex = 0;
-          }
+          } else state.sideIndex = NaN;
         },
-      ),
+      )
+      .addCase(
+        attackAction,
+        (state, { payload: { attacker, defender, target, roll, hit } }) => {
+          state.messages.push(
+            `${attacker.name} attacks ${defender.name}. Target is ${target}, rolled ${roll}. ${hit ? "Hit" : "Miss"}!`,
+          );
+          state.activeUnitId = undefined;
+
+          if (hit && defender.damage + 1 >= defender.type.hits)
+            state.messages.push(`${defender.name} are dispersed!`);
+        },
+      )
+      .addCase(moveAction, (state, { payload: { unit, cost } }) => {
+        if (unit.moved + cost >= unit.type.move) state.activeUnitId = undefined;
+      }),
 });
 
-export const { addMessage, nextSide } = battleSlice.actions;
+export const { addMessage, nextSide, setActiveUnitId } = battleSlice.actions;
 
 export default battleSlice.reducer;

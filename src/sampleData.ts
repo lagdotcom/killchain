@@ -1,23 +1,24 @@
 import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 
-import type { Side } from "./flavours.js";
+import type { SideId } from "./flavours.js";
+import { xyId } from "./killchain/EuclideanEngine.js";
 import type { TerrainType, UnitType } from "./killchain/types.js";
 import {
-  heavyFoot,
+  heavyHorse,
   lightFoot,
   lightHorse,
   mediumFoot,
 } from "./killchain/units.js";
 import type { SideSetup } from "./state/actions.js";
-import type { TerrainState } from "./state/terrain.js";
-import type { UnitState } from "./state/units.js";
+import type { TerrainEntity } from "./state/terrain.js";
+import type { UnitEntity } from "./state/units.js";
 
 function makeUnit(
-  side: Side,
+  side: SideId,
   name: string,
   type: UnitType,
   missile: boolean = false,
-): UnitState {
+): UnitEntity {
   return {
     id: `${side}-${name}`,
     name,
@@ -34,7 +35,7 @@ function makeUnit(
 }
 
 export const defaultUnits = [
-  makeUnit(0, "Heralds of Mikius", heavyFoot, true),
+  makeUnit(0, "Heralds of Mikius", heavyHorse, true),
   makeUnit(0, "Bakhtavornery", lightFoot, true),
   makeUnit(0, "Eyin Eweko", lightFoot, true),
   makeUnit(1, "Chosen of Grund", mediumFoot, true),
@@ -57,7 +58,7 @@ export function generateTerrain() {
   const getTerrainType = noiseView(noise, 10);
   const getElevation = noiseView(noise, 14, 200);
 
-  const terrain: TerrainState[] = [];
+  const terrain: TerrainEntity[] = [];
   for (let y = 0; y < 20; y++) {
     for (let x = 0; x < 20; x++) {
       const rawElevation = (getElevation(x, y) + 1) * 1.5; // 0 to 3
@@ -71,7 +72,7 @@ export function generateTerrain() {
       if (typeValue > 0.3) type = "Woods";
       else if (typeValue < marshThreshold) type = "Marsh";
 
-      terrain.push({ id: `${x},${y}`, x, y, type, elevation });
+      terrain.push({ id: xyId(x, y), x, y, type, elevation });
     }
   }
 

@@ -47,22 +47,39 @@ body,
 
   .messages {
     height: 400px;
+    overflow-y: scroll;
   }
 
   .tokens {
     display: flex;
     flex-direction: column;
     row-gap: 4px;
+  }
+}
 
-    .dragToken {
-      display: flex;
-      align-items: center;
-      padding: 4px;
+.dragToken {
+  display: flex;
+  align-items: center;
+  padding: 4px;
 
-      .name {
-        flex-grow: 1;
-      }
+  .name {
+    flex-grow: 1;
+  }
+
+  .icons {
+    display: flex;
+    align-items: center;
+
+    span {
+      width: 20px;
+      text-align: center;
     }
+  }
+
+  opacity: 0.6;
+  &.isDraggable {
+    cursor: grab;
+    opacity: 1;
   }
 }
 
@@ -109,4 +126,15 @@ body,
     fill: black;
     opacity: 0.2;
   }
+}
+
+.unitToken {
+  &.canSelect {
+    cursor: pointer;
+  }
+}
+
+.tint {
+  pointer-events: none;
+  opacity: 0.2;
 }

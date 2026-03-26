@@ -1,5 +1,8 @@
 import SeedRandom from "seed-random";
 
+import type { Cells } from "./flavours.js";
+import type { XY } from "./killchain/EuclideanEngine.js";
+
 export const enumerate = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 type ClassNameValue = string | Record<string, boolean> | undefined | null;
@@ -31,4 +34,8 @@ const generator = SeedRandom();
 
 export function rollDice(max: number) {
   return Math.ceil(generator() * max);
+}
+
+export function manhattanDistance(a: XY, b: XY): Cells {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }

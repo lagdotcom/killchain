@@ -1,33 +1,58 @@
 import { createAction } from "@reduxjs/toolkit";
 
-import type { Cells, Side } from "../flavours.js";
-import { Phase, phaseChanges } from "../killchain/rules.js";
+import type { Cells, SideId, TerrainId, UnitId } from "../flavours.js";
+import {
+  type AttackModifiers,
+  getAttackModifiers,
+  Phase,
+  phaseChanges,
+} from "../killchain/rules.js";
+import { KillChainEngine } from "../KillChainEngine.js";
+import { rollDice } from "../tools.js";
 import { type BattleState, nextSide } from "./battle.js";
-import type { SideState } from "./sides.js";
-import type { UnitState } from "./units.js";
+import type { SideEntity } from "./sides.js";
+import type { TerrainEntity } from "./terrain.js";
+import type { UnitEntity } from "./units.js";
 
 export type SideSetup = Omit<
-  SideState,
+  SideEntity,
   "casualties" | "initiative" | "unplacedIds" | "surprised"
 >;
+
+export const attackAction = createAction<{
+  attacker: UnitEntity;
+  defender: UnitEntity;
+  missile: boolean;
+  mods: AttackModifiers;
+  target: number;
+  roll: number;
+  hit: boolean;
+}>("battle/attack");
 
 export const changePhaseAction = createAction<{
   oldPhase: Phase;
   phase: Phase;
-  sideOrder: Side[] | undefined;
+  sideOrder: SideId[] | undefined;
   turn: number;
 }>("battle/changePhaseAction");
 
+export const moveAction = createAction<{
+  unit: UnitEntity;
+  x: Cells;
+  y: Cells;
+  cost: Cells;
+}>("battle/move");
+
 export const placeUnitAction = createAction<{
-  side: SideState;
-  unit: UnitState;
+  side: SideEntity;
+  unit: UnitEntity;
   x: Cells;
   y: Cells;
 }>("battle/placeUnit");
 
 export const setupBattleAction = createAction<{
   sides: SideSetup[];
-  units: UnitState[];
+  units: UnitEntity[];
 }>("battle/setup");
 
 function shouldChangePhase(battle: BattleState) {
@@ -43,7 +68,7 @@ function shouldChangePhase(battle: BattleState) {
   }
 }
 
-export function pass(battle: BattleState, sides: SideState[]) {
+export function pass(battle: BattleState, sides: SideEntity[]) {
   if (shouldChangePhase(battle)) {
     const oldPhase = battle.phase;
 
@@ -63,4 +88,25 @@ export function pass(battle: BattleState, sides: SideState[]) {
   }
 
   return nextSide();
+}
+
+export function attack(
+  attacker: UnitEntity,
+  defender: UnitEntity,
+  terrain: Record<TerrainId, TerrainEntity>,
+  units: Record<UnitId, UnitEntity>,
+) {
+  const g = new KillChainEngine(terrain, units);
+
+  const missile = g.getDistance(attacker, defender) > 1;
+
+  const mods = getAttackModifiers(g, missile, attacker, defender);
+
+  const target =
+    mods.armour + mods.rangePenalty + mods.woodsPenalty - mods.hillBonus;
+
+  const roll = rollDice(6);
+  const hit = roll >= target;
+
+  return attackAction({ attacker, defender, missile, mods, target, roll, hit });
 }

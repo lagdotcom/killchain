@@ -7,6 +7,14 @@
   "prettier.prettierPath": ".yarn/sdks/prettier/index.cjs",
   "typescript.tsdk": ".yarn/sdks/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "cSpell.words": ["Grund", "KillChain"],
+  "cSpell.words": [
+    "Bakhtavornery",
+    "Eweko",
+    "Eyin",
+    "Grund",
+    "KillChain",
+    "Mikius",
+    "Regnum"
+  ],
   "files.eol": "\n"
 }

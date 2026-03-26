@@ -1,4 +1,4 @@
-import type { Side } from "../flavours.js";
+import type { SideId } from "../flavours.js";
 
 export interface UnitType {
   name: string;
@@ -19,7 +19,7 @@ export interface Unit {
   moved: number;
   status: MoraleStatus;
   acted: boolean;
-  side: Side;
+  side: SideId;
 }
 
 export type MoraleStatus = "Normal" | "Shaken" | "Rout";
@@ -36,4 +36,5 @@ export interface KillChain<P> {
   getPosition(u: Unit): P;
   getTerrainAt(p: P): Terrain;
   getTerrain(u: Unit): Terrain;
+  getUnitAt(p: P): Unit | undefined;
 }

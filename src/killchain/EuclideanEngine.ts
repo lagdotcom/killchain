@@ -1,8 +1,10 @@
 import type { MarkOptional } from "ts-essentials";
 
+import { manhattanDistance } from "../tools.js";
 import type { KillChain, Terrain, TerrainType, Unit } from "./types.js";
 
 export type XY = { x: number; y: number };
+export const xyId = (x: number, y: number) => `${x},${y}`;
 
 export class EuclideanEngine implements KillChain<XY> {
   private positionCache: Map<string, XY>;
@@ -40,7 +42,7 @@ export class EuclideanEngine implements KillChain<XY> {
   }
 
   at(x: number, y: number): XY {
-    const s = `${x},${y}`;
+    const s = xyId(x, y);
     const p = this.positionCache.get(s);
     if (!p) {
       const pNew: XY = { x, y };
@@ -51,10 +53,7 @@ export class EuclideanEngine implements KillChain<XY> {
   }
 
   getDistance(a: Unit, b: Unit) {
-    const ap = this.getPosition(a);
-    const bp = this.getPosition(b);
-
-    return Math.abs(ap.x - bp.x) + Math.abs(ap.y - bp.y);
+    return manhattanDistance(this.getPosition(a), this.getPosition(b));
   }
 
   getPosition(u: Unit) {
@@ -73,5 +72,11 @@ export class EuclideanEngine implements KillChain<XY> {
 
   setTerrain(x: number, y: number, type: TerrainType, elevation = 0) {
     this.terrain.set(this.at(x, y), { type, elevation });
+  }
+
+  getUnitAt(p: XY): Unit | undefined {
+    for (const [unit, at] of this.positions.entries()) {
+      if (at.x === p.x && at.y === p.y) return unit;
+    }
   }
 }

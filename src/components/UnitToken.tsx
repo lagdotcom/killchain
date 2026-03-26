@@ -1,23 +1,32 @@
 import { useSelector } from "react-redux";
 
 import type { Pixels } from "../flavours.js";
-import { selectSideEntities } from "../state/selectors.js";
-import type { UnitState } from "../state/units.js";
-import { moraleColours } from "../styles.js";
+import { selectActiveUnitId, selectSideEntities } from "../state/selectors.js";
+import type { UnitEntity } from "../state/units.js";
+import { classnames } from "../tools.js";
+import { armourAbbreviation, moraleColours } from "../ui.js";
 
 interface UnitTokenProps {
-  unit: UnitState;
   cellSize: Pixels;
+  onClick: undefined | ((unit: UnitEntity) => void);
+  unit: UnitEntity;
 }
 
-function UnitToken({ unit, cellSize }: UnitTokenProps) {
+function UnitToken({ cellSize, onClick, unit }: UnitTokenProps) {
+  const activeUnitId = useSelector(selectActiveUnitId);
   const sides = useSelector(selectSideEntities);
+
   const side = sides[unit.side];
   const sideColor = side?.colour ?? "black";
 
   const cx = unit.x * cellSize + cellSize / 2;
   const cy = unit.y * cellSize + cellSize / 2;
+
   const radius = cellSize * 0.4;
+  const left = -radius + 4;
+  const right = radius - 4;
+  const top = -radius + 4;
+  const bottom = radius - 4;
 
   const moraleColor = moraleColours[unit.status];
 
@@ -27,8 +36,16 @@ function UnitToken({ unit, cellSize }: UnitTokenProps) {
     .join("");
 
   return (
-    <g transform={`translate(${cx}, ${cy})`}>
-      <circle cx={3} cy={3} r={radius} fill="#000" opacity="0.3" />
+    <g
+      className={classnames("unitToken", { canSelect: !!onClick })}
+      transform={`translate(${cx}, ${cy})`}
+      onClick={() => onClick?.(unit)}
+    >
+      {activeUnitId === unit.id ? (
+        <circle cx={0} cy={0} r={radius * 1.5} fill="#fff" opacity="0.3" />
+      ) : (
+        <circle cx={3} cy={3} r={radius} fill="#000" opacity="0.3" />
+      )}
 
       <circle
         cx={0}
@@ -41,16 +58,16 @@ function UnitToken({ unit, cellSize }: UnitTokenProps) {
       />
 
       <circle
-        cx={radius - 4}
-        cy={-radius + 2}
+        cx={right}
+        cy={top}
         r={9}
         fill={sideColor}
         stroke={moraleColor}
         strokeWidth="3"
       />
       <text
-        x={radius - 4}
-        y={-radius + 2}
+        x={right}
+        y={top}
         textAnchor="middle"
         dominantBaseline="central"
         fontSize={10}
@@ -60,9 +77,29 @@ function UnitToken({ unit, cellSize }: UnitTokenProps) {
         {unit.type.hits - unit.damage}
       </text>
 
+      <circle
+        cx={left}
+        cy={bottom}
+        r={9}
+        fill={sideColor}
+        stroke={moraleColor}
+        strokeWidth="3"
+      />
+      <text
+        x={left}
+        y={bottom}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={10}
+        fill="#fff"
+        pointerEvents="none"
+      >
+        {armourAbbreviation[unit.type.armour]}
+      </text>
+
       <text
         x={0}
-        y={radius - 4}
+        y={12}
         textAnchor="middle"
         dominantBaseline="central"
         pointerEvents="none"
@@ -73,10 +110,10 @@ function UnitToken({ unit, cellSize }: UnitTokenProps) {
 
       <text
         x={0}
-        y={0}
+        y={-4}
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize="14"
+        fontSize={14}
         fill="#fff"
         fontWeight="bold"
         pointerEvents="none"

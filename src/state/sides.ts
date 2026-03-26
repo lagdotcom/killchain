@@ -1,25 +1,26 @@
 import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 
-import type { Side } from "../flavours.js";
+import type { SideId, UnitId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import { without } from "../tools.js";
 import {
+  attackAction,
   changePhaseAction,
   placeUnitAction,
   setupBattleAction,
 } from "./actions.js";
 
-export interface SideState {
-  id: Side;
+export interface SideEntity {
+  id: SideId;
   colour: string;
   name: string;
-  unplacedIds: string[];
+  unplacedIds: UnitId[];
   surprised: boolean;
   casualties: number;
   initiative: number;
 }
 
-export const sidesAdapter = createEntityAdapter<SideState>();
+export const sidesAdapter = createEntityAdapter<SideEntity>();
 const sidesSlice = createSlice({
   name: "sides",
   initialState: sidesAdapter.getInitialState(),
@@ -51,6 +52,9 @@ const sidesSlice = createSlice({
       .addCase(changePhaseAction, (state, { payload: { phase } }) => {
         if (phase === Phase.Morale)
           for (const id of state.ids) state.entities[id]!.surprised = false;
+      })
+      .addCase(attackAction, (state, { payload }) => {
+        if (payload.hit) state.entities[payload.defender.side]!.casualties++;
       }),
 });
 
