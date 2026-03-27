@@ -1,5 +1,6 @@
 import { type AttackModifiers, longRangePenalty } from "../killchain/rules.js";
 import type { MoraleStatus } from "../killchain/types.js";
+import type { MoraleStatusResult } from "./actions.js";
 import type { SideEntity } from "./sides.js";
 import type { UnitEntity } from "./units.js";
 
@@ -58,3 +59,14 @@ export const battleRoutResult = () => "No units remain; a rout!";
 
 export const battleVictoryResult = (side: SideEntity) =>
   `Only ${side.name} remains; victory!`;
+
+export function moraleStatusMessage(result: MoraleStatusResult) {
+  switch (result.type) {
+    case "loser":
+      return `${result.side.name} suffered the most casualties.`;
+    case "none":
+      return "No sides suffered casualties.";
+    case "tied":
+      return "All sides suffered equal casualties.";
+  }
+}

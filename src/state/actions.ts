@@ -119,7 +119,12 @@ function shouldChangePhase(battle: BattleState) {
   }
 }
 
-export function getMoraleStatus(sides: SideEntity[]) {
+export type MoraleStatusResult =
+  | { side: SideEntity; type: "loser" }
+  | { side?: undefined; type: "none" }
+  | { side?: undefined; type: "tied" };
+
+export function getMoraleStatus(sides: SideEntity[]): MoraleStatusResult {
   let threshold = 0;
   const matches: SideEntity[] = [];
   for (const side of sides) {
@@ -130,15 +135,9 @@ export function getMoraleStatus(sides: SideEntity[]) {
   }
 
   const side = matches[0];
-  if (side && matches.length === 1)
-    return {
-      side,
-      message: `${side.name} suffered the most casualties.`,
-    } as const;
-
-  if (threshold === 0)
-    return { message: "No sides suffered casualties." } as const;
-  return { message: "All sides suffered equal casualties." } as const;
+  if (side && matches.length === 1) return { side, type: "loser" };
+  if (threshold === 0) return { type: "none" };
+  return { type: "tied" };
 }
 
 type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
@@ -232,16 +231,14 @@ export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
   const units = selectAllUnits(state);
 
   const results: MoraleRollResult[] = [];
-  const remaining: Record<SideId, number> = Object.fromEntries(
-    sides.map((s) => [s.id, 0]),
-  );
+  const remaining = new Map<SideId, number>(sides.map((s) => [s.id, 0]));
 
   for (const unit of units) {
     if (unit.status === "Rout") continue;
 
     const needsRoll = unit.side === side.id || unit.status === "Shaken";
     if (!needsRoll) {
-      remaining[unit.side]!++;
+      remaining.set(unit.side, (remaining.get(unit.side) ?? 0) + 1);
       continue;
     }
 
@@ -254,19 +251,19 @@ export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
         : "Rout";
 
     results.push({ unit, roll, pass, status });
-    if (status !== "Rout") remaining[unit.side]!++;
+    if (status !== "Rout")
+      remaining.set(unit.side, (remaining.get(unit.side) ?? 0) + 1);
   }
 
   let outcome: BattleOutcome | undefined = undefined;
-  const aliveSides = Object.entries(remaining)
+  const aliveSides = [...remaining.entries()]
     .filter(([, count]) => count > 0)
-    .map(([id]) => Number(id));
+    .map(([id]) => id);
   if (aliveSides.length === 0) outcome = { type: "rout" };
-  else if (aliveSides.length === 1)
-    outcome = {
-      type: "victory",
-      who: sides.find((s) => s.id === aliveSides[0])!,
-    };
+  else if (aliveSides.length === 1) {
+    const winner = sides.find((s) => s.id === aliveSides[0]);
+    if (winner) outcome = { type: "victory", who: winner };
+  }
 
   dispatch(moraleAction({ side, results, outcome }));
 };
