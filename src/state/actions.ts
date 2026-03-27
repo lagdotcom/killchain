@@ -237,26 +237,17 @@ export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
   );
 
   for (const unit of units) {
-    // cannot recover
     if (unit.status === "Rout") continue;
 
-    if (unit.side !== side.id) {
+    const needsRoll = unit.side === side.id || unit.status === "Shaken";
+    if (!needsRoll) {
       remaining[unit.side]!++;
-
-      if (unit.status === "Shaken") {
-        results.push({
-          unit,
-          roll: NaN,
-          pass: true,
-          status: "Normal",
-        });
-      }
       continue;
     }
 
     const roll = rollDice(6) + rollDice(6);
     const pass = roll <= unit.type.morale;
-    const status = pass
+    const status: MoraleStatus = pass
       ? "Normal"
       : unit.status === "Normal"
         ? "Shaken"
