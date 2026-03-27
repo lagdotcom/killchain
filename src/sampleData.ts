@@ -24,7 +24,6 @@ function makeUnit(
     name,
     type,
     missile,
-    meleeReady: !missile,
     side,
     x: NaN,
     y: NaN,

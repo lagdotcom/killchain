@@ -21,7 +21,7 @@ export const unitAttackResult = (
   if (mods.rangePenalty === longRangePenalty) flags.push("--range");
   else if (mods.rangePenalty) flags.push("-range");
   if (mods.woodsPenalty) flags.push("-woods");
-  if (mods.archerBonus) flags.push("+archer");
+  if (mods.archerPenalty) flags.push("-archer");
 
   return `${attacker.name} rolls a ${roll} for attacking ${defender.name} (target ${target}: ${flags.join(", ")}). ${hit ? "Hit" : "Miss"}!`;
 };

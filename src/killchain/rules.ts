@@ -42,7 +42,7 @@ export function getAttackModifiers<P>(
     woodsPenalty:
       missile && (mine.type === "Woods" || theirs.type === "Woods") ? 1 : 0,
 
-    archerBonus: !missile && !defender.meleeReady ? 1 : 0,
+    archerPenalty: !missile && !!attacker.missile ? 1 : 0,
     chargeBonus: attacker.type.mounted && attacker.moved && !missile ? 1 : 0,
     flankingBonus: !missile && defender.flankCount > 0 ? 1 : 0,
   };
@@ -51,9 +51,8 @@ export function getAttackModifiers<P>(
 export type AttackModifiers = ReturnType<typeof getAttackModifiers>;
 
 export function applyAttackModifiers(mods: AttackModifiers) {
-  const bonuses =
-    mods.archerBonus + mods.chargeBonus + mods.flankingBonus + mods.hillBonus;
-  const penalties = mods.rangePenalty + mods.woodsPenalty;
+  const bonuses = mods.chargeBonus + mods.flankingBonus + mods.hillBonus;
+  const penalties = mods.rangePenalty + mods.woodsPenalty + mods.archerPenalty;
 
   return mods.armour + penalties - bonuses;
 }
