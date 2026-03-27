@@ -1,10 +1,14 @@
-import { bfsAbsolute, bfsByTerrain } from "./bfs.js";
 import type { Tint } from "./components/GridOverlay.js";
 import type { TerrainId, UnitId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import type { TerrainType } from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
+import {
+  searchAbsolute,
+  searchByTerrain,
+  squareAdjacency,
+} from "./pathfinding.js";
 import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 
@@ -26,11 +30,12 @@ export function getTints(
     case Phase.Missile:
       if (!activeUnit.missile) return [];
       return Array.from(
-        bfsAbsolute(
+        searchAbsolute(
+          squareAdjacency,
           xyId(activeUnit.x, activeUnit.y),
           Object.values(terrainEntities),
           15,
-        ),
+        ).values(),
       ).map((node) => ({
         id: node.id,
         x: node.x,
@@ -41,15 +46,16 @@ export function getTints(
 
     case Phase.Move:
       return Array.from(
-        bfsByTerrain(
+        searchByTerrain(
           new KillChainEngine(terrainEntities, unitEntities),
           activeUnit.type.mounted
             ? invalidTerrainForMountedUnits
             : invalidTerrain,
+          squareAdjacency,
           xyId(activeUnit.x, activeUnit.y),
           Object.values(terrainEntities),
           activeUnit.type.move - activeUnit.moved,
-        ),
+        ).values(),
       ).map((node) => ({
         id: node.id,
         x: node.x,
