@@ -1,3 +1,4 @@
+import type { Cells } from "../flavours.js";
 import type { Armour, KillChain, Unit } from "./types.js";
 
 const targetByArmourType: Record<Armour, number> = {
@@ -6,6 +7,15 @@ const targetByArmourType: Record<Armour, number> = {
   Medium: 5,
   Heavy: 6,
 };
+
+export const longRangeMax: Cells = 15;
+export const longRangePenalty = 2;
+
+export const mediumRangeMax: Cells = 10;
+export const mediumRangePenalty = 1;
+
+export const shortRangeMax: Cells = 5;
+export const shortRangePenalty = 0;
 
 export function getAttackModifiers<P>(
   g: KillChain<P>,
@@ -21,14 +31,32 @@ export function getAttackModifiers<P>(
   return {
     armour: targetByArmourType[defender.type.armour],
     rangePenalty:
-      distance > 15 ? Infinity : distance > 10 ? 2 : distance > 5 ? 1 : 0,
+      distance > longRangeMax
+        ? Infinity
+        : distance > mediumRangeMax
+          ? longRangePenalty
+          : distance > shortRangeMax
+            ? mediumRangePenalty
+            : shortRangePenalty,
     hillBonus: mine.elevation > theirs.elevation ? 1 : 0,
     woodsPenalty:
       missile && (mine.type === "Woods" || theirs.type === "Woods") ? 1 : 0,
+
+    archerBonus: !missile && !defender.meleeReady ? 1 : 0,
+    chargeBonus: attacker.type.mounted && attacker.moved && !missile ? 1 : 0,
+    flankingBonus: !missile && defender.flankCount > 0 ? 1 : 0,
   };
 }
 
 export type AttackModifiers = ReturnType<typeof getAttackModifiers>;
+
+export function applyAttackModifiers(mods: AttackModifiers) {
+  const bonuses =
+    mods.archerBonus + mods.chargeBonus + mods.flankingBonus + mods.hillBonus;
+  const penalties = mods.rangePenalty + mods.woodsPenalty;
+
+  return mods.armour + penalties - bonuses;
+}
 
 export function getAttackRollTarget<P>(
   g: KillChain<P>,
@@ -36,14 +64,9 @@ export function getAttackRollTarget<P>(
   attacker: Unit,
   defender: Unit,
 ) {
-  const { armour, rangePenalty, hillBonus, woodsPenalty } = getAttackModifiers(
-    g,
-    missile,
-    attacker,
-    defender,
+  return applyAttackModifiers(
+    getAttackModifiers(g, missile, attacker, defender),
   );
-
-  return armour + rangePenalty + woodsPenalty - hillBonus;
 }
 
 export function getMovementCost<P>(g: KillChain<P>, from: P, to: P) {
@@ -65,6 +88,7 @@ export enum Phase {
   Move,
   Melee,
   Morale,
+  Completed,
 }
 
 export interface PassData {
@@ -84,4 +108,5 @@ export const phaseChanges: Record<
   [Phase.Move]: { phase: Phase.Melee, useSides: true },
   [Phase.Melee]: { phase: Phase.Morale },
   [Phase.Morale]: { phase: Phase.Initiative, nextTurn: true },
+  [Phase.Completed]: { phase: Phase.Completed },
 };

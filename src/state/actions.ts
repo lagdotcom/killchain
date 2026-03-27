@@ -1,23 +1,60 @@
-import { createAction } from "@reduxjs/toolkit";
-
-import type { Cells, SideId, TerrainId, UnitId } from "../flavours.js";
 import {
+  type Action,
+  type ActionCreator,
+  createAction,
+  type ThunkAction,
+} from "@reduxjs/toolkit";
+
+import type { Cells, SideId } from "../flavours.js";
+import {
+  applyAttackModifiers,
   type AttackModifiers,
   getAttackModifiers,
   Phase,
   phaseChanges,
 } from "../killchain/rules.js";
+import type { MoraleStatus } from "../killchain/types.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { rollDice } from "../tools.js";
-import { type BattleState, nextSide } from "./battle.js";
+import { allowPass, type BattleState, nextSide } from "./battle.js";
+import {
+  selectActiveUnit,
+  selectAllSides,
+  selectAllUnits,
+  selectBattle,
+  selectTerrainEntities,
+  selectUnitEntities,
+} from "./selectors.js";
 import type { SideEntity } from "./sides.js";
-import type { TerrainEntity } from "./terrain.js";
+import type { AppState } from "./store.js";
 import type { UnitEntity } from "./units.js";
+
+export type BattleOutcome =
+  | { type: "victory"; who: SideEntity }
+  | { type: "rout" };
 
 export type SideSetup = Omit<
   SideEntity,
   "casualties" | "initiative" | "unplacedIds" | "surprised"
 >;
+
+export interface InitiativeRollResult {
+  side: SideEntity;
+  roll: number;
+}
+
+export interface MoraleRollResult {
+  unit: UnitEntity;
+  roll: number;
+  pass: boolean;
+  status: MoraleStatus;
+}
+
+export interface SurpriseRollResult {
+  side: SideEntity;
+  roll: number;
+  surprised: boolean;
+}
 
 export const attackAction = createAction<{
   attacker: UnitEntity;
@@ -35,6 +72,16 @@ export const changePhaseAction = createAction<{
   sideOrder: SideId[] | undefined;
   turn: number;
 }>("battle/changePhaseAction");
+
+export const initiativeAction = createAction<{
+  results: InitiativeRollResult[];
+}>("battle/initiative");
+
+export const moraleAction = createAction<{
+  side: SideEntity;
+  results: MoraleRollResult[];
+  outcome: BattleOutcome | undefined;
+}>("battle/morale");
 
 export const moveAction = createAction<{
   unit: UnitEntity;
@@ -55,6 +102,10 @@ export const setupBattleAction = createAction<{
   units: UnitEntity[];
 }>("battle/setup");
 
+export const surpriseAction = createAction<{
+  results: SurpriseRollResult[];
+}>("battle/surprise");
+
 function shouldChangePhase(battle: BattleState) {
   switch (battle.phase) {
     case Phase.Placement:
@@ -68,7 +119,35 @@ function shouldChangePhase(battle: BattleState) {
   }
 }
 
-export function pass(battle: BattleState, sides: SideEntity[]) {
+export function getMoraleStatus(sides: SideEntity[]) {
+  let threshold = 0;
+  const matches: SideEntity[] = [];
+  for (const side of sides) {
+    if (side.casualties > threshold) {
+      threshold = side.casualties;
+      matches.splice(0, matches.length, side);
+    } else if (side.casualties === threshold) matches.push(side);
+  }
+
+  const side = matches[0];
+  if (side && matches.length === 1)
+    return {
+      side,
+      message: `${side.name} suffered the most casualties.`,
+    } as const;
+
+  if (threshold === 0)
+    return { message: "No sides suffered casualties." } as const;
+  return { message: "All sides suffered equal casualties." } as const;
+}
+
+type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
+
+export const pass: Thunk = () => (dispatch, getState) => {
+  const state = getState();
+  const battle = selectBattle(state);
+  const sides = selectAllSides(state);
+
   if (shouldChangePhase(battle)) {
     const oldPhase = battle.phase;
 
@@ -84,29 +163,119 @@ export function pass(battle: BattleState, sides: SideEntity[]) {
           .map((s) => s.id)
       : undefined;
 
-    return changePhaseAction({ oldPhase, phase, turn, sideOrder });
+    dispatch(changePhaseAction({ oldPhase, phase, turn, sideOrder }));
+
+    if (phase === Phase.Morale && !getMoraleStatus(sides).side)
+      dispatch(allowPass());
+  } else dispatch(nextSide());
+};
+
+export const rollSurprise: Thunk = () => (dispatch, getState) => {
+  const results: SurpriseRollResult[] = [];
+  const sides = selectAllSides(getState());
+  for (const side of sides) {
+    const roll = rollDice(6);
+    const surprised = roll < 3;
+    results.push({ side, roll, surprised });
   }
 
-  return nextSide();
-}
+  dispatch(surpriseAction({ results }));
+};
 
-export function attack(
-  attacker: UnitEntity,
-  defender: UnitEntity,
-  terrain: Record<TerrainId, TerrainEntity>,
-  units: Record<UnitId, UnitEntity>,
-) {
+export const rollInitiative: Thunk = () => (dispatch, getState) => {
+  const results: InitiativeRollResult[] = [];
+  const sides = selectAllSides(getState());
+
+  for (const side of sides) {
+    if (side.surprised) continue;
+
+    const roll = rollDice(6);
+    results.push({ side, roll });
+  }
+
+  dispatch(initiativeAction({ results }));
+};
+
+export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
+  const state = getState();
+  const attacker = selectActiveUnit(state);
+  if (!attacker) return;
+
+  const terrain = selectTerrainEntities(state);
+  const units = selectUnitEntities(state);
+
   const g = new KillChainEngine(terrain, units);
 
   const missile = g.getDistance(attacker, defender) > 1;
 
   const mods = getAttackModifiers(g, missile, attacker, defender);
-
-  const target =
-    mods.armour + mods.rangePenalty + mods.woodsPenalty - mods.hillBonus;
-
+  const target = applyAttackModifiers(mods);
   const roll = rollDice(6);
   const hit = roll >= target;
 
-  return attackAction({ attacker, defender, missile, mods, target, roll, hit });
-}
+  dispatch(
+    attackAction({
+      attacker,
+      defender,
+      missile,
+      mods,
+      target,
+      roll,
+      hit,
+    }),
+  );
+};
+
+export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
+  const state = getState();
+  const sides = selectAllSides(state);
+  const units = selectAllUnits(state);
+
+  const results: MoraleRollResult[] = [];
+  const remaining: Record<SideId, number> = Object.fromEntries(
+    sides.map((s) => [s.id, 0]),
+  );
+
+  for (const unit of units) {
+    // cannot recover
+    if (unit.status === "Rout") continue;
+
+    if (unit.side !== side.id) {
+      remaining[unit.side]!++;
+
+      if (unit.status === "Shaken") {
+        results.push({
+          unit,
+          roll: NaN,
+          pass: true,
+          status: "Normal",
+        });
+      }
+      continue;
+    }
+
+    const roll = rollDice(6) + rollDice(6);
+    const pass = roll <= unit.type.morale;
+    const status = pass
+      ? "Normal"
+      : unit.status === "Normal"
+        ? "Shaken"
+        : "Rout";
+
+    results.push({ unit, roll, pass, status });
+    if (status !== "Rout") remaining[unit.side]!++;
+  }
+
+  let outcome: BattleOutcome | undefined = undefined;
+  const aliveSides = Object.entries(remaining)
+    .filter(([, count]) => count > 0)
+    .map(([id]) => Number(id));
+  if (aliveSides.length === 0) outcome = { type: "rout" };
+  else if (aliveSides.length === 1)
+    outcome = {
+      type: "victory",
+      who: sides.find((s) => s.id === aliveSides[0])!,
+    };
+
+  dispatch(moraleAction({ side, results, outcome }));
+};

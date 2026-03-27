@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import type { Cells, SideId, UnitId } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
@@ -17,6 +17,8 @@ import {
   selectTerrainEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
+import type { SideEntity } from "../state/sides.js";
+import { useAppDispatch } from "../state/store.js";
 import type { TerrainEntity } from "../state/terrain.js";
 import type { UnitEntity } from "../state/units.js";
 import { enumerate, manhattanDistance } from "../tools.js";
@@ -50,19 +52,47 @@ function getTerrainCells(
     ));
 }
 
-function canAttack(attacker: UnitEntity | undefined, target: UnitEntity) {
+function canAttack(
+  unit: UnitEntity,
+  side: SideEntity | undefined,
+  phase: Phase,
+) {
+  if (!unit.ready) return false;
+  if (unit.side !== side?.id) return false;
+
+  if (!unit.missile) return phase === Phase.Melee;
+  return phase === Phase.Missile || phase === Phase.Melee;
+}
+
+function canAttackTarget(
+  attacker: UnitEntity | undefined,
+  target: UnitEntity,
+  phase: Phase,
+) {
   if (!attacker) return false;
 
+  const minRange = phase === Phase.Missile ? 2 : 1;
   const maxRange = attacker.missile ? 15 : 1;
+  const distance = manhattanDistance(attacker, target);
+
   return (
-    !attacker.acted &&
+    attacker.ready &&
     attacker.side !== target.side &&
-    manhattanDistance(attacker, target) <= maxRange
+    distance >= minRange &&
+    distance <= maxRange
+  );
+}
+
+function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
+  return (
+    phase === Phase.Move &&
+    unit.side === side?.id &&
+    unit.moved < unit.type.move
   );
 }
 
 function GameGrid() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const activeSide = useSelector(selectActiveSide);
   const activeUnit = useSelector(selectActiveUnit);
   const phase = useSelector(selectPhase);
@@ -100,23 +130,13 @@ function GameGrid() {
 
   const canSelect = useCallback(
     (unit: UnitEntity) => {
-      switch (phase) {
-        case Phase.Missile:
-        case Phase.Melee:
-          return (
-            (unit.acted === false &&
-              unit.side === activeSide?.id &&
-              (phase === Phase.Melee || unit.missile)) ||
-            canAttack(activeUnit, unit)
-          );
-
-        case Phase.Move:
-          return unit.moved < unit.type.move && unit.side === activeSide?.id;
-      }
-
-      return false;
+      return (
+        canMove(unit, activeSide, phase) ||
+        canAttack(unit, activeSide, phase) ||
+        canAttackTarget(activeUnit, unit, phase)
+      );
     },
-    [activeSide?.id, activeUnit, phase],
+    [activeSide, activeUnit, phase],
   );
 
   const tints = useMemo(
@@ -127,7 +147,6 @@ function GameGrid() {
   const handleClickTerrain = useCallback(
     (x: Cells, y: Cells) => {
       const tint = tints.find((t) => t.x === x && t.y === y);
-      console.log(activeUnit, tint);
 
       switch (phase) {
         case Phase.Move:
@@ -147,15 +166,15 @@ function GameGrid() {
       switch (phase) {
         case Phase.Missile:
         case Phase.Melee:
-          if (canAttack(activeUnit, unit))
-            return dispatch(attack(activeUnit!, unit, terrain, units));
+          if (canAttackTarget(activeUnit, unit, phase))
+            return dispatch(attack(unit));
       }
 
       dispatch(
         setActiveUnitId(activeUnit?.id === unit.id ? undefined : unit.id),
       );
     },
-    [activeUnit, dispatch, phase, terrain, units],
+    [activeUnit, dispatch, phase],
   );
 
   const terrainCells = useMemo(

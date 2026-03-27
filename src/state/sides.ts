@@ -6,9 +6,12 @@ import { without } from "../tools.js";
 import {
   attackAction,
   changePhaseAction,
+  initiativeAction,
   placeUnitAction,
   setupBattleAction,
+  surpriseAction,
 } from "./actions.js";
+import { eachEntity } from "./tools.js";
 
 export interface SideEntity {
   id: SideId;
@@ -51,11 +54,31 @@ const sidesSlice = createSlice({
       )
       .addCase(changePhaseAction, (state, { payload: { phase } }) => {
         if (phase === Phase.Morale)
-          for (const id of state.ids) state.entities[id]!.surprised = false;
+          for (const side of eachEntity(state)) side.surprised = false;
+        else if (phase === Phase.Initiative)
+          for (const side of eachEntity(state)) side.casualties = 0;
       })
-      .addCase(attackAction, (state, { payload }) => {
-        if (payload.hit) state.entities[payload.defender.side]!.casualties++;
-      }),
+      .addCase(attackAction, (state, { payload: { hit, defender } }) => {
+        if (hit) state.entities[defender.side]!.casualties++;
+      })
+      .addCase(surpriseAction, (state, { payload: { results } }) =>
+        sidesAdapter.updateMany(
+          state,
+          results.map(({ side, surprised }) => ({
+            id: side.id,
+            changes: { surprised },
+          })),
+        ),
+      )
+      .addCase(initiativeAction, (state, { payload: { results } }) =>
+        sidesAdapter.updateMany(
+          state,
+          results.map(({ side, roll }) => ({
+            id: side.id,
+            changes: { initiative: roll },
+          })),
+        ),
+      ),
 });
 
 export const { updateSide } = sidesSlice.actions;

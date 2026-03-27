@@ -15,10 +15,12 @@ export interface Unit {
   name: string;
   type: UnitType;
   missile?: boolean;
+  meleeReady: boolean;
+  flankCount: number;
   damage: number;
   moved: number;
   status: MoraleStatus;
-  acted: boolean;
+  ready: boolean;
   side: SideId;
 }
 

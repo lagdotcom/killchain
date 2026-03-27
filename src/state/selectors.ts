@@ -2,20 +2,20 @@ import { createSelector } from "@reduxjs/toolkit";
 
 import { isDefined } from "../tools.js";
 import { sidesAdapter } from "./sides.js";
-import type { RootState } from "./store.js";
+import type { AppState } from "./store.js";
 import { terrainAdapter } from "./terrain.js";
 import { unitsAdapter } from "./units.js";
 
 export const { selectAll: selectAllSides, selectEntities: selectSideEntities } =
-  sidesAdapter.getSelectors<RootState>((state) => state.sides);
+  sidesAdapter.getSelectors<AppState>((state) => state.sides);
 
 export const {
   selectAll: selectAllTerrain,
   selectEntities: selectTerrainEntities,
-} = terrainAdapter.getSelectors<RootState>((state) => state.terrain);
+} = terrainAdapter.getSelectors<AppState>((state) => state.terrain);
 
 export const { selectAll: selectAllUnits, selectEntities: selectUnitEntities } =
-  unitsAdapter.getSelectors<RootState>((state) => state.units);
+  unitsAdapter.getSelectors<AppState>((state) => state.units);
 
 export const selectPlacedUnits = createSelector([selectAllUnits], (units) =>
   units.filter((u) => !isNaN(u.x)),
@@ -24,7 +24,7 @@ export const selectUnplacedUnits = createSelector([selectAllUnits], (units) =>
   units.filter((u) => isNaN(u.x)),
 );
 
-export const selectBattle = (state: RootState) => state.battle;
+export const selectBattle = (state: AppState) => state.battle;
 
 export const selectActiveSideId = createSelector(
   [selectBattle],
@@ -44,6 +44,11 @@ export const selectActiveUnitId = createSelector(
 export const selectActiveUnit = createSelector(
   [selectActiveUnitId, selectUnitEntities],
   (id, units) => (isDefined(id) ? units[id] : undefined),
+);
+
+export const selectCanPass = createSelector(
+  [selectBattle],
+  (battle) => battle.canPass,
 );
 
 export const selectLogMessages = createSelector(

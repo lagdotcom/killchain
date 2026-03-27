@@ -129,6 +129,13 @@ body,
 }
 
 .unitToken {
+  text {
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    fill: white;
+  }
+
   &.canSelect {
     cursor: pointer;
   }

@@ -65,15 +65,7 @@ function UnitToken({ cellSize, onClick, unit }: UnitTokenProps) {
         stroke={moraleColor}
         strokeWidth="3"
       />
-      <text
-        x={right}
-        y={top}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={10}
-        fill="#fff"
-        pointerEvents="none"
-      >
+      <text x={right} y={top} fontSize={10}>
         {unit.type.hits - unit.damage}
       </text>
 
@@ -85,39 +77,22 @@ function UnitToken({ cellSize, onClick, unit }: UnitTokenProps) {
         stroke={moraleColor}
         strokeWidth="3"
       />
-      <text
-        x={left}
-        y={bottom}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={10}
-        fill="#fff"
-        pointerEvents="none"
-      >
+      <text x={left} y={bottom} fontSize={10}>
         {armourAbbreviation[unit.type.armour]}
       </text>
 
-      <text
-        x={0}
-        y={12}
-        textAnchor="middle"
-        dominantBaseline="central"
-        pointerEvents="none"
-      >
+      {unit.ready && (
+        <text x={left} y={top}>
+          ⭐
+        </text>
+      )}
+
+      <text x={0} y={12}>
         {unit.type.mounted && "🐴"}
         {unit.missile && "🏹"}
       </text>
 
-      <text
-        x={0}
-        y={-4}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={14}
-        fill="#fff"
-        fontWeight="bold"
-        pointerEvents="none"
-      >
+      <text x={0} y={-4} fontSize={14} fontWeight="bold">
         {label}
       </text>
 

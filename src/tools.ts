@@ -19,7 +19,8 @@ export function classnames(...args: ClassNameValue[]) {
       }
       return "";
     })
-    .join(" ");
+    .join(" ")
+    .trim();
 }
 
 export function isDefined<T>(value?: T): value is T {

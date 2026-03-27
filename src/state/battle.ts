@@ -7,13 +7,29 @@ import { without } from "../tools.js";
 import {
   attackAction,
   changePhaseAction,
+  initiativeAction,
+  moraleAction,
   moveAction,
   placeUnitAction,
   setupBattleAction,
+  surpriseAction,
 } from "./actions.js";
+import {
+  battleRoutResult,
+  battleVictoryResult,
+  sideInitiativeResult,
+  sidePlacedAllUnits,
+  sideSurpriseResult,
+  unitAttackResult,
+  unitChangesMoraleStatus,
+  unitDispersed,
+  unitLosingCoherence,
+  unitMoraleResult,
+} from "./messages.js";
 
 export interface BattleState {
   activeUnitId: UnitId | undefined;
+  canPass: boolean;
   messages: string[];
   phase: Phase;
   sideOrder: SideId[];
@@ -23,6 +39,7 @@ export interface BattleState {
 
 const initialState: BattleState = {
   activeUnitId: undefined,
+  canPass: false,
   messages: [],
   phase: Phase.Placement,
   sideOrder: [],
@@ -34,8 +51,8 @@ export const battleSlice = createSlice({
   name: "battle",
   initialState,
   reducers: {
-    addMessage(state, { payload }: PayloadAction<string>) {
-      state.messages.push(payload);
+    allowPass(state) {
+      state.canPass = true;
     },
     nextSide(state) {
       state.sideIndex++;
@@ -54,11 +71,12 @@ export const battleSlice = createSlice({
       })
       .addCase(placeUnitAction, (state, { payload: { side } }) => {
         if (side.unplacedIds.length === 1) {
-          state.messages.push(`${side.name} has placed all units.`);
+          state.messages.push(sidePlacedAllUnits(side));
 
           if (state.sideOrder.length === 1) {
             state.sideOrder = [];
             state.sideIndex = NaN;
+            state.canPass = true;
             return;
           }
           state.sideOrder = without(state.sideOrder, side.id);
@@ -76,26 +94,63 @@ export const battleSlice = createSlice({
           if (sideOrder) {
             state.sideOrder = sideOrder;
             state.sideIndex = 0;
-          } else state.sideIndex = NaN;
+          } else {
+            state.sideIndex = NaN;
+            state.canPass = false;
+          }
         },
       )
       .addCase(
         attackAction,
-        (state, { payload: { attacker, defender, target, roll, hit } }) => {
+        (
+          state,
+          { payload: { attacker, defender, hit, missile, mods, roll, target } },
+        ) => {
           state.messages.push(
-            `${attacker.name} attacks ${defender.name}. Target is ${target}, rolled ${roll}. ${hit ? "Hit" : "Miss"}!`,
+            unitAttackResult(attacker, defender, roll, target, hit, mods),
           );
           state.activeUnitId = undefined;
 
           if (hit && defender.damage + 1 >= defender.type.hits)
-            state.messages.push(`${defender.name} are dispersed!`);
+            state.messages.push(
+              missile ? unitDispersed(defender) : unitLosingCoherence(defender),
+            );
         },
       )
       .addCase(moveAction, (state, { payload: { unit, cost } }) => {
         if (unit.moved + cost >= unit.type.move) state.activeUnitId = undefined;
+      })
+      .addCase(moraleAction, (state, { payload: { outcome, results } }) => {
+        state.canPass = true;
+        for (const { unit, roll, status } of results) {
+          if (isNaN(roll))
+            state.messages.push(unitChangesMoraleStatus(unit, status));
+          else state.messages.push(unitMoraleResult(unit, roll, status));
+        }
+
+        if (outcome) {
+          state.messages.push(
+            outcome.type === "rout"
+              ? battleRoutResult()
+              : battleVictoryResult(outcome.who),
+          );
+          state.canPass = false;
+          state.sideIndex = NaN;
+          state.phase = Phase.Completed;
+        }
+      })
+      .addCase(surpriseAction, (state, { payload: { results } }) => {
+        state.canPass = true;
+        for (const { side, roll, surprised } of results)
+          state.messages.push(sideSurpriseResult(side, roll, surprised));
+      })
+      .addCase(initiativeAction, (state, { payload: { results } }) => {
+        state.canPass = true;
+        for (const { side, roll } of results)
+          state.messages.push(sideInitiativeResult(side, roll));
       }),
 });
 
-export const { addMessage, nextSide, setActiveUnitId } = battleSlice.actions;
+export const { allowPass, nextSide, setActiveUnitId } = battleSlice.actions;
 
 export default battleSlice.reducer;

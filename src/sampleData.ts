@@ -24,13 +24,15 @@ function makeUnit(
     name,
     type,
     missile,
+    meleeReady: !missile,
     side,
     x: NaN,
     y: NaN,
+    flankCount: 0,
     damage: 0,
     moved: 0,
     status: "Normal",
-    acted: false,
+    ready: false,
   };
 }
 
