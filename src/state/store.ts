@@ -20,7 +20,7 @@ export type AppAction = Action | ThunkAction<void, AppState, void, Action>;
 export type AppDispatch = ThunkDispatch<AppState, void, Action>;
 
 export const makeStore = (preloadedState?: Partial<AppState>) => {
-  const options: ConfigureStoreOptions<AppState, AppAction> = { reducer };
+  const options: ConfigureStoreOptions<AppState> = { reducer };
 
   if (preloadedState) {
     const initial = reducer(undefined, { type: "@@INIT" });
