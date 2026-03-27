@@ -22,13 +22,7 @@ export class EuclideanEngine implements KillChain<XY> {
   addUnit(
     template: MarkOptional<
       Unit,
-      | "name"
-      | "damage"
-      | "moved"
-      | "status"
-      | "ready"
-      | "flankCount"
-      | "meleeReady"
+      "name" | "damage" | "moved" | "status" | "ready" | "flankCount"
     >,
     x: number,
     y: number,
@@ -40,7 +34,6 @@ export class EuclideanEngine implements KillChain<XY> {
       flankCount: 0,
       status: "Normal",
       ready: false,
-      meleeReady: !template.missile,
       ...template,
     };
 
