@@ -59,7 +59,8 @@ const sidesSlice = createSlice({
           for (const side of eachEntity(state)) side.casualties = 0;
       })
       .addCase(attackAction, (state, { payload: { hit, defender } }) => {
-        if (hit) state.entities[defender.side]!.casualties++;
+        const side = state.entities[defender.side];
+        if (hit && side) side.casualties++;
       })
       .addCase(surpriseAction, (state, { payload: { results } }) =>
         sidesAdapter.updateMany(

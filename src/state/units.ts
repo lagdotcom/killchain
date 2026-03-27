@@ -53,33 +53,39 @@ const unitsSlice = createSlice({
       .addCase(
         attackAction,
         (state, { payload: { attacker, defender, hit, missile } }) => {
-          const victim = state.entities[defender.id]!;
+          const defenderChanges: Partial<UnitEntity> = {};
           if (!missile) {
-            victim.meleeReady = true;
-            victim.flankCount++;
+            defenderChanges.flankCount = defender.flankCount + 1;
           }
+          if (hit) defenderChanges.damage = defender.damage + 1;
+          unitsAdapter.updateOne(state, {
+            id: defender.id,
+            changes: defenderChanges,
+          });
 
-          if (hit) {
-            victim.damage++;
+          if (hit && missile && defender.damage + 1 >= defender.type.hits)
+            unitsAdapter.removeOne(state, defender.id);
 
-            if (missile && victim.damage >= victim.type.hits)
-              unitsAdapter.removeOne(state, victim.id);
-          }
-
-          const unit = state.entities[attacker.id]!;
-          unit.ready = false;
-          unit.meleeReady = !missile;
+          unitsAdapter.updateOne(state, {
+            id: attacker.id,
+            changes: { ready: false },
+          });
         },
       )
       .addCase(moveAction, (state, { payload: { unit, x, y, cost } }) => {
-        const u = state.entities[unit.id]!;
-        u.x = x;
-        u.y = y;
-        u.moved += cost;
+        unitsAdapter.updateOne(state, {
+          id: unit.id,
+          changes: { x, y, moved: unit.moved + cost },
+        });
       })
       .addCase(moraleAction, (state, { payload: { results } }) => {
-        for (const { unit, status } of results)
-          state.entities[unit.id]!.status = status;
+        unitsAdapter.updateMany(
+          state,
+          results.map(({ unit, status }) => ({
+            id: unit.id,
+            changes: { status },
+          })),
+        );
       })
       .addCase(initiativeAction, (state, { payload: { results } }) => {
         const sideIds = new Set(results.map(({ side }) => side.id));

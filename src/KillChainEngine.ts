@@ -28,7 +28,7 @@ export class KillChainEngine implements KillChain<TerrainId> {
   }
 
   getTerrainAt(p: TerrainId) {
-    return this.terrain[p]!;
+    return this.terrain[p] ?? { type: "Open", elevation: 0 };
   }
 
   getTerrain(u: Unit) {
