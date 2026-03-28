@@ -8,10 +8,6 @@ import { getTints } from "./logic.js";
 import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function makeGrid(
   width: number,
   height: number,

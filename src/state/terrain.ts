@@ -13,15 +13,7 @@ export const terrainAdapter = createEntityAdapter<TerrainEntity>();
 const terrainSlice = createSlice({
   name: "terrain",
   initialState: terrainAdapter.getInitialState(),
-  reducers: {
-    addTerrain: terrainAdapter.addOne,
-    addTerrains: terrainAdapter.addMany,
-    updateTerrain: terrainAdapter.updateOne,
-    removeTerrain: terrainAdapter.removeOne,
-  },
+  reducers: {},
 });
-
-export const { addTerrain, addTerrains, updateTerrain, removeTerrain } =
-  terrainSlice.actions;
 
 export default terrainSlice.reducer;

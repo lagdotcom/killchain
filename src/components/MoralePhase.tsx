@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 
+import { moraleStatusMessage } from "../messages.js";
 import { getMoraleStatus, rollMorale } from "../state/actions.js";
-import { moraleStatusMessage } from "../state/messages.js";
 import { selectAllSides, selectAllUnits } from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
 
@@ -15,7 +15,10 @@ export function MoralePhase() {
   const { side } = status;
   const message = moraleStatusMessage(status);
 
-  const hasShaken = useMemo(() => units.some((u) => u.status === "Shaken"), [units]);
+  const hasShaken = useMemo(
+    () => units.some((u) => u.status === "Shaken"),
+    [units],
+  );
   const needsRoll = !!side || hasShaken;
 
   const [disabled, setDisabled] = useState(!needsRoll);

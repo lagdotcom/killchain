@@ -25,12 +25,7 @@ export const unitsAdapter = createEntityAdapter<UnitEntity>();
 const unitsSlice = createSlice({
   name: "units",
   initialState: unitsAdapter.getInitialState(),
-  reducers: {
-    addUnit: unitsAdapter.addOne,
-    addUnits: unitsAdapter.addMany,
-    updateUnit: unitsAdapter.updateOne,
-    removeUnit: unitsAdapter.removeOne,
-  },
+  reducers: {},
   extraReducers: (builder) =>
     builder
       .addCase(setupBattleAction, (state, { payload: { units } }) =>
@@ -102,11 +97,10 @@ const unitsSlice = createSlice({
         const sideIds = new Set(results.map(({ side }) => side.id));
 
         for (const unit of eachEntity(state)) {
-          if (sideIds.has(unit.side) && unit.status === "Normal") unit.ready = true;
+          if (sideIds.has(unit.side) && unit.status === "Normal")
+            unit.ready = true;
         }
       }),
 });
-
-export const { addUnit, addUnits, updateUnit, removeUnit } = unitsSlice.actions;
 
 export default unitsSlice.reducer;

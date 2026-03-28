@@ -179,7 +179,10 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
       // active unit. Attack targets have onClick for cursor feedback but must
       // not be selectable as initiators — doing so lets the player control
       // enemy units.
-      if (canMove(unit, activeSide, phase) || canAttack(unit, activeSide, phase)) {
+      if (
+        canMove(unit, activeSide, phase) ||
+        canAttack(unit, activeSide, phase)
+      ) {
         dispatch(
           setActiveUnitId(activeUnit?.id === unit.id ? undefined : unit.id),
         );

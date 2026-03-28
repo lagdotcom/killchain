@@ -3,7 +3,6 @@ import {
   combineReducers,
   configureStore,
   type ConfigureStoreOptions,
-  type ThunkAction,
   type ThunkDispatch,
 } from "@reduxjs/toolkit";
 import { useDispatch } from "react-redux";
@@ -16,7 +15,6 @@ import units from "./units.js";
 const reducer = combineReducers({ battle, sides, terrain, units });
 
 export type AppState = ReturnType<typeof reducer>;
-export type AppAction = Action | ThunkAction<void, AppState, void, Action>;
 export type AppDispatch = ThunkDispatch<AppState, void, Action>;
 
 export const makeStore = (preloadedState?: Partial<AppState>) => {

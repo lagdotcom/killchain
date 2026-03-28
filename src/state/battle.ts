@@ -3,18 +3,6 @@ import shuffle from "knuth-shuffle-seeded";
 
 import type { SideId, TerrainId, UnitId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
-import { without } from "../tools.js";
-import {
-  attackAction,
-  changePhaseAction,
-  initiativeAction,
-  moraleAction,
-  moveAction,
-  placeUnitAction,
-  routMoveAction,
-  setupBattleAction,
-  surpriseAction,
-} from "./actions.js";
 import {
   battleRoutResult,
   battleVictoryResult,
@@ -28,7 +16,19 @@ import {
   unitLosingCoherence,
   unitMoraleResult,
   unitRouting,
-} from "./messages.js";
+} from "../messages.js";
+import { without } from "../tools.js";
+import {
+  attackAction,
+  changePhaseAction,
+  initiativeAction,
+  moraleAction,
+  moveAction,
+  placeUnitAction,
+  routMoveAction,
+  setupBattleAction,
+  surpriseAction,
+} from "./actions.js";
 
 export interface LogMessage {
   text: string;

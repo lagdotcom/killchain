@@ -1,10 +1,10 @@
 import { useRef } from "react";
 import { Provider } from "react-redux";
 
-import type { Cells } from "./flavours.js";
 import GameGrid from "./components/GameGrid.js";
 import { MessageLog } from "./components/MessageLog.js";
 import { Sidebar } from "./components/Sidebar.js";
+import type { Cells } from "./flavours.js";
 import { defaultSides, defaultUnits, generateTerrain } from "./sampleData.js";
 import { setupBattleAction } from "./state/actions.js";
 import { makeStore } from "./state/store.js";

@@ -1,29 +1,22 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId, TerrainId, UnitId } from "../flavours.js";
-import { xyId } from "../killchain/EuclideanEngine.js";
-import { heavyFoot } from "../killchain/units.js";
-import { Phase } from "../killchain/rules.js";
+import type { Cells, SideId, TerrainId, UnitId } from "./flavours.js";
+import { xyId } from "./killchain/EuclideanEngine.js";
+import { Phase } from "./killchain/rules.js";
+import { heavyFoot } from "./killchain/units.js";
 import {
   executeRoutMovement,
   initiativeAction,
   rollMorale,
-} from "./actions.js";
-import type { SideEntity } from "./sides.js";
-import { sidesAdapter } from "./sides.js";
-import {
-  selectAllUnits,
-  selectCanPassNow,
-} from "./selectors.js";
-import { makeStore } from "./store.js";
-import type { TerrainEntity } from "./terrain.js";
-import { terrainAdapter } from "./terrain.js";
-import type { UnitEntity } from "./units.js";
-import { unitsAdapter } from "./units.js";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+} from "./state/actions.js";
+import { selectAllUnits, selectCanPassNow } from "./state/selectors.js";
+import type { SideEntity } from "./state/sides.js";
+import { sidesAdapter } from "./state/sides.js";
+import { makeStore } from "./state/store.js";
+import type { TerrainEntity } from "./state/terrain.js";
+import { terrainAdapter } from "./state/terrain.js";
+import type { UnitEntity } from "./state/units.js";
+import { unitsAdapter } from "./state/units.js";
 
 function makeSide(id: number): SideEntity {
   return {
@@ -366,7 +359,10 @@ describe("selectCanPassNow", () => {
     const enemy = makeUnit({ side: 1, x: 6, y: 5, status: "Normal" });
     const sideEntities = [makeSide(0), makeSide(1)];
     const store = makeStore({
-      units: unitsAdapter.setAll(unitsAdapter.getInitialState(), [shaken, enemy]),
+      units: unitsAdapter.setAll(unitsAdapter.getInitialState(), [
+        shaken,
+        enemy,
+      ]),
       sides: sidesAdapter.setAll(sidesAdapter.getInitialState(), sideEntities),
       battle: {
         activeUnitId: undefined,

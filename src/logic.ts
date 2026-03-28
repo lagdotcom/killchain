@@ -61,7 +61,8 @@ export function getTints(
 
       if (activeUnit.status === "Shaken") {
         const enemies = Object.values(unitEntities).filter(
-          (u) => u.side !== activeUnit.side && u.status !== "Rout" && !isNaN(u.x),
+          (u) =>
+            u.side !== activeUnit.side && u.status !== "Rout" && !isNaN(u.x),
         );
 
         if (enemies.length > 0) {
@@ -73,16 +74,18 @@ export function getTints(
           );
 
           const satisfiesBoth = (node: { x: number; y: number }) =>
-            enemies.every((e) => manhattanDistance(node, e) >= currentDistances.get(e.id)!) &&
-            adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
+            enemies.every(
+              (e) => manhattanDistance(node, e) >= currentDistances.get(e.id)!,
+            ) && adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
 
           const satisfiesExitMelee = (node: { x: number; y: number }) =>
             adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
 
           const filtered = reachable.filter(satisfiesBoth);
-          const fallback = adjacentEnemies.length > 0
-            ? reachable.filter(satisfiesExitMelee)
-            : reachable;
+          const fallback =
+            adjacentEnemies.length > 0
+              ? reachable.filter(satisfiesExitMelee)
+              : reachable;
 
           const validNodes = filtered.length > 0 ? filtered : fallback;
 

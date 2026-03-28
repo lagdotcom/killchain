@@ -27,9 +27,7 @@ export const sidesAdapter = createEntityAdapter<SideEntity>();
 const sidesSlice = createSlice({
   name: "sides",
   initialState: sidesAdapter.getInitialState(),
-  reducers: {
-    updateSide: sidesAdapter.updateOne,
-  },
+  reducers: {},
   extraReducers: (builder) =>
     builder
       .addCase(setupBattleAction, (state, { payload: { sides, units } }) =>
@@ -81,7 +79,5 @@ const sidesSlice = createSlice({
         ),
       ),
 });
-
-export const { updateSide } = sidesSlice.actions;
 
 export default sidesSlice.reducer;
