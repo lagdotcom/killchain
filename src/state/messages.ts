@@ -55,6 +55,12 @@ export const sideSurpriseResult = (
 export const sideInitiativeResult = (side: SideEntity, roll: number) =>
   `${side.name} rolled ${roll} for initiative.`;
 
+export const unitRouting = (unit: UnitEntity) =>
+  `${unit.name} are routing away from battle.`;
+
+export const unitFlees = (unit: UnitEntity) =>
+  `${unit.name} flee the field!`;
+
 export const battleRoutResult = () => "No units remain; a rout!";
 
 export const battleVictoryResult = (side: SideEntity) =>

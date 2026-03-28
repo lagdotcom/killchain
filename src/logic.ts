@@ -11,6 +11,7 @@ import {
 } from "./pathfinding.js";
 import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
+import { manhattanDistance } from "./tools.js";
 
 const rangeName = (cost: number) =>
   cost <= 5 ? "short" : cost <= 10 ? "medium" : "long";
@@ -44,8 +45,8 @@ export function getTints(
         reason: rangeName(node.cost),
       }));
 
-    case Phase.Move:
-      return Array.from(
+    case Phase.Move: {
+      const reachable = Array.from(
         searchByTerrain(
           new KillChainEngine(terrainEntities, unitEntities),
           activeUnit.type.mounted
@@ -56,13 +57,53 @@ export function getTints(
           Object.values(terrainEntities),
           activeUnit.type.move - activeUnit.moved,
         ).values(),
-      ).map((node) => ({
+      );
+
+      if (activeUnit.status === "Shaken") {
+        const enemies = Object.values(unitEntities).filter(
+          (u) => u.side !== activeUnit.side && u.status !== "Rout" && !isNaN(u.x),
+        );
+
+        if (enemies.length > 0) {
+          const currentDistances = new Map(
+            enemies.map((e) => [e.id, manhattanDistance(activeUnit, e)]),
+          );
+          const adjacentEnemies = enemies.filter(
+            (e) => currentDistances.get(e.id) === 1,
+          );
+
+          const satisfiesBoth = (node: { x: number; y: number }) =>
+            enemies.every((e) => manhattanDistance(node, e) >= currentDistances.get(e.id)!) &&
+            adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
+
+          const satisfiesExitMelee = (node: { x: number; y: number }) =>
+            adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
+
+          const filtered = reachable.filter(satisfiesBoth);
+          const fallback = adjacentEnemies.length > 0
+            ? reachable.filter(satisfiesExitMelee)
+            : reachable;
+
+          const validNodes = filtered.length > 0 ? filtered : fallback;
+
+          return validNodes.map((node) => ({
+            id: node.id,
+            x: node.x,
+            y: node.y,
+            cost: node.cost,
+            reason: "reachable" as const,
+          }));
+        }
+      }
+
+      return reachable.map((node) => ({
         id: node.id,
         x: node.x,
         y: node.y,
         cost: node.cost,
         reason: "reachable",
       }));
+    }
   }
 
   return [];

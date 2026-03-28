@@ -11,6 +11,7 @@ import {
   moraleAction,
   moveAction,
   placeUnitAction,
+  routMoveAction,
   setupBattleAction,
   surpriseAction,
 } from "./actions.js";
@@ -23,8 +24,10 @@ import {
   unitAttackResult,
   unitChangesMoraleStatus,
   unitDispersed,
+  unitFlees,
   unitLosingCoherence,
   unitMoraleResult,
+  unitRouting,
 } from "./messages.js";
 
 export interface BattleState {
@@ -138,6 +141,9 @@ export const battleSlice = createSlice({
           state.sideIndex = NaN;
           state.phase = Phase.Completed;
         }
+      })
+      .addCase(routMoveAction, (state, { payload: { unit, fled } }) => {
+        state.messages.push(fled ? unitFlees(unit) : unitRouting(unit));
       })
       .addCase(surpriseAction, (state, { payload: { results } }) => {
         state.canPass = true;

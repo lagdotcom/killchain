@@ -14,8 +14,9 @@ import {
   phaseChanges,
 } from "../killchain/rules.js";
 import type { MoraleStatus } from "../killchain/types.js";
+import { mapHeight, mapWidth } from "../ui.js";
 import { KillChainEngine } from "../KillChainEngine.js";
-import { rollDice } from "../tools.js";
+import { manhattanDistance, rollDice } from "../tools.js";
 import { allowPass, type BattleState, nextSide } from "./battle.js";
 import {
   selectActiveUnit,
@@ -78,10 +79,17 @@ export const initiativeAction = createAction<{
 }>("battle/initiative");
 
 export const moraleAction = createAction<{
-  side: SideEntity;
+  side: SideEntity | undefined;
   results: MoraleRollResult[];
   outcome: BattleOutcome | undefined;
 }>("battle/morale");
+
+export const routMoveAction = createAction<{
+  unit: UnitEntity;
+  x: Cells;
+  y: Cells;
+  fled: boolean;
+}>("battle/routMove");
 
 export const moveAction = createAction<{
   unit: UnitEntity;
@@ -164,6 +172,8 @@ export const pass: Thunk = () => (dispatch, getState) => {
 
     dispatch(changePhaseAction({ oldPhase, phase, turn, sideOrder }));
 
+    if (phase === Phase.Move) dispatch(executeRoutMovement());
+
     if (phase === Phase.Morale && !getMoraleStatus(sides).side)
       dispatch(allowPass());
   } else dispatch(nextSide());
@@ -225,7 +235,61 @@ export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
   );
 };
 
-export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
+export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
+  const state = getState();
+  const units = selectAllUnits(state);
+
+  const routUnits = units.filter((u) => u.status === "Rout" && !isNaN(u.x));
+  if (routUnits.length === 0) return;
+
+  for (const unit of routUnits) {
+    const enemies = units.filter(
+      (u) => u.side !== unit.side && u.status !== "Rout" && !isNaN(u.x),
+    );
+
+    let dx = 0;
+    let dy = 0;
+
+    if (enemies.length > 0) {
+      const nearest = enemies.reduce((a, b) =>
+        manhattanDistance(unit, a) <= manhattanDistance(unit, b) ? a : b,
+      );
+      const ax = unit.x - nearest.x;
+      const ay = unit.y - nearest.y;
+      if (Math.abs(ax) >= Math.abs(ay)) {
+        dx = ax >= 0 ? 1 : -1;
+      } else {
+        dy = ay >= 0 ? 1 : -1;
+      }
+    } else {
+      // No enemies — move toward the nearest board edge
+      const toLeft = unit.x;
+      const toRight = mapWidth - 1 - unit.x;
+      const toTop = unit.y;
+      const toBottom = mapHeight - 1 - unit.y;
+      const minDist = Math.min(toLeft, toRight, toTop, toBottom);
+      if (minDist === toLeft) dx = -1;
+      else if (minDist === toRight) dx = 1;
+      else if (minDist === toTop) dy = -1;
+      else dy = 1;
+    }
+
+    const newX = unit.x + dx * unit.type.move;
+    const newY = unit.y + dy * unit.type.move;
+    const fled = newX < 0 || newX >= mapWidth || newY < 0 || newY >= mapHeight;
+
+    dispatch(
+      routMoveAction({
+        unit,
+        x: Math.max(0, Math.min(mapWidth - 1, newX)) as Cells,
+        y: Math.max(0, Math.min(mapHeight - 1, newY)) as Cells,
+        fled,
+      }),
+    );
+  }
+};
+
+export const rollMorale: Thunk = (side: SideEntity | undefined) => (dispatch, getState) => {
   const state = getState();
   const sides = selectAllSides(state);
   const units = selectAllUnits(state);
@@ -236,7 +300,7 @@ export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
   for (const unit of units) {
     if (unit.status === "Rout") continue;
 
-    const needsRoll = unit.side === side.id || unit.status === "Shaken";
+    const needsRoll = (side !== undefined && unit.side === side.id) || unit.status === "Shaken";
     if (!needsRoll) {
       remaining.set(unit.side, (remaining.get(unit.side) ?? 0) + 1);
       continue;
