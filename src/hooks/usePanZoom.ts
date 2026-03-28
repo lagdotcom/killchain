@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
-import type { Pixels } from "../flavours.js";
+import type { Cells, Pixels } from "../flavours.js";
+import { cellSize } from "../ui.js";
 
 class PanZoomController {
   svg!: SVGSVGElement;
@@ -124,5 +125,17 @@ export function usePanZoom(
 
   return {
     goto: (x: Pixels, y: Pixels) => controllerRef.current.goto(x, y),
+    panToCell: (x: Cells, y: Cells) => {
+      const svg = svgRef.current;
+      if (!svg) return;
+      const ctrl = controllerRef.current;
+      const rect = svg.getBoundingClientRect();
+      const px = x * cellSize + cellSize / 2;
+      const py = y * cellSize + cellSize / 2;
+      ctrl.goto(
+        (rect.width / 2 - px * ctrl.zr) as Pixels,
+        (rect.height / 2 - py * ctrl.zr) as Pixels,
+      );
+    },
   };
 }

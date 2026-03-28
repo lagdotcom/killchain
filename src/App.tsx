@@ -1,6 +1,9 @@
+import { useRef } from "react";
 import { Provider } from "react-redux";
 
+import type { Cells } from "./flavours.js";
 import GameGrid from "./components/GameGrid.js";
+import { MessageLog } from "./components/MessageLog.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { defaultSides, defaultUnits, generateTerrain } from "./sampleData.js";
 import { setupBattleAction } from "./state/actions.js";
@@ -14,11 +17,20 @@ const store = makeStore({
 store.dispatch(setupBattleAction({ sides: defaultSides, units: defaultUnits }));
 
 function App() {
+  const panToCellRef = useRef<((x: Cells, y: Cells) => void) | null>(null);
+
   return (
     <Provider store={store}>
       <div className="app">
-        <Sidebar />
-        <GameGrid />
+        <div className="app-main">
+          <Sidebar />
+          <GameGrid
+            onRegisterPan={(fn) => {
+              panToCellRef.current = fn;
+            }}
+          />
+        </div>
+        <MessageLog panToCell={(x, y) => panToCellRef.current?.(x, y)} />
       </div>
     </Provider>
   );

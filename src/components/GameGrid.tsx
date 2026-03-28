@@ -91,7 +91,11 @@ function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
   );
 }
 
-function GameGrid() {
+interface GameGridProps {
+  onRegisterPan?: (fn: (x: Cells, y: Cells) => void) => void;
+}
+
+function GameGrid({ onRegisterPan }: GameGridProps) {
   const dispatch = useAppDispatch();
   const activeSide = useSelector(selectActiveSide);
   const activeUnit = useSelector(selectActiveUnit);
@@ -103,7 +107,7 @@ function GameGrid() {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
 
-  const { goto } = usePanZoom(svgRef, gRef);
+  const { goto, panToCell } = usePanZoom(svgRef, gRef);
 
   const placedUnits = useSelector(selectPlacedUnits);
 
@@ -200,6 +204,7 @@ function GameGrid() {
       const offsetY = (rect.height - mapH) / 2;
       goto(offsetX, offsetY);
     }
+    onRegisterPan?.(panToCell);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

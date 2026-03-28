@@ -5,7 +5,6 @@ import { pass } from "../state/actions.js";
 import {
   selectActiveSide,
   selectCanPassNow,
-  selectLogMessages,
   selectPhase,
   selectTurn,
 } from "../state/selectors.js";
@@ -19,7 +18,6 @@ export function Sidebar() {
   const dispatch = useAppDispatch();
   const canPass = useSelector(selectCanPassNow);
   const side = useSelector(selectActiveSide);
-  const log = useSelector(selectLogMessages);
   const phase = useSelector(selectPhase);
   const turn = useSelector(selectTurn);
 
@@ -42,11 +40,6 @@ export function Sidebar() {
         {phase === Phase.Surprise && <SurprisePhase />}
         {phase === Phase.Initiative && <InitiativePhase />}
         {phase === Phase.Morale && <MoralePhase />}
-      </div>
-      <div className="messages">
-        {log.toReversed().map((msg, i) => (
-          <div key={i}>{msg}</div>
-        ))}
       </div>
     </div>
   );
