@@ -70,6 +70,7 @@ function canAttackTarget(
   phase: Phase,
 ) {
   if (!attacker) return false;
+  if (phase !== Phase.Missile && phase !== Phase.Melee) return false;
 
   const minRange = phase === Phase.Missile ? 2 : 1;
   const maxRange = attacker.missile ? 15 : 1;
@@ -137,8 +138,7 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
       return (
         canMove(unit, activeSide, phase) ||
         canAttack(unit, activeSide, phase) ||
-        ((phase === Phase.Missile || phase === Phase.Melee) &&
-          canAttackTarget(activeUnit, unit, phase))
+        canAttackTarget(activeUnit, unit, phase)
       );
     },
     [activeSide, activeUnit, phase],
