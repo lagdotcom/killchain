@@ -1,11 +1,19 @@
 import { type AttackModifiers, longRangePenalty } from "../killchain/rules.js";
 import type { MoraleStatus } from "../killchain/types.js";
+import { xyId } from "../killchain/EuclideanEngine.js";
+import type { TerrainId } from "../flavours.js";
 import type { MoraleStatusResult } from "./actions.js";
+import type { LogMessage } from "./battle.js";
 import type { SideEntity } from "./sides.js";
 import type { UnitEntity } from "./units.js";
 
-export const sidePlacedAllUnits = (side: SideEntity) =>
-  `${side.name} has placed all units.`;
+function focusUnit(unit: UnitEntity): Pick<LogMessage, "focus"> {
+  return isNaN(unit.x) ? {} : { focus: xyId(unit.x, unit.y) as TerrainId };
+}
+
+export const sidePlacedAllUnits = (side: SideEntity): LogMessage => ({
+  text: `${side.name} has placed all units.`,
+});
 
 export const unitAttackResult = (
   attacker: UnitEntity,
@@ -14,7 +22,7 @@ export const unitAttackResult = (
   target: number,
   hit: boolean,
   mods: AttackModifiers,
-) => {
+): LogMessage => {
   const flags: string[] = [defender.type.armour];
   if (mods.chargeBonus) flags.push("+charge");
   if (mods.flankingBonus) flags.push("+flank");
@@ -24,49 +32,73 @@ export const unitAttackResult = (
   if (mods.woodsPenalty) flags.push("-woods");
   if (mods.archerPenalty) flags.push("-archer");
 
-  return `${attacker.name} rolls a ${roll} for attacking ${defender.name} (target ${target}: ${flags.join(", ")}). ${hit ? "Hit" : "Miss"}!`;
+  return {
+    text: `${attacker.name} rolls a ${roll} for attacking ${defender.name} (target ${target}: ${flags.join(", ")}). ${hit ? "Hit" : "Miss"}!`,
+    ...focusUnit(attacker),
+  };
 };
 
-export const unitDispersed = (unit: UnitEntity) =>
-  `${unit.name} are dispersed!`;
+export const unitDispersed = (unit: UnitEntity): LogMessage => ({
+  text: `${unit.name} are dispersed!`,
+  ...focusUnit(unit),
+});
 
-export const unitLosingCoherence = (unit: UnitEntity) =>
-  `${unit.name} are losing coherence!`;
+export const unitLosingCoherence = (unit: UnitEntity): LogMessage => ({
+  text: `${unit.name} are losing coherence!`,
+  ...focusUnit(unit),
+});
 
 export const unitChangesMoraleStatus = (
   unit: UnitEntity,
   status: MoraleStatus,
-) => `${unit.name} is now ${status}.`;
+): LogMessage => ({
+  text: `${unit.name} is now ${status}.`,
+  ...focusUnit(unit),
+});
 
 export const unitMoraleResult = (
   unit: UnitEntity,
   roll: number,
   status: MoraleStatus,
-) =>
-  `${unit.name} rolls a ${roll} for morale (ml ${unit.type.morale}); now ${status}.`;
+): LogMessage => ({
+  text: `${unit.name} rolls a ${roll} for morale (ml ${unit.type.morale}); now ${status}.`,
+  ...focusUnit(unit),
+});
 
 export const sideSurpriseResult = (
   side: SideEntity,
   roll: number,
   surprised: boolean,
-) =>
-  `${side.name} rolled ${roll} for surprise: ${surprised ? "Surprised!" : "OK."}`;
+): LogMessage => ({
+  text: `${side.name} rolled ${roll} for surprise: ${surprised ? "Surprised!" : "OK."}`,
+});
 
-export const sideInitiativeResult = (side: SideEntity, roll: number) =>
-  `${side.name} rolled ${roll} for initiative.`;
+export const sideInitiativeResult = (
+  side: SideEntity,
+  roll: number,
+): LogMessage => ({
+  text: `${side.name} rolled ${roll} for initiative.`,
+});
 
-export const unitRouting = (unit: UnitEntity) =>
-  `${unit.name} are routing away from battle.`;
+export const unitRouting = (unit: UnitEntity): LogMessage => ({
+  text: `${unit.name} are routing away from battle.`,
+  ...focusUnit(unit),
+});
 
-export const unitFlees = (unit: UnitEntity) =>
-  `${unit.name} flee the field!`;
+export const unitFlees = (unit: UnitEntity): LogMessage => ({
+  text: `${unit.name} flee the field!`,
+  ...focusUnit(unit),
+});
 
-export const battleRoutResult = () => "No units remain; a rout!";
+export const battleRoutResult = (): LogMessage => ({
+  text: "No units remain; a rout!",
+});
 
-export const battleVictoryResult = (side: SideEntity) =>
-  `Only ${side.name} remains; victory!`;
+export const battleVictoryResult = (side: SideEntity): LogMessage => ({
+  text: `Only ${side.name} remains; victory!`,
+});
 
-export function moraleStatusMessage(result: MoraleStatusResult) {
+export function moraleStatusMessage(result: MoraleStatusResult): string {
   switch (result.type) {
     case "loser":
       return `${result.side.name} suffered the most casualties.`;

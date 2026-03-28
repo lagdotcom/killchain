@@ -28,32 +28,55 @@ body,
   overflow: hidden;
   background: var(--container-bg);
   display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 .sidebar {
-  width: 300px;
+  width: 260px;
   background: var(--panel-bg);
   padding: var(--padding);
   flex-shrink: 0;
+  align-self: flex-start;
   color: white;
 
   display: flex;
   flex-direction: column;
   row-gap: 10px;
 
-  .main {
-    flex: 1;
-  }
-
-  .messages {
-    height: 400px;
-    overflow-y: scroll;
-  }
-
   .tokens {
     display: flex;
     flex-direction: column;
     row-gap: 4px;
+  }
+}
+
+.message-log {
+  height: 150px;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  color: var(--text-color);
+  padding: var(--padding);
+  font-size: var(--font-size);
+  display: flex;
+  flex-direction: column-reverse;
+
+  .log-entry {
+    padding: 2px 0;
+
+    &.clickable {
+      cursor: pointer;
+      text-decoration: underline dotted;
+
+      &:hover {
+        color: #adf;
+      }
+    }
   }
 }
 
@@ -138,6 +161,21 @@ body,
 
   &.canSelect {
     cursor: pointer;
+  }
+}
+
+.selectableRing {
+  animation: selectable-pulse 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes selectable-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.85;
   }
 }
 

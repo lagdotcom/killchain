@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import shuffle from "knuth-shuffle-seeded";
 
-import type { SideId, UnitId } from "../flavours.js";
+import type { SideId, TerrainId, UnitId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import { without } from "../tools.js";
 import {
@@ -30,10 +30,15 @@ import {
   unitRouting,
 } from "./messages.js";
 
+export interface LogMessage {
+  text: string;
+  focus?: TerrainId;
+}
+
 export interface BattleState {
   activeUnitId: UnitId | undefined;
   canPass: boolean;
-  messages: string[];
+  messages: LogMessage[];
   phase: Phase;
   sideOrder: SideId[];
   sideIndex: number;
@@ -43,7 +48,7 @@ export interface BattleState {
 const initialState: BattleState = {
   activeUnitId: undefined,
   canPass: false,
-  messages: [],
+  messages: [] as LogMessage[],
   phase: Phase.Placement,
   sideOrder: [],
   sideIndex: NaN,

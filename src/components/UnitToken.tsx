@@ -47,6 +47,19 @@ function UnitToken({ cellSize, onClick, unit }: UnitTokenProps) {
         <circle cx={3} cy={3} r={radius} fill="#000" opacity="0.3" />
       )}
 
+      {!!onClick && activeUnitId !== unit.id && (
+        <circle
+          className="selectableRing"
+          cx={0}
+          cy={0}
+          r={radius + 5}
+          fill="none"
+          stroke="#fff"
+          strokeWidth="2"
+          strokeDasharray="5 3"
+        />
+      )}
+
       <circle
         cx={0}
         cy={0}

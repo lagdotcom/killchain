@@ -70,6 +70,7 @@ function canAttackTarget(
   phase: Phase,
 ) {
   if (!attacker) return false;
+  if (phase !== Phase.Missile && phase !== Phase.Melee) return false;
 
   const minRange = phase === Phase.Missile ? 2 : 1;
   const maxRange = attacker.missile ? 15 : 1;
@@ -91,7 +92,11 @@ function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
   );
 }
 
-function GameGrid() {
+interface GameGridProps {
+  onRegisterPan?: (fn: (x: Cells, y: Cells) => void) => void;
+}
+
+function GameGrid({ onRegisterPan }: GameGridProps) {
   const dispatch = useAppDispatch();
   const activeSide = useSelector(selectActiveSide);
   const activeUnit = useSelector(selectActiveUnit);
@@ -103,7 +108,7 @@ function GameGrid() {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
 
-  const { goto } = usePanZoom(svgRef, gRef);
+  const { goto, panToCell } = usePanZoom(svgRef, gRef);
 
   const placedUnits = useSelector(selectPlacedUnits);
 
@@ -170,11 +175,19 @@ function GameGrid() {
             return dispatch(attack(unit));
       }
 
-      dispatch(
-        setActiveUnitId(activeUnit?.id === unit.id ? undefined : unit.id),
-      );
+      // Only units that can act as initiators (move or attack) may become the
+      // active unit. Attack targets have onClick for cursor feedback but must
+      // not be selectable as initiators — doing so lets the player control
+      // enemy units.
+      if (canMove(unit, activeSide, phase) || canAttack(unit, activeSide, phase)) {
+        dispatch(
+          setActiveUnitId(activeUnit?.id === unit.id ? undefined : unit.id),
+        );
+      } else {
+        dispatch(setActiveUnitId(undefined));
+      }
     },
-    [activeUnit, dispatch, phase],
+    [activeSide, activeUnit, dispatch, phase],
   );
 
   const terrainCells = useMemo(
@@ -200,6 +213,7 @@ function GameGrid() {
       const offsetY = (rect.height - mapH) / 2;
       goto(offsetX, offsetY);
     }
+    onRegisterPan?.(panToCell);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
