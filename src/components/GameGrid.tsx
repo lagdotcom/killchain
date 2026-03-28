@@ -174,11 +174,19 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
             return dispatch(attack(unit));
       }
 
-      dispatch(
-        setActiveUnitId(activeUnit?.id === unit.id ? undefined : unit.id),
-      );
+      // Only units that can act as initiators (move or attack) may become the
+      // active unit. Attack targets have onClick for cursor feedback but must
+      // not be selectable as initiators — doing so lets the player control
+      // enemy units.
+      if (canMove(unit, activeSide, phase) || canAttack(unit, activeSide, phase)) {
+        dispatch(
+          setActiveUnitId(activeUnit?.id === unit.id ? undefined : unit.id),
+        );
+      } else {
+        dispatch(setActiveUnitId(undefined));
+      }
     },
-    [activeUnit, dispatch, phase],
+    [activeSide, activeUnit, dispatch, phase],
   );
 
   const terrainCells = useMemo(
