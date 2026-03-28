@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId, UnitId } from "../flavours.js";
+import type { Cells, SideId, TerrainId, UnitId } from "../flavours.js";
+import { xyId } from "../killchain/EuclideanEngine.js";
 import { heavyFoot } from "../killchain/units.js";
 import { Phase } from "../killchain/rules.js";
 import {
@@ -11,11 +12,12 @@ import {
 import type { SideEntity } from "./sides.js";
 import { sidesAdapter } from "./sides.js";
 import {
-  selectActiveSide,
   selectAllUnits,
   selectCanPassNow,
 } from "./selectors.js";
 import { makeStore } from "./store.js";
+import type { TerrainEntity } from "./terrain.js";
+import { terrainAdapter } from "./terrain.js";
 import type { UnitEntity } from "./units.js";
 import { unitsAdapter } from "./units.js";
 
@@ -56,10 +58,31 @@ function makeUnit(
   };
 }
 
-function makeStoreWith(units: UnitEntity[], sides: SideEntity[] = []) {
+function makeFlatTerrain(width: number, height: number): TerrainEntity[] {
+  const result: TerrainEntity[] = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      result.push({
+        id: xyId(x, y) as TerrainId,
+        x: x as Cells,
+        y: y as Cells,
+        type: "Open",
+        elevation: 0,
+      });
+    }
+  }
+  return result;
+}
+
+function makeStoreWith(
+  units: UnitEntity[],
+  sides: SideEntity[] = [],
+  terrain: TerrainEntity[] = [],
+) {
   return makeStore({
     units: unitsAdapter.setAll(unitsAdapter.getInitialState(), units),
     sides: sidesAdapter.setAll(sidesAdapter.getInitialState(), sides),
+    terrain: terrainAdapter.setAll(terrainAdapter.getInitialState(), terrain),
   });
 }
 
@@ -127,34 +150,41 @@ describe("initiativeAction", () => {
 // ---------------------------------------------------------------------------
 
 describe("executeRoutMovement", () => {
-  test("Rout unit moves away from nearest enemy along x-axis", () => {
-    // Rout unit at (5,5), enemy at (2,5): ax=3 → dx=+1, speed=6 → newX=11
+  test("Rout unit moves further from nearest enemy (terrain-aware)", () => {
+    // Rout unit at (5,5), enemy at (2,5): straight-line away is +x, stays on board.
+    // Pathfinding finds the best reachable cell within move=6 on a flat grid.
+    const terrain = makeFlatTerrain(20, 20);
     const rout = makeUnit({ side: 0, x: 5, y: 5, status: "Rout" });
     const enemy = makeUnit({ side: 1, x: 2, y: 5, status: "Normal" });
-    const store = makeStoreWith([rout, enemy]);
+    const store = makeStoreWith([rout, enemy], [], terrain);
 
     store.dispatch(executeRoutMovement());
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === rout.id,
     )!;
-    expect(updated.x).toBe(11);
-    expect(updated.y).toBe(5);
+    const distBefore = Math.abs(rout.x - enemy.x) + Math.abs(rout.y - enemy.y);
+    const distAfter =
+      Math.abs(updated.x - enemy.x) + Math.abs(updated.y - enemy.y);
+    expect(distAfter).toBeGreaterThan(distBefore);
   });
 
-  test("Rout unit moves away along y-axis when dy is larger", () => {
-    // Rout unit at (5,8), enemy at (5,2): ay=6 > ax=0 → dy=+1, speed=6 → newY=14
-    const rout = makeUnit({ side: 0, x: 5, y: 8, status: "Rout" });
+  test("Rout unit moves further from enemy along y-axis when dy dominates", () => {
+    // Rout unit at (5,5), enemy at (5,2): straight-line away is +y, stays on board.
+    const terrain = makeFlatTerrain(20, 20);
+    const rout = makeUnit({ side: 0, x: 5, y: 5, status: "Rout" });
     const enemy = makeUnit({ side: 1, x: 5, y: 2, status: "Normal" });
-    const store = makeStoreWith([rout, enemy]);
+    const store = makeStoreWith([rout, enemy], [], terrain);
 
     store.dispatch(executeRoutMovement());
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === rout.id,
     )!;
-    expect(updated.x).toBe(5);
-    expect(updated.y).toBe(14);
+    const distBefore = Math.abs(rout.x - enemy.x) + Math.abs(rout.y - enemy.y);
+    const distAfter =
+      Math.abs(updated.x - enemy.x) + Math.abs(updated.y - enemy.y);
+    expect(distAfter).toBeGreaterThan(distBefore);
   });
 
   test("Rout unit is removed when movement carries it off the board", () => {
