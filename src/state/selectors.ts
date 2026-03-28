@@ -1,5 +1,6 @@
 import { createSelector } from "@reduxjs/toolkit";
 
+import { Phase } from "../killchain/rules.js";
 import { isDefined } from "../tools.js";
 import { sidesAdapter } from "./sides.js";
 import type { AppState } from "./store.js";
@@ -49,6 +50,29 @@ export const selectActiveUnit = createSelector(
 export const selectCanPass = createSelector(
   [selectBattle],
   (battle) => battle.canPass,
+);
+
+export const selectCanPassNow = createSelector(
+  [selectBattle, selectActiveSide, selectAllUnits],
+  (battle, activeSide, units) => {
+    if (!battle.canPass) return false;
+    if (battle.phase !== Phase.Move || !activeSide) return true;
+
+    // Block passing while any Shaken unit of the active side is still in melee
+    return !units.some(
+      (unit) =>
+        unit.side === activeSide.id &&
+        unit.status === "Shaken" &&
+        !isNaN(unit.x) &&
+        units.some(
+          (e) =>
+            e.side !== unit.side &&
+            e.status !== "Rout" &&
+            !isNaN(e.x) &&
+            Math.abs(e.x - unit.x) + Math.abs(e.y - unit.y) === 1,
+        ),
+    );
+  },
 );
 
 export const selectLogMessages = createSelector(
