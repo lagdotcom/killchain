@@ -10,6 +10,7 @@ import {
   moraleAction,
   moveAction,
   placeUnitAction,
+  routMoveAction,
   setupBattleAction,
 } from "./actions.js";
 import { eachEntity } from "./tools.js";
@@ -87,11 +88,21 @@ const unitsSlice = createSlice({
           })),
         );
       })
+      .addCase(routMoveAction, (state, { payload: { unit, x, y, fled } }) => {
+        if (fled) {
+          unitsAdapter.removeOne(state, unit.id);
+        } else {
+          unitsAdapter.updateOne(state, {
+            id: unit.id,
+            changes: { x, y, moved: unit.type.move },
+          });
+        }
+      })
       .addCase(initiativeAction, (state, { payload: { results } }) => {
         const sideIds = new Set(results.map(({ side }) => side.id));
 
         for (const unit of eachEntity(state)) {
-          if (sideIds.has(unit.side)) unit.ready = true;
+          if (sideIds.has(unit.side) && unit.status === "Normal") unit.ready = true;
         }
       }),
 });

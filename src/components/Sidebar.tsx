@@ -4,7 +4,7 @@ import { Phase } from "../killchain/rules.js";
 import { pass } from "../state/actions.js";
 import {
   selectActiveSide,
-  selectCanPass,
+  selectCanPassNow,
   selectLogMessages,
   selectPhase,
   selectTurn,
@@ -17,7 +17,7 @@ import { SurprisePhase } from "./SurprisePhase.js";
 
 export function Sidebar() {
   const dispatch = useAppDispatch();
-  const canPass = useSelector(selectCanPass);
+  const canPass = useSelector(selectCanPassNow);
   const side = useSelector(selectActiveSide);
   const log = useSelector(selectLogMessages);
   const phase = useSelector(selectPhase);

@@ -14,8 +14,9 @@ import {
   phaseChanges,
 } from "../killchain/rules.js";
 import type { MoraleStatus } from "../killchain/types.js";
-import { KillChainEngine } from "../KillChainEngine.js";
-import { rollDice } from "../tools.js";
+import { mapHeight, mapWidth } from "../ui.js";
+import { canFleeBoard, findBestMove } from "../movement.js";
+import { manhattanDistance, rollDice } from "../tools.js";
 import { allowPass, type BattleState, nextSide } from "./battle.js";
 import {
   selectActiveUnit,
@@ -78,10 +79,17 @@ export const initiativeAction = createAction<{
 }>("battle/initiative");
 
 export const moraleAction = createAction<{
-  side: SideEntity;
+  side: SideEntity | undefined;
   results: MoraleRollResult[];
   outcome: BattleOutcome | undefined;
 }>("battle/morale");
+
+export const routMoveAction = createAction<{
+  unit: UnitEntity;
+  x: Cells;
+  y: Cells;
+  fled: boolean;
+}>("battle/routMove");
 
 export const moveAction = createAction<{
   unit: UnitEntity;
@@ -164,6 +172,8 @@ export const pass: Thunk = () => (dispatch, getState) => {
 
     dispatch(changePhaseAction({ oldPhase, phase, turn, sideOrder }));
 
+    if (phase === Phase.Move) dispatch(executeRoutMovement());
+
     if (phase === Phase.Morale && !getMoraleStatus(sides).side)
       dispatch(allowPass());
   } else dispatch(nextSide());
@@ -225,7 +235,62 @@ export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
   );
 };
 
-export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
+export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
+  const state = getState();
+  const units = selectAllUnits(state);
+  const unitEntities = selectUnitEntities(state);
+  const terrainEntities = selectTerrainEntities(state);
+
+  const routUnits = units.filter((u) => u.status === "Rout" && !isNaN(u.x));
+  if (routUnits.length === 0) return;
+
+  // Routing units don't block each other — exclude them from pathfinding so
+  // they can scatter past one another in the chaos of rout.
+  const nonRoutEntities = Object.fromEntries(
+    Object.entries(unitEntities).filter(([, u]) => u.status !== "Rout"),
+  ) as typeof unitEntities;
+
+  for (const unit of routUnits) {
+    // A unit flees the field if it can reach a map edge cell with movement
+    // remaining — i.e. it would step off the board.
+    if (canFleeBoard(unit, nonRoutEntities, terrainEntities, mapWidth, mapHeight)) {
+      dispatch(routMoveAction({ unit, x: unit.x, y: unit.y, fled: true }));
+      continue;
+    }
+
+    const enemies = units.filter(
+      (u) => u.side !== unit.side && u.status !== "Rout" && !isNaN(u.x),
+    );
+
+    const nearestEnemy =
+      enemies.length > 0
+        ? enemies.reduce((a, b) =>
+            manhattanDistance(unit, a) <= manhattanDistance(unit, b) ? a : b,
+          )
+        : null;
+
+    // Terrain-aware pathfinding selects the actual destination on the board.
+    // Score: maximise distance from the nearest enemy, or minimise distance
+    // to the nearest board edge when no enemies remain.
+    const score = nearestEnemy
+      ? (node: { x: number; y: number }) =>
+          manhattanDistance(node, nearestEnemy)
+      : (node: { x: number; y: number }) =>
+          -(Math.min(
+            node.x,
+            mapWidth - 1 - node.x,
+            node.y,
+            mapHeight - 1 - node.y,
+          ));
+
+    const best = findBestMove(unit, nonRoutEntities, terrainEntities, score);
+    if (!best) continue;
+
+    dispatch(routMoveAction({ unit, x: best.x, y: best.y, fled: false }));
+  }
+};
+
+export const rollMorale: Thunk = (side: SideEntity | undefined) => (dispatch, getState) => {
   const state = getState();
   const sides = selectAllSides(state);
   const units = selectAllUnits(state);
@@ -236,7 +301,7 @@ export const rollMorale: Thunk = (side: SideEntity) => (dispatch, getState) => {
   for (const unit of units) {
     if (unit.status === "Rout") continue;
 
-    const needsRoll = unit.side === side.id || unit.status === "Shaken";
+    const needsRoll = (side !== undefined && unit.side === side.id) || unit.status === "Shaken";
     if (!needsRoll) {
       remaining.set(unit.side, (remaining.get(unit.side) ?? 0) + 1);
       continue;
