@@ -15,8 +15,7 @@ import {
 } from "../killchain/rules.js";
 import type { MoraleStatus } from "../killchain/types.js";
 import { mapHeight, mapWidth } from "../ui.js";
-import { KillChainEngine } from "../KillChainEngine.js";
-import { findBestMove } from "../movement.js";
+import { canFleeBoard, findBestMove } from "../movement.js";
 import { manhattanDistance, rollDice } from "../tools.js";
 import { allowPass, type BattleState, nextSide } from "./battle.js";
 import {
@@ -245,55 +244,30 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
   const routUnits = units.filter((u) => u.status === "Rout" && !isNaN(u.x));
   if (routUnits.length === 0) return;
 
+  // Routing units don't block each other — exclude them from pathfinding so
+  // they can scatter past one another in the chaos of rout.
+  const nonRoutEntities = Object.fromEntries(
+    Object.entries(unitEntities).filter(([, u]) => u.status !== "Rout"),
+  ) as typeof unitEntities;
+
   for (const unit of routUnits) {
+    // A unit flees the field if it can reach a map edge cell with movement
+    // remaining — i.e. it would step off the board.
+    if (canFleeBoard(unit, nonRoutEntities, terrainEntities, mapWidth, mapHeight)) {
+      dispatch(routMoveAction({ unit, x: unit.x, y: unit.y, fled: true }));
+      continue;
+    }
+
     const enemies = units.filter(
       (u) => u.side !== unit.side && u.status !== "Rout" && !isNaN(u.x),
     );
 
-    // Nearest living enemy (used for both direction and scoring)
     const nearestEnemy =
       enemies.length > 0
         ? enemies.reduce((a, b) =>
             manhattanDistance(unit, a) <= manhattanDistance(unit, b) ? a : b,
           )
         : null;
-
-    // Compute the straight-line "away" direction to detect off-board flight
-    let dx = 0;
-    let dy = 0;
-
-    if (nearestEnemy) {
-      const ax = unit.x - nearestEnemy.x;
-      const ay = unit.y - nearestEnemy.y;
-      if (Math.abs(ax) >= Math.abs(ay)) {
-        dx = ax >= 0 ? 1 : -1;
-      } else {
-        dy = ay >= 0 ? 1 : -1;
-      }
-    } else {
-      // No living enemies — move toward the nearest board edge
-      const toLeft = unit.x;
-      const toRight = mapWidth - 1 - unit.x;
-      const toTop = unit.y;
-      const toBottom = mapHeight - 1 - unit.y;
-      const minDist = Math.min(toLeft, toRight, toTop, toBottom);
-      if (minDist === toLeft) dx = -1;
-      else if (minDist === toRight) dx = 1;
-      else if (minDist === toTop) dy = -1;
-      else dy = 1;
-    }
-
-    // A straight-line projection determines whether the unit would exit the
-    // board (terrain doesn't save a fully routing unit from fleeing the field)
-    const projX = unit.x + dx * unit.type.move;
-    const projY = unit.y + dy * unit.type.move;
-    const fled =
-      projX < 0 || projX >= mapWidth || projY < 0 || projY >= mapHeight;
-
-    if (fled) {
-      dispatch(routMoveAction({ unit, x: unit.x, y: unit.y, fled: true }));
-      continue;
-    }
 
     // Terrain-aware pathfinding selects the actual destination on the board.
     // Score: maximise distance from the nearest enemy, or minimise distance
@@ -309,7 +283,7 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
             mapHeight - 1 - node.y,
           ));
 
-    const best = findBestMove(unit, unitEntities, terrainEntities, score);
+    const best = findBestMove(unit, nonRoutEntities, terrainEntities, score);
     if (!best) continue;
 
     dispatch(routMoveAction({ unit, x: best.x, y: best.y, fled: false }));

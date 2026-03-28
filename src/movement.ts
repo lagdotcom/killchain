@@ -16,6 +16,48 @@ const invalidTerrainForMounted = new Set<TerrainType>(["Marsh"]);
 const noInvalidTerrain = new Set<TerrainType>();
 
 /**
+ * Returns true if the unit can reach a map edge cell with at least 1 movement
+ * point remaining, meaning it can step off the board.
+ *
+ * Pass a unitEntities map that already excludes any units that should not
+ * block the path (e.g. other routing units).
+ */
+export function canFleeBoard(
+  unit: UnitEntity,
+  unitEntities: Record<UnitId, UnitEntity>,
+  terrainEntities: Record<TerrainId, TerrainEntity>,
+  mapWidth: number,
+  mapHeight: number,
+): boolean {
+  const engine = new KillChainEngine(terrainEntities, unitEntities);
+  const invalidTerrain = unit.type.mounted
+    ? invalidTerrainForMounted
+    : noInvalidTerrain;
+  const budget = unit.type.move - unit.moved;
+
+  const reachable = searchByTerrain(
+    engine,
+    invalidTerrain,
+    squareAdjacency,
+    xyId(unit.x, unit.y) as TerrainId,
+    Object.values(terrainEntities),
+    budget,
+  );
+
+  for (const node of reachable.values()) {
+    if (
+      node.x === 0 ||
+      node.x === mapWidth - 1 ||
+      node.y === 0 ||
+      node.y === mapHeight - 1
+    ) {
+      if (node.cost < budget) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Find the reachable cell that maximises score(cell) for the given unit,
  * respecting terrain movement costs and unit occupancy.
  * The unit's starting cell (cost 0) is excluded; returns undefined if the

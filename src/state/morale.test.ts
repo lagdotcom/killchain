@@ -151,11 +151,11 @@ describe("initiativeAction", () => {
 
 describe("executeRoutMovement", () => {
   test("Rout unit moves further from nearest enemy (terrain-aware)", () => {
-    // Rout unit at (5,5), enemy at (2,5): straight-line away is +x, stays on board.
+    // Rout unit at (10,10), far from all edges (nearest edge is 9 away, move=6).
     // Pathfinding finds the best reachable cell within move=6 on a flat grid.
     const terrain = makeFlatTerrain(20, 20);
-    const rout = makeUnit({ side: 0, x: 5, y: 5, status: "Rout" });
-    const enemy = makeUnit({ side: 1, x: 2, y: 5, status: "Normal" });
+    const rout = makeUnit({ side: 0, x: 10, y: 10, status: "Rout" });
+    const enemy = makeUnit({ side: 1, x: 7, y: 10, status: "Normal" });
     const store = makeStoreWith([rout, enemy], [], terrain);
 
     store.dispatch(executeRoutMovement());
@@ -170,10 +170,10 @@ describe("executeRoutMovement", () => {
   });
 
   test("Rout unit moves further from enemy along y-axis when dy dominates", () => {
-    // Rout unit at (5,5), enemy at (5,2): straight-line away is +y, stays on board.
+    // Rout unit at (10,10), far from all edges (nearest edge is 9 away, move=6).
     const terrain = makeFlatTerrain(20, 20);
-    const rout = makeUnit({ side: 0, x: 5, y: 5, status: "Rout" });
-    const enemy = makeUnit({ side: 1, x: 5, y: 2, status: "Normal" });
+    const rout = makeUnit({ side: 0, x: 10, y: 10, status: "Rout" });
+    const enemy = makeUnit({ side: 1, x: 10, y: 7, status: "Normal" });
     const store = makeStoreWith([rout, enemy], [], terrain);
 
     store.dispatch(executeRoutMovement());
@@ -188,10 +188,11 @@ describe("executeRoutMovement", () => {
   });
 
   test("Rout unit is removed when movement carries it off the board", () => {
-    // Rout unit at (17,5), enemy at (10,5): dx=+1, speed=6 → newX=23 ≥ 20 → fled
+    // Rout unit at (17,5), enemy at (10,5): edge x=19 is 2 steps away (< move=6) → fled
+    const terrain = makeFlatTerrain(20, 20);
     const rout = makeUnit({ side: 0, x: 17, y: 5, status: "Rout" });
     const enemy = makeUnit({ side: 1, x: 10, y: 5, status: "Normal" });
-    const store = makeStoreWith([rout, enemy]);
+    const store = makeStoreWith([rout, enemy], [], terrain);
 
     store.dispatch(executeRoutMovement());
 
@@ -214,10 +215,10 @@ describe("executeRoutMovement", () => {
   });
 
   test("Rout unit with no enemies moves toward nearest board edge", () => {
-    // Rout unit at (1,5): toLeft=1, toRight=18, toTop=5, toBottom=14 → nearest edge is left (dx=-1)
-    // speed=6 → newX = 1 + (-1)*6 = -5 < 0 → fled, unit removed
+    // Rout unit at (1,5): edge x=0 is 1 step away (< move=6) → fled, unit removed
+    const terrain = makeFlatTerrain(20, 20);
     const rout = makeUnit({ side: 0, x: 1, y: 5, status: "Rout" });
-    const store = makeStoreWith([rout]);
+    const store = makeStoreWith([rout], [], terrain);
 
     store.dispatch(executeRoutMovement());
 
@@ -227,12 +228,12 @@ describe("executeRoutMovement", () => {
 
   test("enemy Rout units are not counted as enemies when calculating direction", () => {
     // Rout unit (side 0) at (5,5). Only other unit is a Rout unit on side 1.
-    // No living enemies → moves toward nearest edge.
-    // toLeft=5, toRight=14, toTop=5, toBottom=14 → tie, toLeft wins → dx=-1
-    // newX = 5 + (-1)*6 = -1 < 0 → fled
+    // No living enemies; rout1 does not block (rout units excluded from pathfinding).
+    // Edge x=0 is 5 steps away (< move=6) → fled, unit removed
+    const terrain = makeFlatTerrain(20, 20);
     const rout0 = makeUnit({ side: 0, x: 5, y: 5, status: "Rout" });
     const rout1 = makeUnit({ side: 1, x: 2, y: 5, status: "Rout" });
-    const store = makeStoreWith([rout0, rout1]);
+    const store = makeStoreWith([rout0, rout1], [], terrain);
 
     store.dispatch(executeRoutMovement());
 
