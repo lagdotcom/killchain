@@ -137,7 +137,8 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
       return (
         canMove(unit, activeSide, phase) ||
         canAttack(unit, activeSide, phase) ||
-        canAttackTarget(activeUnit, unit, phase)
+        ((phase === Phase.Missile || phase === Phase.Melee) &&
+          canAttackTarget(activeUnit, unit, phase))
       );
     },
     [activeSide, activeUnit, phase],
