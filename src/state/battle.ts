@@ -48,7 +48,7 @@ export interface BattleState {
 const initialState: BattleState = {
   activeUnitId: undefined,
   canPass: false,
-  messages: [] as LogMessage[],
+  messages: [],
   phase: Phase.Placement,
   sideOrder: [],
   sideIndex: NaN,

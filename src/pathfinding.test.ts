@@ -12,18 +12,18 @@ import {
 import type { TerrainEntity } from "./state/terrain.js";
 
 function makeGrid(
-  width: number,
-  height: number,
+  width: Cells,
+  height: Cells,
   overrides: Record<string, Partial<TerrainEntity>> = {},
 ): TerrainEntity[] {
   const terrain: TerrainEntity[] = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const id = xyId(x, y) as TerrainId;
+      const id = xyId(x, y);
       terrain.push({
         id,
-        x: x as Cells,
-        y: y as Cells,
+        x,
+        y,
         type: "Open",
         elevation: 0,
         ...overrides[id],
@@ -42,11 +42,7 @@ function nodeCosts(result: Map<string, PathNode>) {
 describe("searchAbsolute", () => {
   test("returns start node at cost 0", () => {
     const terrain = makeGrid(3, 3);
-    const result = searchAbsolute(
-      squareAdjacency,
-      xyId(1, 1) as TerrainId,
-      terrain,
-    );
+    const result = searchAbsolute(squareAdjacency, xyId(1, 1), terrain);
     const costs = nodeCosts(result);
 
     expect(costs["1,1"]).toBe(0);
@@ -54,11 +50,7 @@ describe("searchAbsolute", () => {
 
   test("adjacent cells cost 1", () => {
     const terrain = makeGrid(3, 3);
-    const result = searchAbsolute(
-      squareAdjacency,
-      xyId(1, 1) as TerrainId,
-      terrain,
-    );
+    const result = searchAbsolute(squareAdjacency, xyId(1, 1), terrain);
     const costs = nodeCosts(result);
 
     expect(costs["1,0"]).toBe(1);
@@ -69,11 +61,7 @@ describe("searchAbsolute", () => {
 
   test("diagonal cells cost 2 (manhattan)", () => {
     const terrain = makeGrid(3, 3);
-    const result = searchAbsolute(
-      squareAdjacency,
-      xyId(1, 1) as TerrainId,
-      terrain,
-    );
+    const result = searchAbsolute(squareAdjacency, xyId(1, 1), terrain);
     const costs = nodeCosts(result);
 
     expect(costs["0,0"]).toBe(2);
@@ -82,12 +70,7 @@ describe("searchAbsolute", () => {
 
   test("respects maxCost limit", () => {
     const terrain = makeGrid(5, 1);
-    const result = searchAbsolute(
-      squareAdjacency,
-      xyId(0, 0) as TerrainId,
-      terrain,
-      2,
-    );
+    const result = searchAbsolute(squareAdjacency, xyId(0, 0), terrain, 2);
     const costs = nodeCosts(result);
 
     expect(costs["0,0"]).toBe(0);
@@ -99,11 +82,7 @@ describe("searchAbsolute", () => {
 
   test("explores all reachable cells in a grid", () => {
     const terrain = makeGrid(3, 3);
-    const result = searchAbsolute(
-      squareAdjacency,
-      xyId(0, 0) as TerrainId,
-      terrain,
-    );
+    const result = searchAbsolute(squareAdjacency, xyId(0, 0), terrain);
 
     expect(result.size).toBe(9);
   });
@@ -119,10 +98,10 @@ describe("searchByTerrain", () => {
 
     return {
       getDistance: () => 0,
-      getPosition: () => "" as TerrainId,
+      getPosition: () => "",
       getTerrainAt: (p: TerrainId) =>
-        terrainMap[p] ?? { type: "Open" as const, elevation: 0 },
-      getTerrain: () => ({ type: "Open" as const, elevation: 0 }),
+        terrainMap[p] ?? { type: "Open", elevation: 0 },
+      getTerrain: () => ({ type: "Open", elevation: 0 }),
       getUnitAt: (p: TerrainId): Unit | undefined =>
         occupiedPositions.includes(p)
           ? ({ name: "blocker" } as Unit)
@@ -139,7 +118,7 @@ describe("searchByTerrain", () => {
       g,
       new Set(),
       squareAdjacency,
-      xyId(0, 0) as TerrainId,
+      xyId(0, 0),
       terrain,
     );
     const costs = nodeCosts(result);
@@ -158,7 +137,7 @@ describe("searchByTerrain", () => {
       g,
       new Set(),
       squareAdjacency,
-      xyId(0, 0) as TerrainId,
+      xyId(0, 0),
       terrain,
     );
     const costs = nodeCosts(result);
@@ -168,13 +147,13 @@ describe("searchByTerrain", () => {
 
   test("occupied cells are unreachable", () => {
     const terrain = makeGrid(3, 1);
-    const occupied = [xyId(1, 0) as TerrainId];
+    const occupied = [xyId(1, 0)];
     const g = makeEngine(terrain, occupied);
     const result = searchByTerrain(
       g,
       new Set(),
       squareAdjacency,
-      xyId(0, 0) as TerrainId,
+      xyId(0, 0),
       terrain,
       10,
     );
@@ -194,7 +173,7 @@ describe("searchByTerrain", () => {
       g,
       new Set(["Marsh"]),
       squareAdjacency,
-      xyId(0, 0) as TerrainId,
+      xyId(0, 0),
       terrain,
       10,
     );
@@ -214,7 +193,7 @@ describe("searchByTerrain", () => {
       g,
       new Set(),
       squareAdjacency,
-      xyId(0, 0) as TerrainId,
+      xyId(0, 0),
       terrain,
       3,
     );
@@ -244,7 +223,7 @@ describe("searchByTerrain", () => {
       g,
       new Set(),
       squareAdjacency,
-      xyId(0, 0) as TerrainId,
+      xyId(0, 0),
       terrain,
     );
     const costs = nodeCosts(result);

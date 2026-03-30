@@ -1,6 +1,6 @@
 import type { Tint } from "./components/GridOverlay.js";
 import type { TerrainId, UnitId } from "./flavours.js";
-import { xyId } from "./killchain/EuclideanEngine.js";
+import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import type { TerrainType } from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
@@ -73,12 +73,12 @@ export function getTints(
             (e) => currentDistances.get(e.id) === 1,
           );
 
-          const satisfiesBoth = (node: { x: number; y: number }) =>
+          const satisfiesBoth = (node: XY) =>
             enemies.every(
               (e) => manhattanDistance(node, e) >= currentDistances.get(e.id)!,
             ) && adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
 
-          const satisfiesExitMelee = (node: { x: number; y: number }) =>
+          const satisfiesExitMelee = (node: XY) =>
             adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
 
           const filtered = reachable.filter(satisfiesBoth);
@@ -94,7 +94,7 @@ export function getTints(
             x: node.x,
             y: node.y,
             cost: node.cost,
-            reason: "reachable" as const,
+            reason: "reachable",
           }));
         }
       }

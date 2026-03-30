@@ -5,7 +5,8 @@ import {
   type ThunkAction,
 } from "@reduxjs/toolkit";
 
-import type { Cells, SideId } from "../flavours.js";
+import type { Cells, SideId, UnitId } from "../flavours.js";
+import type { XY } from "../killchain/EuclideanEngine.js";
 import {
   applyAttackModifiers,
   type AttackModifiers,
@@ -249,7 +250,7 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
   // they can scatter past one another in the chaos of rout.
   const nonRoutEntities = Object.fromEntries(
     Object.entries(unitEntities).filter(([, u]) => u.status !== "Rout"),
-  ) as typeof unitEntities;
+  ) as Record<UnitId, UnitEntity>;
 
   for (const unit of routUnits) {
     // A unit flees the field if it can reach a map edge cell with movement
@@ -276,9 +277,8 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
     // Score: maximise distance from the nearest enemy, or minimise distance
     // to the nearest board edge when no enemies remain.
     const score = nearestEnemy
-      ? (node: { x: number; y: number }) =>
-          manhattanDistance(node, nearestEnemy)
-      : (node: { x: number; y: number }) =>
+      ? (node: XY) => manhattanDistance(node, nearestEnemy)
+      : (node: XY) =>
           -Math.min(
             node.x,
             mapWidth - 1 - node.x,

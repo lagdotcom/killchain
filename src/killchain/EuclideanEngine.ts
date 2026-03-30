@@ -1,10 +1,11 @@
 import type { MarkOptional } from "ts-essentials";
 
+import type { Cells } from "../flavours.js";
 import { manhattanDistance } from "../tools.js";
 import type { KillChain, Terrain, TerrainType, Unit } from "./types.js";
 
-export type XY = { x: number; y: number };
-export const xyId = (x: number, y: number) => `${x},${y}`;
+export type XY<T extends number = Cells> = { x: T; y: T };
+export const xyId = (x: Cells, y: Cells) => `${x},${y}`;
 
 export class EuclideanEngine implements KillChain<XY> {
   private positionCache: Map<string, XY>;
@@ -24,8 +25,8 @@ export class EuclideanEngine implements KillChain<XY> {
       Unit,
       "name" | "damage" | "moved" | "status" | "ready" | "flankCount"
     >,
-    x: number,
-    y: number,
+    x: Cells,
+    y: Cells,
   ) {
     const u: Unit = {
       name: "unit",
@@ -42,7 +43,7 @@ export class EuclideanEngine implements KillChain<XY> {
     return u;
   }
 
-  at(x: number, y: number): XY {
+  at(x: Cells, y: Cells): XY {
     const s = xyId(x, y);
     const p = this.positionCache.get(s);
     if (!p) {
@@ -71,7 +72,7 @@ export class EuclideanEngine implements KillChain<XY> {
     return this.terrain.get(p) ?? { type: "Open", elevation: 0 };
   }
 
-  setTerrain(x: number, y: number, type: TerrainType, elevation = 0) {
+  setTerrain(x: Cells, y: Cells, type: TerrainType, elevation = 0) {
     this.terrain.set(this.at(x, y), { type, elevation });
   }
 

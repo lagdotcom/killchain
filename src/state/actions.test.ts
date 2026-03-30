@@ -1,15 +1,15 @@
 import { describe, expect, test } from "vitest";
 
-import type { SideId, UnitId } from "../flavours.js";
+import type { SideId } from "../flavours.js";
 import { getMoraleStatus } from "./actions.js";
 import type { SideEntity } from "./sides.js";
 
-function makeSide(id: number, casualties: number): SideEntity {
+function makeSide(id: SideId, casualties: number): SideEntity {
   return {
-    id: id as SideId,
+    id,
     colour: "red",
     name: `Side ${id}`,
-    unplacedIds: [] as UnitId[],
+    unplacedIds: [],
     surprised: false,
     casualties,
     initiative: 0,
@@ -23,7 +23,7 @@ describe("getMoraleStatus", () => {
 
     expect(result.type).toBe("loser");
     expect(result.side).toBeDefined();
-    expect(result.side!.id).toBe(1 as SideId);
+    expect(result.side!.id).toBe(1);
   });
 
   test("returns tied when casualties are equal", () => {
@@ -47,7 +47,7 @@ describe("getMoraleStatus", () => {
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("loser");
-    expect(result.side!.id).toBe(1 as SideId);
+    expect(result.side!.id).toBe(1);
   });
 
   test("returns tied when multiple sides tie for most", () => {
@@ -63,6 +63,6 @@ describe("getMoraleStatus", () => {
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("loser");
-    expect(result.side!.id).toBe(0 as SideId);
+    expect(result.side!.id).toBe(0);
   });
 });

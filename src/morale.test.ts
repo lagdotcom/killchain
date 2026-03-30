@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId, TerrainId, UnitId } from "./flavours.js";
+import type { Cells, SideId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import { heavyFoot } from "./killchain/units.js";
@@ -18,9 +18,9 @@ import { terrainAdapter } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 import { unitsAdapter } from "./state/units.js";
 
-function makeSide(id: number): SideEntity {
+function makeSide(id: SideId): SideEntity {
   return {
-    id: id as SideId,
+    id,
     colour: "#fff",
     name: `Side ${id}`,
     unplacedIds: [],
@@ -32,10 +32,10 @@ function makeSide(id: number): SideEntity {
 
 let _uid = 0;
 function makeUnit(
-  partial: Partial<UnitEntity> & { side: number; x: number; y: number },
+  partial: Partial<UnitEntity> & { side: SideId; x: Cells; y: Cells },
 ): UnitEntity {
   return {
-    id: `u${_uid++}` as UnitId,
+    id: `u${_uid++}`,
     name: "Unit",
     type: heavyFoot, // move=6
     missile: false,
@@ -45,20 +45,17 @@ function makeUnit(
     status: "Normal",
     ready: false,
     ...partial,
-    side: partial.side as SideId,
-    x: partial.x as Cells,
-    y: partial.y as Cells,
   };
 }
 
-function makeFlatTerrain(width: number, height: number): TerrainEntity[] {
+function makeFlatTerrain(width: Cells, height: Cells): TerrainEntity[] {
   const result: TerrainEntity[] = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       result.push({
-        id: xyId(x, y) as TerrainId,
-        x: x as Cells,
-        y: y as Cells,
+        id: xyId(x, y),
+        x,
+        y,
         type: "Open",
         elevation: 0,
       });
@@ -293,7 +290,7 @@ describe("rollMorale with no losing side", () => {
 describe("selectCanPassNow", () => {
   function makeMovePhaseStore(
     units: UnitEntity[],
-    activeSideId: number = 0,
+    activeSideId: SideId = 0,
     canPass: boolean = true,
   ) {
     const sideEntities = [makeSide(0), makeSide(1)];
@@ -305,7 +302,7 @@ describe("selectCanPassNow", () => {
         canPass,
         messages: [],
         phase: Phase.Move,
-        sideOrder: [activeSideId as SideId],
+        sideOrder: [activeSideId],
         sideIndex: 0,
         turn: 1,
       },
@@ -369,7 +366,7 @@ describe("selectCanPassNow", () => {
         canPass: true,
         messages: [],
         phase: Phase.Melee, // not Move
-        sideOrder: [0 as SideId],
+        sideOrder: [0],
         sideIndex: 0,
         turn: 1,
       },

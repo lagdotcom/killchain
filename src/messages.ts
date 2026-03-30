@@ -1,4 +1,3 @@
-import type { TerrainId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import { type AttackModifiers, longRangePenalty } from "./killchain/rules.js";
 import type { MoraleStatus } from "./killchain/types.js";
@@ -8,7 +7,7 @@ import type { SideEntity } from "./state/sides.js";
 import type { UnitEntity } from "./state/units.js";
 
 function focusUnit(unit: UnitEntity): Pick<LogMessage, "focus"> {
-  return isNaN(unit.x) ? {} : { focus: xyId(unit.x, unit.y) as TerrainId };
+  return isNaN(unit.x) ? {} : { focus: xyId(unit.x, unit.y) };
 }
 
 export const sidePlacedAllUnits = (side: SideEntity): LogMessage => ({

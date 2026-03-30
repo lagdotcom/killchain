@@ -1,13 +1,11 @@
 import type { Cells, TerrainId } from "./flavours.js";
-import { xyId } from "./killchain/EuclideanEngine.js";
+import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import { getMovementCost } from "./killchain/rules.js";
 import type { KillChain, TerrainType } from "./killchain/types.js";
 import type { TerrainEntity } from "./state/terrain.js";
 
-export interface PathNode {
+export interface PathNode extends XY {
   id: string;
-  x: Cells;
-  y: Cells;
   cost: number;
   parent: string | undefined;
 }
@@ -106,7 +104,7 @@ export function shortestPath(
   return finalized;
 }
 
-export type Adjacency = (x: number, y: number) => { x: number; y: number }[];
+export type Adjacency = (x: Cells, y: Cells) => XY[];
 
 export const squareAdjacency: Adjacency = (x, y) => [
   { x: x + 1, y },
@@ -187,8 +185,8 @@ function runSearch(
     (id) =>
       nodes[id] ?? {
         id,
-        x: 0 as Cells,
-        y: 0 as Cells,
+        x: 0,
+        y: 0,
         cost: Infinity,
         parent: undefined,
       },

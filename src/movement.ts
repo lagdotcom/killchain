@@ -1,14 +1,12 @@
 import type { Cells, TerrainId, UnitId } from "./flavours.js";
-import { xyId } from "./killchain/EuclideanEngine.js";
+import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import type { TerrainType } from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
 import { searchByTerrain, squareAdjacency } from "./pathfinding.js";
 import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 
-export interface MoveCandidate {
-  x: Cells;
-  y: Cells;
+export interface MoveCandidate extends XY {
   cost: number;
 }
 
@@ -26,8 +24,8 @@ export function canFleeBoard(
   unit: UnitEntity,
   unitEntities: Record<UnitId, UnitEntity>,
   terrainEntities: Record<TerrainId, TerrainEntity>,
-  mapWidth: number,
-  mapHeight: number,
+  mapWidth: Cells,
+  mapHeight: Cells,
 ): boolean {
   const engine = new KillChainEngine(terrainEntities, unitEntities);
   const invalidTerrain = unit.type.mounted
@@ -39,7 +37,7 @@ export function canFleeBoard(
     engine,
     invalidTerrain,
     squareAdjacency,
-    xyId(unit.x, unit.y) as TerrainId,
+    xyId(unit.x, unit.y),
     Object.values(terrainEntities),
     budget,
   );
@@ -72,7 +70,7 @@ export function findBestMove(
   unit: UnitEntity,
   unitEntities: Record<UnitId, UnitEntity>,
   terrainEntities: Record<TerrainId, TerrainEntity>,
-  score: (candidate: { x: number; y: number }) => number,
+  score: (candidate: XY) => number,
 ): MoveCandidate | undefined {
   const engine = new KillChainEngine(terrainEntities, unitEntities);
   const invalidTerrain = unit.type.mounted
@@ -83,7 +81,7 @@ export function findBestMove(
     engine,
     invalidTerrain,
     squareAdjacency,
-    xyId(unit.x, unit.y) as TerrainId,
+    xyId(unit.x, unit.y),
     Object.values(terrainEntities),
     unit.type.move - unit.moved,
   );

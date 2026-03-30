@@ -134,10 +134,7 @@ export function usePanZoom(
       const rect = svg.getBoundingClientRect();
       const px = x * cellSize + cellSize / 2;
       const py = y * cellSize + cellSize / 2;
-      ctrl.goto(
-        (rect.width / 2 - px * ctrl.zr) as Pixels,
-        (rect.height / 2 - py * ctrl.zr) as Pixels,
-      );
+      ctrl.goto(rect.width / 2 - px * ctrl.zr, rect.height / 2 - py * ctrl.zr);
     },
   };
 }

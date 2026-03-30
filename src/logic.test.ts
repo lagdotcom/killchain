@@ -9,31 +9,31 @@ import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 
 function makeGrid(
-  width: number,
-  height: number,
+  width: Cells,
+  height: Cells,
 ): Record<TerrainId, TerrainEntity> {
-  const result: Record<string, TerrainEntity> = {};
+  const result: Record<TerrainId, TerrainEntity> = {};
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const id = xyId(x, y) as TerrainId;
+      const id = xyId(x, y);
       result[id] = {
         id,
-        x: x as Cells,
-        y: y as Cells,
+        x,
+        y,
         type: "Open",
         elevation: 0,
       };
     }
   }
-  return result as Record<TerrainId, TerrainEntity>;
+  return result;
 }
 
 let _uid = 0;
 function makeUnit(
-  partial: Partial<UnitEntity> & { side: number; x: number; y: number },
+  partial: Partial<UnitEntity> & { side: SideId; x: Cells; y: Cells },
 ): UnitEntity {
   return {
-    id: `u${_uid++}` as UnitId,
+    id: `u${_uid++}`,
     name: "Unit",
     type: heavyFoot, // move=6
     missile: false,
@@ -43,17 +43,11 @@ function makeUnit(
     status: "Normal",
     ready: true,
     ...partial,
-    side: partial.side as SideId,
-    x: partial.x as Cells,
-    y: partial.y as Cells,
   };
 }
 
 function unitMap(...units: UnitEntity[]): Record<UnitId, UnitEntity> {
-  return Object.fromEntries(units.map((u) => [u.id, u])) as Record<
-    UnitId,
-    UnitEntity
-  >;
+  return Object.fromEntries(units.map((u) => [u.id, u]));
 }
 
 function tintCoords(

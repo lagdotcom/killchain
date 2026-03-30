@@ -25,7 +25,8 @@ export const makeStore = (preloadedState?: Partial<AppState>) => {
     options.preloadedState = { ...initial, ...preloadedState };
   }
 
-  return configureStore(options);
+  const store = configureStore(options);
+  return store as typeof store & { dispatch: AppDispatch };
 };
 
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();

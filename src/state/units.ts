@@ -1,6 +1,7 @@
 import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 
-import type { Cells, UnitId } from "../flavours.js";
+import type { UnitId } from "../flavours.js";
+import type { XY } from "../killchain/EuclideanEngine.js";
 import { Phase } from "../killchain/rules.js";
 import type { Unit } from "../killchain/types.js";
 import {
@@ -15,10 +16,8 @@ import {
 } from "./actions.js";
 import { eachEntity } from "./tools.js";
 
-export interface UnitEntity extends Unit {
+export interface UnitEntity extends Unit, XY {
   id: UnitId;
-  x: Cells;
-  y: Cells;
 }
 
 export const unitsAdapter = createEntityAdapter<UnitEntity>();
