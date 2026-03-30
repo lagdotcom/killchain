@@ -10,7 +10,12 @@ export function InitiativePhase() {
 
   return (
     <div>
-      <button disabled={canPass} onClick={() => dispatch(rollInitiative())}>
+      <button
+        disabled={canPass}
+        onClick={() => {
+          dispatch(rollInitiative());
+        }}
+      >
         Roll
       </button>
     </div>

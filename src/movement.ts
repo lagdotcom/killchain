@@ -96,7 +96,7 @@ export function findBestMove(
     const s = score(node);
     if (s > bestScore) {
       bestScore = s;
-      best = { x: node.x as Cells, y: node.y as Cells, cost: node.cost };
+      best = { x: node.x, y: node.y, cost: node.cost };
     }
   }
 

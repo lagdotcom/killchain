@@ -31,7 +31,12 @@ export function Sidebar() {
         </div>
 
         <div>
-          <button disabled={!canPass} onClick={() => dispatch(pass())}>
+          <button
+            disabled={!canPass}
+            onClick={() => {
+              dispatch(pass());
+            }}
+          >
             Pass
           </button>
         </div>

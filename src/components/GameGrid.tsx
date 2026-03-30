@@ -171,8 +171,10 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
       switch (phase) {
         case Phase.Missile:
         case Phase.Melee:
-          if (canAttackTarget(activeUnit, unit, phase))
-            return dispatch(attack(unit));
+          if (canAttackTarget(activeUnit, unit, phase)) {
+            dispatch(attack(unit));
+            return;
+          }
       }
 
       // Only units that can act as initiators (move or attack) may become the

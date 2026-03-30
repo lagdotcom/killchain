@@ -10,7 +10,12 @@ export function SurprisePhase() {
 
   return (
     <div>
-      <button disabled={canPass} onClick={() => dispatch(rollSurprise())}>
+      <button
+        disabled={canPass}
+        onClick={() => {
+          dispatch(rollSurprise());
+        }}
+      >
         Roll
       </button>
     </div>

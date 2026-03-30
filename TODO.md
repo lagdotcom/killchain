@@ -1,10 +1,5 @@
 # TODO
 
-## Code quality
-
-- Find the best eslint plugins
-- Turn on maximum strictness
-
 ## Rule correctness
 
 - **Delay**: No support for 'delaying action until after a lower initiative roller'.

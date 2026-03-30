@@ -124,7 +124,9 @@ export function usePanZoom(
   }, [svgRef, gRef]);
 
   return {
-    goto: (x: Pixels, y: Pixels) => controllerRef.current.goto(x, y),
+    goto: (x: Pixels, y: Pixels) => {
+      controllerRef.current.goto(x, y);
+    },
     panToCell: (x: Cells, y: Cells) => {
       const svg = svgRef.current;
       if (!svg) return;
