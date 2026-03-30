@@ -4,7 +4,7 @@ export const unarmouredTroops: UnitType = {
   name: "Unarmoured",
   hits: 1,
   armour: "Unarmoured",
-  move: 12,
+  move: 120,
   morale: 6,
 };
 
@@ -12,7 +12,7 @@ export const lightFoot: UnitType = {
   name: "Light Foot",
   hits: 1,
   armour: "Light",
-  move: 12,
+  move: 120,
   morale: 7,
 };
 
@@ -20,7 +20,7 @@ export const mediumFoot: UnitType = {
   name: "Medium Foot",
   hits: 1,
   armour: "Medium",
-  move: 9,
+  move: 90,
   morale: 7, // this isn't specified!!
 };
 
@@ -28,7 +28,7 @@ export const heavyFoot: UnitType = {
   name: "Heavy Foot",
   hits: 1,
   armour: "Heavy",
-  move: 6,
+  move: 60,
   morale: 8,
 };
 
@@ -37,7 +37,7 @@ export const lightHorse: UnitType = {
   hits: 2,
   armour: "Light",
   mounted: true,
-  move: 24,
+  move: 240,
   morale: 9,
 };
 
@@ -46,7 +46,7 @@ export const mediumHorse: UnitType = {
   hits: 2,
   armour: "Medium",
   mounted: true,
-  move: 18,
+  move: 180,
   morale: 10,
 };
 
@@ -55,6 +55,6 @@ export const heavyHorse: UnitType = {
   hits: 2,
   armour: "Heavy",
   mounted: true,
-  move: 12,
+  move: 120,
   morale: 11,
 };

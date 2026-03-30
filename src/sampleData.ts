@@ -1,6 +1,6 @@
 import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 
-import type { SideId } from "./flavours.js";
+import type { Cells, Feet, MapId, SideId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import type { TerrainType, UnitType } from "./killchain/types.js";
 import {
@@ -10,7 +10,8 @@ import {
   mediumFoot,
 } from "./killchain/units.js";
 import type { SideSetup } from "./state/actions.js";
-import type { TerrainEntity } from "./state/terrain.js";
+import type { MapEntity } from "./state/maps.js";
+import { terrainAdapter, type TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 
 function makeUnit(
@@ -54,14 +55,19 @@ const noiseView =
   (x: number, y: number) =>
     noise(x / scale + offset, y / scale);
 
-export function generateTerrain() {
+export function generateGridMap(
+  id: MapId,
+  cellSize: Feet,
+  width: Cells,
+  height: Cells,
+): MapEntity {
   const noise = createNoise2D();
   const getTerrainType = noiseView(noise, 10);
   const getElevation = noiseView(noise, 14, 200);
 
   const terrain: TerrainEntity[] = [];
-  for (let y = 0; y < 20; y++) {
-    for (let x = 0; x < 20; x++) {
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
       const rawElevation = (getElevation(x, y) + 1) * 1.5; // 0 to 3
 
       const elevation = Math.floor(rawElevation);
@@ -77,5 +83,12 @@ export function generateTerrain() {
     }
   }
 
-  return terrain;
+  return {
+    id,
+    layout: "square",
+    cellSize,
+    width,
+    height,
+    cells: terrainAdapter.getInitialState(undefined, terrain),
+  };
 }

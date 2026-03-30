@@ -1,9 +1,9 @@
-import type { Cells, TerrainId, UnitId } from "./flavours.js";
+import type { Feet, UnitId } from "./flavours.js";
 import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import type { TerrainType } from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
-import { searchByTerrain, squareAdjacency } from "./pathfinding.js";
-import type { TerrainEntity } from "./state/terrain.js";
+import { searchByTerrain } from "./pathfinding.js";
+import type { MapEntity } from "./state/maps.js";
 import type { UnitEntity } from "./state/units.js";
 
 export interface MoveCandidate extends XY {
@@ -23,31 +23,28 @@ const noInvalidTerrain = new Set<TerrainType>();
 export function canFleeBoard(
   unit: UnitEntity,
   unitEntities: Record<UnitId, UnitEntity>,
-  terrainEntities: Record<TerrainId, TerrainEntity>,
-  mapWidth: Cells,
-  mapHeight: Cells,
+  map: MapEntity,
 ): boolean {
-  const engine = new KillChainEngine(terrainEntities, unitEntities);
+  const g = new KillChainEngine(map, unitEntities);
   const invalidTerrain = unit.type.mounted
     ? invalidTerrainForMounted
     : noInvalidTerrain;
-  const budget = unit.type.move - unit.moved;
+  const budget: Feet = unit.type.move - unit.moved;
 
   const reachable = searchByTerrain(
-    engine,
+    g,
+    map,
     invalidTerrain,
-    squareAdjacency,
     xyId(unit.x, unit.y),
-    Object.values(terrainEntities),
     budget,
   );
 
   for (const node of reachable.values()) {
     if (
       node.x === 0 ||
-      node.x === mapWidth - 1 ||
+      node.x === map.width - 1 ||
       node.y === 0 ||
-      node.y === mapHeight - 1
+      node.y === map.height - 1
     ) {
       if (node.cost < budget) return true;
     }
@@ -69,20 +66,19 @@ export function canFleeBoard(
 export function findBestMove(
   unit: UnitEntity,
   unitEntities: Record<UnitId, UnitEntity>,
-  terrainEntities: Record<TerrainId, TerrainEntity>,
+  map: MapEntity,
   score: (candidate: XY) => number,
 ): MoveCandidate | undefined {
-  const engine = new KillChainEngine(terrainEntities, unitEntities);
+  const g = new KillChainEngine(map, unitEntities);
   const invalidTerrain = unit.type.mounted
     ? invalidTerrainForMounted
     : noInvalidTerrain;
 
   const reachable = searchByTerrain(
-    engine,
+    g,
+    map,
     invalidTerrain,
-    squareAdjacency,
     xyId(unit.x, unit.y),
-    Object.values(terrainEntities),
     unit.type.move - unit.moved,
   );
 

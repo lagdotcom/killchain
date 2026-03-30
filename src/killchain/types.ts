@@ -1,11 +1,11 @@
-import type { SideId } from "../flavours.js";
+import type { Feet, SideId } from "../flavours.js";
 
 export interface UnitType {
   name: string;
   hits: number;
   armour: Armour;
   mounted?: boolean;
-  move: number;
+  move: Feet;
   morale: number;
 }
 
@@ -17,7 +17,7 @@ export interface Unit {
   missile?: boolean;
   flankCount: number;
   damage: number;
-  moved: number;
+  moved: Feet;
   status: MoraleStatus;
   ready: boolean;
   side: SideId;
@@ -33,7 +33,8 @@ export interface Terrain {
 export type TerrainType = "Open" | "Woods" | "Marsh";
 
 export interface KillChain<P> {
-  getDistance(a: Unit, b: Unit): number;
+  cellSize: Feet;
+  getDistance(a: Unit, b: Unit): Feet;
   getPosition(u: Unit): P;
   getTerrainAt(p: P): Terrain;
   getTerrain(u: Unit): Terrain;

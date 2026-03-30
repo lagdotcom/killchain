@@ -1,4 +1,4 @@
-import type { Cells } from "../flavours.js";
+import type { Feet } from "../flavours.js";
 import type { Armour, KillChain, Unit } from "./types.js";
 
 const targetByArmourType: Record<Armour, number> = {
@@ -8,13 +8,13 @@ const targetByArmourType: Record<Armour, number> = {
   Heavy: 6,
 };
 
-export const longRangeMax: Cells = 15;
+export const longRangeMax: Feet = 150;
 export const longRangePenalty = 2;
 
-export const mediumRangeMax: Cells = 10;
+export const mediumRangeMax: Feet = 100;
 export const mediumRangePenalty = 1;
 
-export const shortRangeMax: Cells = 5;
+export const shortRangeMax: Feet = 50;
 export const shortRangePenalty = 0;
 
 export function getAttackModifiers<P>(
@@ -23,7 +23,7 @@ export function getAttackModifiers<P>(
   attacker: Unit,
   defender: Unit,
 ) {
-  const distance = missile ? g.getDistance(attacker, defender) : 0;
+  const distance = missile ? g.getDistance(attacker, defender) : (0 as Feet);
 
   const mine = g.getTerrain(attacker);
   const theirs = g.getTerrain(defender);
@@ -68,7 +68,7 @@ export function getAttackRollTarget<P>(
   );
 }
 
-export function getMovementCost<P>(g: KillChain<P>, from: P, to: P) {
+export function getMovementCost<P>(g: KillChain<P>, from: P, to: P): Feet {
   const location = g.getTerrainAt(from);
   const destination = g.getTerrainAt(to);
 
@@ -76,7 +76,7 @@ export function getMovementCost<P>(g: KillChain<P>, from: P, to: P) {
   if (destination.elevation > location.elevation) cost += 1;
   if (destination.type === "Woods" || destination.type === "Marsh") cost += 1;
 
-  return cost;
+  return cost * g.cellSize;
 }
 
 export enum Phase {

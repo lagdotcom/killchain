@@ -8,11 +8,12 @@ import {
 import { useDispatch } from "react-redux";
 
 import battle from "./battle.js";
+import maps from "./maps.js";
 import sides from "./sides.js";
 import terrain from "./terrain.js";
 import units from "./units.js";
 
-const reducer = combineReducers({ battle, sides, terrain, units });
+const reducer = combineReducers({ battle, maps, sides, terrain, units });
 
 export type AppState = ReturnType<typeof reducer>;
 export type AppDispatch = ThunkDispatch<AppState, void, Action>;

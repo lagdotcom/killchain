@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import shuffle from "knuth-shuffle-seeded";
 
-import type { SideId, TerrainId, UnitId } from "../flavours.js";
+import type { MapId, SideId, TerrainId, UnitId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import {
   battleRoutResult,
@@ -38,6 +38,7 @@ export interface LogMessage {
 export interface BattleState {
   activeUnitId: UnitId | undefined;
   canPass: boolean;
+  mapId: MapId | undefined;
   messages: LogMessage[];
   phase: Phase;
   sideOrder: SideId[];
@@ -48,6 +49,7 @@ export interface BattleState {
 const initialState: BattleState = {
   activeUnitId: undefined,
   canPass: false,
+  mapId: undefined,
   messages: [],
   phase: Phase.Placement,
   sideOrder: [],
@@ -72,7 +74,8 @@ export const battleSlice = createSlice({
   },
   extraReducers: (builder) =>
     builder
-      .addCase(setupBattleAction, (state, { payload: { sides } }) => {
+      .addCase(setupBattleAction, (state, { payload: { map, sides } }) => {
+        state.mapId = map;
         state.sideOrder = shuffle(sides.map((side) => side.id));
         state.sideIndex = 0;
         state.phase = Phase.Placement;

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import type { Cells, Pixels } from "../flavours.js";
 import { cellSize } from "../ui.js";
@@ -123,18 +123,30 @@ export function usePanZoom(
       return controllerRef.current.attach(svgRef.current, gRef.current);
   }, [svgRef, gRef]);
 
-  return {
-    goto: (x: Pixels, y: Pixels) => {
-      controllerRef.current.goto(x, y);
-    },
-    panToCell: (x: Cells, y: Cells) => {
+  const centre = useCallback(() => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    const image = gRef.current?.getBoundingClientRect();
+    if (!rect || !image) return;
+
+    const ctrl = controllerRef.current;
+    ctrl.goto(
+      rect.width / 2 - image.width / 2,
+      rect.height / 2 - image.height / 2,
+    );
+  }, [gRef, svgRef]);
+
+  const gotoCell = useCallback(
+    (x: Cells, y: Cells) => {
       const svg = svgRef.current;
       if (!svg) return;
       const ctrl = controllerRef.current;
       const rect = svg.getBoundingClientRect();
-      const px = x * cellSize + cellSize / 2;
-      const py = y * cellSize + cellSize / 2;
+      const px = (x + 0.5) * cellSize;
+      const py = (y + 0.5) * cellSize;
       ctrl.goto(rect.width / 2 - px * ctrl.zr, rect.height / 2 - py * ctrl.zr);
     },
-  };
+    [svgRef],
+  );
+
+  return { centre, gotoCell };
 }

@@ -1,28 +1,44 @@
-import type { Tint } from "./components/GridOverlay.js";
-import type { TerrainId, UnitId } from "./flavours.js";
+import type { Tint, TintReason } from "./components/GridOverlay.js";
+import type { Feet, UnitId } from "./flavours.js";
 import { type XY, xyId } from "./killchain/EuclideanEngine.js";
-import { Phase } from "./killchain/rules.js";
+import {
+  longRangeMax,
+  mediumRangeMax,
+  Phase,
+  shortRangeMax,
+} from "./killchain/rules.js";
 import type { TerrainType } from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
 import {
+  type PathNode,
   searchAbsolute,
   searchByTerrain,
-  squareAdjacency,
 } from "./pathfinding.js";
-import type { TerrainEntity } from "./state/terrain.js";
+import type { MapEntity } from "./state/maps.js";
 import type { UnitEntity } from "./state/units.js";
 import { manhattanDistance } from "./tools.js";
 
-const rangeName = (cost: number) =>
-  cost <= 5 ? "short" : cost <= 10 ? "medium" : "long";
+const rangeName = (cost: Feet) =>
+  cost <= shortRangeMax ? "short" : cost <= mediumRangeMax ? "medium" : "long";
 
 const invalidTerrainForMountedUnits = new Set<TerrainType>(["Marsh"]);
 const invalidTerrain = new Set<TerrainType>();
 
+const nodeToTint = (
+  { id, x, y, cost }: PathNode,
+  reason: TintReason,
+): Tint => ({
+  id,
+  x,
+  y,
+  cost,
+  reason,
+});
+
 export function getTints(
   activeUnit: UnitEntity | undefined,
   phase: Phase,
-  terrainEntities: Record<TerrainId, TerrainEntity>,
+  map: MapEntity,
   unitEntities: Record<UnitId, UnitEntity>,
 ): Tint[] {
   if (!activeUnit) return [];
@@ -32,29 +48,21 @@ export function getTints(
       if (!activeUnit.missile) return [];
       return Array.from(
         searchAbsolute(
-          squareAdjacency,
+          map,
           xyId(activeUnit.x, activeUnit.y),
-          Object.values(terrainEntities),
-          15,
+          longRangeMax,
         ).values(),
-      ).map((node) => ({
-        id: node.id,
-        x: node.x,
-        y: node.y,
-        cost: node.cost,
-        reason: rangeName(node.cost),
-      }));
+      ).map((node) => nodeToTint(node, rangeName(node.cost)));
 
     case Phase.Move: {
       const reachable = Array.from(
         searchByTerrain(
-          new KillChainEngine(terrainEntities, unitEntities),
+          new KillChainEngine(map, unitEntities),
+          map,
           activeUnit.type.mounted
             ? invalidTerrainForMountedUnits
             : invalidTerrain,
-          squareAdjacency,
           xyId(activeUnit.x, activeUnit.y),
-          Object.values(terrainEntities),
           activeUnit.type.move - activeUnit.moved,
         ).values(),
       );
@@ -89,23 +97,11 @@ export function getTints(
 
           const validNodes = filtered.length > 0 ? filtered : fallback;
 
-          return validNodes.map((node) => ({
-            id: node.id,
-            x: node.x,
-            y: node.y,
-            cost: node.cost,
-            reason: "reachable",
-          }));
+          return validNodes.map((node) => nodeToTint(node, "reachable"));
         }
       }
 
-      return reachable.map((node) => ({
-        id: node.id,
-        x: node.x,
-        y: node.y,
-        cost: node.cost,
-        reason: "reachable",
-      }));
+      return reachable.map((node) => nodeToTint(node, "reachable"));
     }
   }
 

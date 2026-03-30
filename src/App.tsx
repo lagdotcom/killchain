@@ -5,16 +5,18 @@ import GameGrid from "./components/GameGrid.js";
 import { MessageLog } from "./components/MessageLog.js";
 import { Sidebar } from "./components/Sidebar.js";
 import type { Cells } from "./flavours.js";
-import { defaultSides, defaultUnits, generateTerrain } from "./sampleData.js";
+import { defaultSides, defaultUnits, generateGridMap } from "./sampleData.js";
 import { setupBattleAction } from "./state/actions.js";
+import { mapsAdapter } from "./state/maps.js";
 import { makeStore } from "./state/store.js";
-import { terrainAdapter } from "./state/terrain.js";
 
+const map = generateGridMap("test", 10, 20, 20);
 const store = makeStore({
-  terrain: terrainAdapter.getInitialState(undefined, generateTerrain()),
+  maps: mapsAdapter.getInitialState(undefined, [map]),
 });
-
-store.dispatch(setupBattleAction({ sides: defaultSides, units: defaultUnits }));
+store.dispatch(
+  setupBattleAction({ map: map.id, sides: defaultSides, units: defaultUnits }),
+);
 
 function App() {
   const panToCellRef = useRef<((x: Cells, y: Cells) => void) | null>(null);

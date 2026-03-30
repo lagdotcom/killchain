@@ -2,10 +2,14 @@ import { createSelector } from "@reduxjs/toolkit";
 
 import { Phase } from "../killchain/rules.js";
 import { isDefined } from "../tools.js";
+import { mapsAdapter } from "./maps.js";
 import { sidesAdapter } from "./sides.js";
 import type { AppState } from "./store.js";
 import { terrainAdapter } from "./terrain.js";
 import { unitsAdapter } from "./units.js";
+
+export const { selectAll: selectAllMaps, selectEntities: selectMapEntities } =
+  mapsAdapter.getSelectors<AppState>((state) => state.maps);
 
 export const { selectAll: selectAllSides, selectEntities: selectSideEntities } =
   sidesAdapter.getSelectors<AppState>((state) => state.sides);
@@ -78,6 +82,11 @@ export const selectCanPassNow = createSelector(
 export const selectLogMessages = createSelector(
   [selectBattle],
   (battle) => battle.messages,
+);
+
+export const selectMap = createSelector(
+  [selectBattle, selectMapEntities],
+  (battle, maps) => (battle.mapId ? maps[battle.mapId] : undefined),
 );
 
 export const selectPhase = createSelector(

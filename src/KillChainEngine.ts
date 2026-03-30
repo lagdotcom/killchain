@@ -1,24 +1,30 @@
-import type { TerrainId, UnitId } from "./flavours.js";
+import type { Feet, TerrainId, UnitId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import type { KillChain, Unit } from "./killchain/types.js";
-import type { TerrainEntity } from "./state/terrain.js";
+import type { MapEntity } from "./state/maps.js";
 import type { UnitEntity } from "./state/units.js";
 import { manhattanDistance } from "./tools.js";
 
 export class KillChainEngine implements KillChain<TerrainId> {
+  cellSize: Feet;
+
   constructor(
-    private terrain: Record<TerrainId, TerrainEntity>,
+    private map: MapEntity,
     private units: Record<UnitId, UnitEntity>,
-  ) {}
+  ) {
+    this.cellSize = map.cellSize;
+  }
 
   getXY(u: UnitEntity) {
     return { x: u.x, y: u.y };
   }
 
-  getDistance(a: Unit, b: Unit) {
-    return manhattanDistance(
-      this.getXY(a as UnitEntity),
-      this.getXY(b as UnitEntity),
+  getDistance(a: Unit, b: Unit): Feet {
+    return (
+      manhattanDistance(
+        this.getXY(a as UnitEntity),
+        this.getXY(b as UnitEntity),
+      ) * this.cellSize
     );
   }
 
@@ -28,7 +34,7 @@ export class KillChainEngine implements KillChain<TerrainId> {
   }
 
   getTerrainAt(p: TerrainId) {
-    return this.terrain[p] ?? { type: "Open", elevation: 0 };
+    return this.map.cells.entities[p] ?? { type: "Open", elevation: 0 };
   }
 
   getTerrain(u: Unit) {

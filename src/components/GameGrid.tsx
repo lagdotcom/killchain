@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
 
-import type { Cells, SideId, UnitId } from "../flavours.js";
+import type { Cells, Feet, SideId, UnitId } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
 import { xyId } from "../killchain/EuclideanEngine.js";
-import { Phase } from "../killchain/rules.js";
+import { longRangeMax, Phase } from "../killchain/rules.js";
 import { getTints } from "../logic.js";
 import { attack, moveAction, placeUnitAction } from "../state/actions.js";
 import { setActiveUnitId } from "../state/battle.js";
@@ -12,9 +12,9 @@ import {
   selectActiveSide,
   selectActiveUnit,
   selectAllSides,
+  selectMap,
   selectPhase,
   selectPlacedUnits,
-  selectTerrainEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
 import type { SideEntity } from "../state/sides.js";
@@ -22,7 +22,7 @@ import { useAppDispatch } from "../state/store.js";
 import type { TerrainEntity } from "../state/terrain.js";
 import type { UnitEntity } from "../state/units.js";
 import { enumerate, manhattanDistance } from "../tools.js";
-import { cellSize, mapHeight, mapWidth } from "../ui.js";
+import { cellSize } from "../ui.js";
 import { GridOverlay } from "./GridOverlay.js";
 import TerrainCell, { type TerrainCellProps } from "./TerrainCell.js";
 import UnitToken from "./UnitToken.js";
@@ -68,12 +68,13 @@ function canAttackTarget(
   attacker: UnitEntity | undefined,
   target: UnitEntity,
   phase: Phase,
+  cellSize: Feet,
 ) {
   if (!attacker) return false;
   if (phase !== Phase.Missile && phase !== Phase.Melee) return false;
 
-  const minRange = phase === Phase.Missile ? 2 : 1;
-  const maxRange = attacker.missile ? 15 : 1;
+  const minRange: Cells = phase === Phase.Missile ? 2 : 1;
+  const maxRange: Cells = attacker.missile ? longRangeMax / cellSize : 1;
   const distance = manhattanDistance(attacker, target);
 
   return (
@@ -102,13 +103,13 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
   const activeUnit = useSelector(selectActiveUnit);
   const phase = useSelector(selectPhase);
   const sides = useSelector(selectAllSides);
-  const terrain = useSelector(selectTerrainEntities);
+  const map = useSelector(selectMap);
   const units = useSelector(selectUnitEntities);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
 
-  const { goto, panToCell } = usePanZoom(svgRef, gRef);
+  const { centre, gotoCell } = usePanZoom(svgRef, gRef);
 
   const placedUnits = useSelector(selectPlacedUnits);
 
@@ -123,14 +124,14 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
 
   const getTerrain = useCallback(
     (x: Cells, y: Cells, defaultElevation: number = 0): TerrainEntity =>
-      terrain[xyId(x, y)] ?? {
+      map?.cells.entities[xyId(x, y)] ?? {
         id: xyId(x, y),
         x,
         y,
         type: "Open",
         elevation: defaultElevation,
       },
-    [terrain],
+    [map],
   );
 
   const canSelect = useCallback(
@@ -138,15 +139,15 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
       return (
         canMove(unit, activeSide, phase) ||
         canAttack(unit, activeSide, phase) ||
-        canAttackTarget(activeUnit, unit, phase)
+        (map && canAttackTarget(activeUnit, unit, phase, map.cellSize))
       );
     },
-    [activeSide, activeUnit, phase],
+    [activeSide, activeUnit, map, phase],
   );
 
   const tints = useMemo(
-    () => getTints(activeUnit, phase, terrain, units),
-    [activeUnit, phase, terrain, units],
+    () => (map ? getTints(activeUnit, phase, map, units) : []),
+    [activeUnit, map, phase, units],
   );
 
   const handleClickTerrain = useCallback(
@@ -171,7 +172,7 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
       switch (phase) {
         case Phase.Missile:
         case Phase.Melee:
-          if (canAttackTarget(activeUnit, unit, phase)) {
+          if (map && canAttackTarget(activeUnit, unit, phase, map.cellSize)) {
             dispatch(attack(unit));
             return;
           }
@@ -192,35 +193,27 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
         dispatch(setActiveUnitId(undefined));
       }
     },
-    [activeSide, activeUnit, dispatch, phase],
+    [activeSide, activeUnit, dispatch, map, phase],
   );
 
   const terrainCells = useMemo(
     () =>
-      getTerrainCells(
-        mapWidth,
-        mapHeight,
-        getTerrain,
-        handleClickTerrain,
-        handleDrop,
-      ),
-    [getTerrain, handleClickTerrain, handleDrop],
+      map
+        ? getTerrainCells(
+            map.width,
+            map.height,
+            getTerrain,
+            handleClickTerrain,
+            handleDrop,
+          )
+        : [],
+    [getTerrain, handleClickTerrain, handleDrop, map],
   );
 
-  // centre map on mount
   useEffect(() => {
-    const svg = svgRef.current;
-    if (svg) {
-      const rect = svg.getBoundingClientRect();
-      const mapW = mapWidth * cellSize;
-      const mapH = mapHeight * cellSize;
-      const offsetX = (rect.width - mapW) / 2;
-      const offsetY = (rect.height - mapH) / 2;
-      goto(offsetX, offsetY);
-    }
-    onRegisterPan?.(panToCell);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    centre();
+    onRegisterPan?.(gotoCell);
+  }, [centre, gotoCell, onRegisterPan]);
 
   return (
     <svg ref={svgRef} width="100%" height="100%" className="map">

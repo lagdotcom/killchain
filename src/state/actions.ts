@@ -5,7 +5,7 @@ import {
   type ThunkAction,
 } from "@reduxjs/toolkit";
 
-import type { Cells, SideId, UnitId } from "../flavours.js";
+import type { Cells, Feet, MapId, SideId, UnitId } from "../flavours.js";
 import type { XY } from "../killchain/EuclideanEngine.js";
 import {
   applyAttackModifiers,
@@ -18,14 +18,13 @@ import type { MoraleStatus } from "../killchain/types.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { canFleeBoard, findBestMove } from "../movement.js";
 import { manhattanDistance, rollDice } from "../tools.js";
-import { mapHeight, mapWidth } from "../ui.js";
 import { allowPass, type BattleState, nextSide } from "./battle.js";
 import {
   selectActiveUnit,
   selectAllSides,
   selectAllUnits,
   selectBattle,
-  selectTerrainEntities,
+  selectMap,
   selectUnitEntities,
 } from "./selectors.js";
 import type { SideEntity } from "./sides.js";
@@ -91,13 +90,14 @@ export const routMoveAction = createAction<{
   x: Cells;
   y: Cells;
   fled: boolean;
+  moved: Feet;
 }>("battle/routMove");
 
 export const moveAction = createAction<{
   unit: UnitEntity;
   x: Cells;
   y: Cells;
-  cost: Cells;
+  cost: Feet;
 }>("battle/move");
 
 export const placeUnitAction = createAction<{
@@ -108,6 +108,7 @@ export const placeUnitAction = createAction<{
 }>("battle/placeUnit");
 
 export const setupBattleAction = createAction<{
+  map: MapId;
   sides: SideSetup[];
   units: UnitEntity[];
 }>("battle/setup");
@@ -209,15 +210,15 @@ export const rollInitiative: Thunk = () => (dispatch, getState) => {
 
 export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
   const state = getState();
+  const map = selectMap(state);
   const attacker = selectActiveUnit(state);
-  if (!attacker) return;
+  if (!attacker || !map) return;
 
-  const terrain = selectTerrainEntities(state);
   const units = selectUnitEntities(state);
 
-  const g = new KillChainEngine(terrain, units);
+  const g = new KillChainEngine(map, units);
 
-  const missile = g.getDistance(attacker, defender) > 1;
+  const missile = g.getDistance(attacker, defender) > map.cellSize;
 
   const mods = getAttackModifiers(g, missile, attacker, defender);
   const target = applyAttackModifiers(mods);
@@ -239,9 +240,11 @@ export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
 
 export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
   const state = getState();
+  const map = selectMap(state);
+  if (!map) return;
+
   const units = selectAllUnits(state);
   const unitEntities = selectUnitEntities(state);
-  const terrainEntities = selectTerrainEntities(state);
 
   const routUnits = units.filter((u) => u.status === "Rout" && !isNaN(u.x));
   if (routUnits.length === 0) return;
@@ -255,10 +258,16 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
   for (const unit of routUnits) {
     // A unit flees the field if it can reach a map edge cell with movement
     // remaining — i.e. it would step off the board.
-    if (
-      canFleeBoard(unit, nonRoutEntities, terrainEntities, mapWidth, mapHeight)
-    ) {
-      dispatch(routMoveAction({ unit, x: unit.x, y: unit.y, fled: true }));
+    if (canFleeBoard(unit, nonRoutEntities, map)) {
+      dispatch(
+        routMoveAction({
+          unit,
+          x: unit.x,
+          y: unit.y,
+          fled: true,
+          moved: unit.type.move,
+        }),
+      );
       continue;
     }
 
@@ -281,15 +290,23 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
       : (node: XY) =>
           -Math.min(
             node.x,
-            mapWidth - 1 - node.x,
+            map.width - 1 - node.x,
             node.y,
-            mapHeight - 1 - node.y,
+            map.height - 1 - node.y,
           );
 
-    const best = findBestMove(unit, nonRoutEntities, terrainEntities, score);
+    const best = findBestMove(unit, nonRoutEntities, map, score);
     if (!best) continue;
 
-    dispatch(routMoveAction({ unit, x: best.x, y: best.y, fled: false }));
+    dispatch(
+      routMoveAction({
+        unit,
+        x: best.x,
+        y: best.y,
+        fled: false,
+        moved: best.cost,
+      }),
+    );
   }
 };
 

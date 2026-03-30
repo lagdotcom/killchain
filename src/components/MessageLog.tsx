@@ -1,10 +1,7 @@
 import { useSelector } from "react-redux";
 
 import type { Cells } from "../flavours.js";
-import {
-  selectLogMessages,
-  selectTerrainEntities,
-} from "../state/selectors.js";
+import { selectLogMessages, selectMap } from "../state/selectors.js";
 import { classnames } from "../tools.js";
 
 interface MessageLogProps {
@@ -13,12 +10,12 @@ interface MessageLogProps {
 
 export function MessageLog({ panToCell }: MessageLogProps) {
   const log = useSelector(selectLogMessages);
-  const terrain = useSelector(selectTerrainEntities);
+  const map = useSelector(selectMap);
 
   return (
     <div className="message-log">
       {log.toReversed().map((msg, i) => {
-        const cell = msg.focus ? terrain[msg.focus] : undefined;
+        const cell = msg.focus ? map?.cells.entities[msg.focus] : undefined;
         return (
           <div
             key={i}

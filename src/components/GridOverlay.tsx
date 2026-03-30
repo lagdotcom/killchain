@@ -1,4 +1,4 @@
-import type { Cells } from "../flavours.js";
+import type { Cells, Feet } from "../flavours.js";
 import { cellSize } from "../ui.js";
 
 export type TintReason = "short" | "medium" | "long" | "reachable";
@@ -7,7 +7,7 @@ export interface Tint {
   id: string;
   x: Cells;
   y: Cells;
-  cost: number;
+  cost: Feet;
   reason: TintReason;
 }
 

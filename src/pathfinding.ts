@@ -1,69 +1,70 @@
-import type { Cells, TerrainId } from "./flavours.js";
+import type { Cells, Feet, TerrainId } from "./flavours.js";
 import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import { getMovementCost } from "./killchain/rules.js";
 import type { KillChain, TerrainType } from "./killchain/types.js";
-import type { TerrainEntity } from "./state/terrain.js";
+import MinHeap from "./MinHeap.js";
+import type { MapEntity, MapLayout } from "./state/maps.js";
+
+export type AdjacencyFn = (x: Cells, y: Cells) => XY[];
+
+export const squareAdjacency: AdjacencyFn = (x, y) => [
+  { x: x + 1, y },
+  { x, y: y + 1 },
+  { x: x - 1, y },
+  { x, y: y - 1 },
+];
+
+export const hexAdjacencyEvenQ: AdjacencyFn = (x, y) =>
+  x % 2 === 0
+    ? [
+        { x: x + 1, y: y - 1 },
+        { x: x + 1, y },
+        { x, y: y + 1 },
+        { x: x - 1, y },
+        { x: x - 1, y: y - 1 },
+        { x, y: y - 1 },
+      ]
+    : [
+        { x: x + 1, y },
+        { x: x + 1, y: y + 1 },
+        { x, y: y + 1 },
+        { x: x - 1, y: y + 1 },
+        { x: x - 1, y },
+        { x, y: y - 1 },
+      ];
+
+export const hexAdjacencyOddQ: AdjacencyFn = (x, y) =>
+  x % 2 === 0
+    ? [
+        { x: x + 1, y },
+        { x: x + 1, y: y + 1 },
+        { x, y: y + 1 },
+        { x: x - 1, y: y + 1 },
+        { x: x - 1, y },
+        { x, y: y - 1 },
+      ]
+    : [
+        { x: x + 1, y: y - 1 },
+        { x: x + 1, y },
+        { x, y: y + 1 },
+        { x: x - 1, y },
+        { x: x - 1, y: y - 1 },
+        { x, y: y - 1 },
+      ];
+
+const adjacencyByLayout: Record<MapLayout, AdjacencyFn> = {
+  square: squareAdjacency,
+};
 
 export interface PathNode extends XY {
   id: string;
-  cost: number;
+  cost: Feet;
   parent: string | undefined;
 }
 
 export interface PathEdge {
-  cost: number;
+  cost: Feet;
   destination: string;
-}
-
-class MinHeap {
-  private heap: PathNode[] = [];
-
-  get length() {
-    return this.heap.length;
-  }
-
-  push(node: PathNode) {
-    this.heap.push(node);
-    this.bubbleUp(this.heap.length - 1);
-  }
-
-  pop(): PathNode | undefined {
-    const first = this.heap[0];
-    const last = this.heap.pop();
-    if (this.heap.length > 0 && last) {
-      this.heap[0] = last;
-      this.sinkDown(0);
-    }
-    return first;
-  }
-
-  private bubbleUp(i: number) {
-    while (i > 0) {
-      const parent = (i - 1) >> 1;
-      if (this.heap[i]!.cost >= this.heap[parent]!.cost) break;
-      [this.heap[i], this.heap[parent]] = [this.heap[parent]!, this.heap[i]!];
-      i = parent;
-    }
-  }
-
-  private sinkDown(i: number) {
-    const n = this.heap.length;
-    let smallest = i;
-    for (;;) {
-      const left = 2 * i + 1;
-      const right = 2 * i + 2;
-      if (left < n && this.heap[left]!.cost < this.heap[smallest]!.cost)
-        smallest = left;
-      if (right < n && this.heap[right]!.cost < this.heap[smallest]!.cost)
-        smallest = right;
-      if (smallest === i) break;
-      [this.heap[i], this.heap[smallest]] = [
-        this.heap[smallest]!,
-        this.heap[i]!,
-      ];
-      i = smallest;
-    }
-  }
 }
 
 export function shortestPath(
@@ -73,7 +74,7 @@ export function shortestPath(
   maxCost = Infinity,
 ) {
   const finalized = new Map<string, PathNode>();
-  const pq = new MinHeap();
+  const pq = new MinHeap<PathNode>();
 
   const root = getNode(start);
   root.cost = 0;
@@ -104,89 +105,35 @@ export function shortestPath(
   return finalized;
 }
 
-export type Adjacency = (x: Cells, y: Cells) => XY[];
-
-export const squareAdjacency: Adjacency = (x, y) => [
-  { x: x + 1, y },
-  { x, y: y + 1 },
-  { x: x - 1, y },
-  { x, y: y - 1 },
-];
-
-export const hexAdjacencyEvenQ: Adjacency = (x, y) =>
-  x % 2 === 0
-    ? [
-        { x: x + 1, y: y - 1 },
-        { x: x + 1, y },
-        { x, y: y + 1 },
-        { x: x - 1, y },
-        { x: x - 1, y: y - 1 },
-        { x, y: y - 1 },
-      ]
-    : [
-        { x: x + 1, y },
-        { x: x + 1, y: y + 1 },
-        { x, y: y + 1 },
-        { x: x - 1, y: y + 1 },
-        { x: x - 1, y },
-        { x, y: y - 1 },
-      ];
-
-export const hexAdjacencyOddQ: Adjacency = (x, y) =>
-  x % 2 === 0
-    ? [
-        { x: x + 1, y },
-        { x: x + 1, y: y + 1 },
-        { x, y: y + 1 },
-        { x: x - 1, y: y + 1 },
-        { x: x - 1, y },
-        { x, y: y - 1 },
-      ]
-    : [
-        { x: x + 1, y: y - 1 },
-        { x: x + 1, y },
-        { x, y: y + 1 },
-        { x: x - 1, y },
-        { x: x - 1, y: y - 1 },
-        { x, y: y - 1 },
-      ];
-
 function runSearch(
-  getCost: (from: TerrainId, to: TerrainId) => number,
-  adjacency: Adjacency,
+  map: MapEntity,
+  getCost: (from: TerrainId, to: TerrainId) => Feet,
   start: TerrainId,
-  terrain: TerrainEntity[],
-  maxCost = Infinity,
+  maxCost: Feet = Infinity,
 ) {
-  const terrainIds = new Set(terrain.map((t) => t.id));
+  const adjacency = adjacencyByLayout[map.layout];
 
-  const nodes = Object.fromEntries(
-    terrain.map<[string, PathNode]>((t) => [
-      t.id,
-      { id: t.id, x: t.x, y: t.y, cost: Infinity, parent: undefined },
-    ]),
-  );
+  const edges: Record<TerrainId, PathEdge[]> = {};
+  const nodes: Record<TerrainId, PathNode> = {};
+  for (const [id, cell] of Object.entries(map.cells.entities)) {
+    nodes[id] = { id, x: cell.x, y: cell.y, cost: Infinity, parent: undefined };
 
-  const edges = Object.fromEntries(
-    terrain.map((t) => [
-      t.id,
-      adjacency(t.x, t.y)
-        .map(({ x, y }) => xyId(x, y) as TerrainId)
-        .filter((id) => terrainIds.has(id))
-        .map<PathEdge>((destination) => ({
-          cost: getCost(t.id, destination),
-          destination,
-        })),
-    ]),
-  );
+    const cellEdges: PathEdge[] = [];
+    for (const target of adjacency(cell.x, cell.y)) {
+      const destination = xyId(target.x, target.y);
+      const dest = map.cells.entities[destination];
+      if (dest) cellEdges.push({ destination, cost: getCost(id, destination) });
+    }
+    edges[id] = cellEdges;
+  }
 
   return shortestPath(
     (id) => edges[id] ?? [],
     (id) =>
       nodes[id] ?? {
         id,
-        x: 0,
-        y: 0,
+        x: NaN,
+        y: NaN,
         cost: Infinity,
         parent: undefined,
       },
@@ -196,30 +143,27 @@ function runSearch(
 }
 
 export function searchAbsolute(
-  adjacency: Adjacency,
+  map: MapEntity,
   start: TerrainId,
-  terrain: TerrainEntity[],
-  maxCost = Infinity,
+  maxCost: Feet = Infinity,
 ) {
-  return runSearch(() => 1, adjacency, start, terrain, maxCost);
+  return runSearch(map, () => map.cellSize, start, maxCost);
 }
 
 export function searchByTerrain(
   g: KillChain<TerrainId>,
+  map: MapEntity,
   invalidTerrain: Set<TerrainType>,
-  adjacency: Adjacency,
   start: TerrainId,
-  terrain: TerrainEntity[],
-  maxCost = Infinity,
+  maxCost: Feet = Infinity,
 ) {
   return runSearch(
+    map,
     (from, to) =>
       g.getUnitAt(to) || invalidTerrain.has(g.getTerrainAt(to).type)
         ? Infinity
         : getMovementCost(g, from, to),
-    adjacency,
     start,
-    terrain,
     maxCost,
   );
 }
