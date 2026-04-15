@@ -19,6 +19,7 @@ interface SidebarProps {
   isEditingTerrain: boolean;
   onOpenMapManager: () => void;
   onOpenRosterManager: () => void;
+  onOpenScenarioManager: () => void;
   onToggleEditTerrain: () => void;
 }
 
@@ -26,6 +27,7 @@ export function Sidebar({
   isEditingTerrain,
   onOpenMapManager,
   onOpenRosterManager,
+  onOpenScenarioManager,
   onToggleEditTerrain,
 }: SidebarProps) {
   const dispatch = useAppDispatch();
@@ -59,6 +61,9 @@ export function Sidebar({
           </button>
           <button onClick={onOpenRosterManager} title="Unit roster">
             ⚔️
+          </button>
+          <button onClick={onOpenScenarioManager} title="Scenarios">
+            🎯
           </button>
         </div>
       </div>

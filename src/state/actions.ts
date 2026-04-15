@@ -16,6 +16,7 @@ import {
   phaseChanges,
 } from "../killchain/rules.js";
 import type { MoraleStatus, UnitDefinition } from "../killchain/types.js";
+import type { Scenario } from "./scenarios.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { canFleeBoard, findBestMove } from "../movement.js";
 import { manhattanDistance, rollDice } from "../tools.js";
@@ -25,6 +26,7 @@ import {
   selectAllSides,
   selectAllUnits,
   selectBattle,
+  selectDefinitionEntities,
   selectMap,
   selectUnitEntities,
 } from "./selectors.js";
@@ -129,6 +131,54 @@ export const deployUnitAction = createAction(
 export const surpriseAction = createAction<{
   results: SurpriseRollResult[];
 }>("battle/surprise");
+
+/** Instantiate and load a scenario, replacing the current battle. */
+export const loadScenarioAction =
+  (scenario: Scenario): ThunkAction<void, AppState, void, Action> =>
+  (dispatch, getState) => {
+    const defs = selectDefinitionEntities(getState());
+
+    const units: UnitEntity[] = scenario.sides.flatMap((side, si) =>
+      side.units
+        .map((setup, ui): UnitEntity | null => {
+          const def = defs[setup.definitionId];
+          if (!def) {
+            console.warn(
+              `loadScenario: definition "${setup.definitionId}" not found in roster — unit skipped`,
+            );
+            return null;
+          }
+          return {
+            id: `${scenario.id}-s${si}-u${ui}` as UnitId,
+            name: def.name,
+            ...(def.shortName !== undefined && { shortName: def.shortName }),
+            type: def.type,
+            ...(def.missile !== undefined && { missile: def.missile }),
+            side: side.id,
+            x: setup.x ?? NaN,
+            y: setup.y ?? NaN,
+            flankCount: 0,
+            damage: 0,
+            moved: 0,
+            status: "Normal" as MoraleStatus,
+            ready: false,
+          };
+        })
+        .filter((u): u is UnitEntity => u !== null),
+    );
+
+    dispatch(
+      setupBattleAction({
+        map: scenario.mapId,
+        sides: scenario.sides.map(({ id, name, colour }) => ({
+          id,
+          name,
+          colour,
+        })),
+        units,
+      }),
+    );
+  };
 
 function shouldChangePhase(battle: BattleState) {
   switch (battle.phase) {

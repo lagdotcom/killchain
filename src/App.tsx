@@ -5,12 +5,14 @@ import GameGrid from "./components/GameGrid.js";
 import { MapManager } from "./components/MapManager.js";
 import { MessageLog } from "./components/MessageLog.js";
 import { RosterManager } from "./components/RosterManager.js";
+import { ScenarioManager } from "./components/ScenarioManager.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { TerrainPalette, type EditBrush } from "./components/TerrainPalette.js";
 import type { Cells, TerrainId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import {
   defaultDefinitions,
+  defaultScenario,
   defaultSides,
   defaultUnits,
   generateGridMap,
@@ -19,6 +21,7 @@ import { setupBattleAction } from "./state/actions.js";
 import { mapsAdapter } from "./state/maps.js";
 import { updateCell } from "./state/maps.js";
 import { rosterAdapter } from "./state/roster.js";
+import { scenariosAdapter } from "./state/scenarios.js";
 import { selectMap } from "./state/selectors.js";
 import { makeStore, useAppDispatch } from "./state/store.js";
 
@@ -26,6 +29,7 @@ const initialMap = generateGridMap("default", 10, 20, 20, undefined, "Default");
 const store = makeStore({
   maps: mapsAdapter.getInitialState(undefined, [initialMap]),
   roster: rosterAdapter.getInitialState(undefined, defaultDefinitions),
+  scenarios: scenariosAdapter.getInitialState(undefined, [defaultScenario]),
 });
 store.dispatch(
   setupBattleAction({
@@ -44,6 +48,7 @@ function AppContent() {
   >(null);
   const [showMapManager, setShowMapManager] = useState(false);
   const [showRosterManager, setShowRosterManager] = useState(false);
+  const [showScenarioManager, setShowScenarioManager] = useState(false);
   const [editBrush, setEditBrush] = useState<EditBrush | null>(null);
   const [logHoverCell, setLogHoverCell] = useState<
     { x: Cells; y: Cells } | undefined
@@ -72,6 +77,7 @@ function AppContent() {
         <Sidebar
           onOpenMapManager={() => setShowMapManager(true)}
           onOpenRosterManager={() => setShowRosterManager(true)}
+          onOpenScenarioManager={() => setShowScenarioManager(true)}
           onToggleEditTerrain={() =>
             setEditBrush((b) =>
               b ? null : { mode: "terrain", type: "Open" },
@@ -104,6 +110,9 @@ function AppContent() {
       )}
       {showRosterManager && (
         <RosterManager onClose={() => setShowRosterManager(false)} />
+      )}
+      {showScenarioManager && (
+        <ScenarioManager onClose={() => setShowScenarioManager(false)} />
       )}
     </div>
   );

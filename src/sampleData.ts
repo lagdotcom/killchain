@@ -1,9 +1,10 @@
 import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 import SeedRandom from "seed-random";
 
-import type { Cells, Feet, MapId, SideId, UnitDefinitionId } from "./flavours.js";
+import type { Cells, Feet, MapId, ScenarioId, SideId, UnitDefinitionId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import type { TerrainType, UnitDefinition, UnitType } from "./killchain/types.js";
+import type { Scenario } from "./state/scenarios.js";
 import {
   heavyHorse,
   lightFoot,
@@ -89,6 +90,35 @@ export const defaultDefinitions: UnitDefinition[] = [
     type: lightHorse,
   },
 ];
+
+/** Default scenario matching the hard-coded initial battle. */
+export const defaultScenario: Scenario = {
+  id: "default-scenario" as ScenarioId,
+  name: "Default Scenario",
+  mapId: "default" as MapId,
+  sides: [
+    {
+      id: 0 as SideId,
+      name: "Regnum-Fey Alliance",
+      colour: "#49e",
+      units: [
+        { definitionId: "def-heralds-of-mikius" as UnitDefinitionId },
+        { definitionId: "def-bakhtavornery" as UnitDefinitionId },
+        { definitionId: "def-eyin-eweko" as UnitDefinitionId },
+      ],
+    },
+    {
+      id: 1 as SideId,
+      name: "Horde of Grund",
+      colour: "#f66",
+      units: [
+        { definitionId: "def-chosen-of-grund" as UnitDefinitionId },
+        { definitionId: "def-beloved-of-grund" as UnitDefinitionId },
+        { definitionId: "def-outriders-of-grund" as UnitDefinitionId },
+      ],
+    },
+  ],
+};
 
 const noiseView =
   (noise: NoiseFunction2D, scale: number, offset: number = 0) =>

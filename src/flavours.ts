@@ -7,6 +7,7 @@ export type Pixels = Flavour<number, "Pixels">;
 export type SideId = Flavour<number, "Side">;
 
 export type MapId = Flavour<string, "MapId">;
+export type ScenarioId = Flavour<string, "ScenarioId">;
 export type TerrainId = Flavour<string, "TerrainId">;
 export type UnitDefinitionId = Flavour<string, "UnitDefinitionId">;
 export type UnitId = Flavour<string, "UnitId">;
