@@ -1,13 +1,16 @@
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 import type { Cells, MapId, ScenarioId, SideId, UnitDefinitionId } from "../flavours.js";
+import type { DeploymentZone } from "../killchain/types.js";
 import { Phase } from "../killchain/rules.js";
 import { loadScenarioAction } from "../state/actions.js";
+import { upsertMap } from "../state/maps.js";
+import { upsertDefinitions } from "../state/roster.js";
 import {
   addScenario,
   removeScenario,
-  setAllScenarios,
+  upsertScenario,
   updateScenario,
   type Scenario,
   type ScenarioSideSetup,
@@ -19,6 +22,8 @@ import {
   selectBattle,
 } from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
+import { ScenarioMapEditor } from "./ScenarioMapEditor.js";
+import type { PlacedUnit, ZoneInfo } from "./ScenarioMapEditor.js";
 
 // ---------------------------------------------------------------------------
 // Local form types
@@ -26,9 +31,8 @@ import { useAppDispatch } from "../state/store.js";
 
 interface UnitSetupForm {
   definitionId: UnitDefinitionId;
-  prePlaced: boolean;
-  x: string;
-  y: string;
+  x?: Cells;
+  y?: Cells;
 }
 
 interface SideForm {
@@ -37,11 +41,7 @@ interface SideForm {
   units: UnitSetupForm[];
   /** Tracks the dropdown selection for "add unit" — not saved to state. */
   addDefId: string;
-  hasZone: boolean;
-  zoneX: string;
-  zoneY: string;
-  zoneWidth: string;
-  zoneHeight: string;
+  deploymentZone?: DeploymentZone;
 }
 
 interface ScenarioForm {
@@ -59,11 +59,6 @@ const blankSide = (n: number): SideForm => ({
   colour: n === 1 ? "#4488ee" : n === 2 ? "#ee4444" : "#44bb44",
   units: [],
   addDefId: "",
-  hasZone: false,
-  zoneX: "0",
-  zoneY: "0",
-  zoneWidth: "5",
-  zoneHeight: "5",
 });
 
 const blankForm: ScenarioForm = {
@@ -80,16 +75,12 @@ function scenarioToForm(s: Scenario): ScenarioForm {
       name: side.name,
       colour: side.colour,
       addDefId: "",
-      hasZone: side.deploymentZone !== undefined,
-      zoneX: side.deploymentZone ? String(side.deploymentZone.x) : "0",
-      zoneY: side.deploymentZone ? String(side.deploymentZone.y) : "0",
-      zoneWidth: side.deploymentZone ? String(side.deploymentZone.width) : "5",
-      zoneHeight: side.deploymentZone ? String(side.deploymentZone.height) : "5",
+      ...(side.deploymentZone !== undefined
+        ? { deploymentZone: side.deploymentZone }
+        : {}),
       units: side.units.map((u) => ({
         definitionId: u.definitionId,
-        prePlaced: u.x !== undefined,
-        x: u.x !== undefined ? String(u.x) : "",
-        y: u.y !== undefined ? String(u.y) : "",
+        ...(u.x !== undefined && u.y !== undefined ? { x: u.x, y: u.y } : {}),
       })),
     })),
   };
@@ -104,21 +95,13 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
         id: i as SideId,
         name: side.name.trim() || `Side ${i + 1}`,
         colour: side.colour,
-        ...(side.hasZone && {
-          deploymentZone: {
-            x: Math.max(0, parseInt(side.zoneX, 10) || 0) as Cells,
-            y: Math.max(0, parseInt(side.zoneY, 10) || 0) as Cells,
-            width: Math.max(1, parseInt(side.zoneWidth, 10) || 1) as Cells,
-            height: Math.max(1, parseInt(side.zoneHeight, 10) || 1) as Cells,
-          },
+        ...(side.deploymentZone !== undefined && {
+          deploymentZone: side.deploymentZone,
         }),
         units: side.units.map((u) => ({
           definitionId: u.definitionId,
-          ...(u.prePlaced && u.x !== "" && u.y !== ""
-            ? {
-                x: Math.max(0, parseInt(u.x, 10) || 0) as Cells,
-                y: Math.max(0, parseInt(u.y, 10) || 0) as Cells,
-              }
+          ...(u.x !== undefined && u.y !== undefined
+            ? { x: u.x, y: u.y }
             : {}),
         })),
       }),
@@ -138,20 +121,6 @@ function updateSide(
   return sides.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
 }
 
-function updateUnit(
-  sides: SideForm[],
-  si: number,
-  ui: number,
-  patch: Partial<UnitSetupForm>,
-): SideForm[] {
-  return updateSide(sides, si, {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    units: sides[si]!.units.map((u, idx) =>
-      idx === ui ? { ...u, ...patch } : u,
-    ),
-  });
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -169,8 +138,8 @@ export function ScenarioManager({ onClose }: Props) {
 
   const [form, setForm] = useState<ScenarioForm | null>(null);
   const [editingId, setEditingId] = useState<ScenarioId | null>(null);
+  const [zoneSideIdx, setZoneSideIdx] = useState(-1);
   const importRef = useRef<HTMLInputElement>(null);
-  const formId = useId();
 
   const mapName = (id: string) =>
     maps.find((m) => m.id === id)?.name ?? id ?? "—";
@@ -192,7 +161,16 @@ export function ScenarioManager({ onClose }: Props) {
   }
 
   function handleExport(s: Scenario) {
-    const json = JSON.stringify(s, null, 2);
+    const map = maps.find((m) => m.id === s.mapId);
+    const usedDefIds = new Set(s.sides.flatMap((side) => side.units.map((u) => u.definitionId)));
+    const usedDefs = definitions.filter((d) => usedDefIds.has(d.id));
+    const pkg = {
+      version: 1,
+      scenario: s,
+      ...(map && { map }),
+      ...(usedDefs.length > 0 && { definitions: usedDefs }),
+    };
+    const json = JSON.stringify(pkg, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -203,7 +181,18 @@ export function ScenarioManager({ onClose }: Props) {
   }
 
   function handleExportAll() {
-    const json = JSON.stringify(scenarios, null, 2);
+    const pkgs = scenarios.map((s) => {
+      const map = maps.find((m) => m.id === s.mapId);
+      const usedDefIds = new Set(s.sides.flatMap((side) => side.units.map((u) => u.definitionId)));
+      const usedDefs = definitions.filter((d) => usedDefIds.has(d.id));
+      return {
+        version: 1,
+        scenario: s,
+        ...(map && { map }),
+        ...(usedDefs.length > 0 && { definitions: usedDefs }),
+      };
+    });
+    const json = JSON.stringify(pkgs, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -220,11 +209,20 @@ export function ScenarioManager({ onClose }: Props) {
     reader.onload = (ev) => {
       try {
         const raw = JSON.parse(ev.target?.result as string);
-        // Accept either a single scenario or an array
-        const list: Scenario[] = Array.isArray(raw) ? raw : [raw];
-        if (!list.length || typeof list[0]!.name !== "string")
-          throw new Error("Invalid format");
-        dispatch(setAllScenarios(list));
+        const list = Array.isArray(raw) ? raw : [raw];
+        for (const item of list) {
+          if (item.version === 1 && item.scenario) {
+            // New self-contained format
+            if (item.map) dispatch(upsertMap(item.map));
+            if (item.definitions) dispatch(upsertDefinitions(item.definitions));
+            dispatch(upsertScenario(item.scenario));
+          } else if (typeof item.name === "string" && item.mapId) {
+            // Old format: raw Scenario object
+            dispatch(upsertScenario(item));
+          } else {
+            throw new Error("Unrecognised item");
+          }
+        }
       } catch {
         alert("Invalid scenario JSON.");
       }
@@ -237,17 +235,20 @@ export function ScenarioManager({ onClose }: Props) {
 
   function handleNew() {
     setEditingId(null);
+    setZoneSideIdx(-1);
     setForm({ ...blankForm, mapId: maps[0]?.id ?? "" });
   }
 
   function handleEdit(s: Scenario) {
     setEditingId(s.id);
+    setZoneSideIdx(-1);
     setForm(scenarioToForm(s));
   }
 
   function handleCancelEdit() {
     setForm(null);
     setEditingId(null);
+    setZoneSideIdx(-1);
   }
 
   function handleSave(e: React.FormEvent) {
@@ -261,6 +262,7 @@ export function ScenarioManager({ onClose }: Props) {
     }
     setForm(null);
     setEditingId(null);
+    setZoneSideIdx(-1);
   }
 
   // ---- Side / unit editing helpers -----------------------------------------
@@ -290,7 +292,7 @@ export function ScenarioManager({ onClose }: Props) {
         sides: updateSide(f.sides, si, {
           units: [
             ...f.sides[si]!.units,
-            { definitionId: defId, prePlaced: false, x: "", y: "" },
+            { definitionId: defId },
           ],
           addDefId: "",
         }),
@@ -312,16 +314,65 @@ export function ScenarioManager({ onClose }: Props) {
     );
   }
 
-  // ---- Render --------------------------------------------------------------
+  function unplace(si: number, ui: number) {
+    setForm((f) =>
+      f
+        ? {
+            ...f,
+            sides: f.sides.map((s, idx) =>
+              idx !== si
+                ? s
+                : {
+                    ...s,
+                    units: s.units.map((u, uidx) =>
+                      uidx !== ui ? u : { definitionId: u.definitionId },
+                    ),
+                  },
+            ),
+          }
+        : f,
+    );
+  }
 
-  // Editor view
+  // ---- Render: Editor view -------------------------------------------------
+
   if (form) {
+    const selectedMap = maps.find((m) => m.id === form.mapId);
+
+    const placedUnits: PlacedUnit[] = form.sides.flatMap((side, si) =>
+      side.units.flatMap((u, ui) =>
+        u.x !== undefined && u.y !== undefined
+          ? [
+              {
+                sideIdx: si,
+                unitIdx: ui,
+                colour: side.colour,
+                label: (
+                  definitions.find((d) => d.id === u.definitionId)?.name ??
+                  String(u.definitionId)
+                )
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join(""),
+                x: u.x,
+                y: u.y,
+              } satisfies PlacedUnit,
+            ]
+          : [],
+      ),
+    );
+
+    const zones: ZoneInfo[] = form.sides
+      .map((side, si) =>
+        side.deploymentZone
+          ? { sideIdx: si, colour: side.colour, zone: side.deploymentZone }
+          : null,
+      )
+      .filter((z): z is ZoneInfo => z !== null);
+
     return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div
-          className="modal-panel scenario-manager-panel"
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div className="modal-overlay">
+        <div className="modal-panel scenario-manager-panel editing">
           <div className="modal-header">
             <h2>{editingId ? "Edit Scenario" : "New Scenario"}</h2>
             <button className="close-btn" onClick={onClose}>
@@ -329,20 +380,16 @@ export function ScenarioManager({ onClose }: Props) {
             </button>
           </div>
 
-          <form
-            className="scenario-form"
-            id={formId}
-            onSubmit={handleSave}
-          >
-            {/* Name + map */}
-            <div className="scenario-form-row">
+          <form className="scenario-editor" onSubmit={handleSave}>
+            {/* Top row: Name + Map */}
+            <div className="scenario-editor-top">
               <label className="scenario-label-wide">
                 Name
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) =>
-                    setForm((f) => f && { ...f, name: e.target.value })
+                    setForm((f) => (f ? { ...f, name: e.target.value } : f))
                   }
                   placeholder="Scenario name"
                 />
@@ -352,7 +399,7 @@ export function ScenarioManager({ onClose }: Props) {
                 <select
                   value={form.mapId}
                   onChange={(e) =>
-                    setForm((f) => f && { ...f, mapId: e.target.value })
+                    setForm((f) => (f ? { ...f, mapId: e.target.value } : f))
                   }
                 >
                   <option value="">— select map —</option>
@@ -365,304 +412,266 @@ export function ScenarioManager({ onClose }: Props) {
               </label>
             </div>
 
-            {/* Sides */}
-            <div className="scenario-sides">
-              {form.sides.map((side, si) => (
-                <div key={si} className="scenario-side">
-                  <div className="scenario-side-header">
-                    <span className="scenario-side-label">Side {si + 1}</span>
-                    <input
-                      type="text"
-                      className="scenario-side-name"
-                      value={side.name}
-                      onChange={(e) =>
-                        setForm(
-                          (f) =>
-                            f && {
-                              ...f,
-                              sides: updateSide(f.sides, si, {
-                                name: e.target.value,
-                              }),
-                            },
-                        )
-                      }
-                    />
-                    <input
-                      type="color"
-                      value={side.colour}
-                      onChange={(e) =>
-                        setForm(
-                          (f) =>
-                            f && {
-                              ...f,
-                              sides: updateSide(f.sides, si, {
-                                colour: e.target.value,
-                              }),
-                            },
-                        )
-                      }
-                      title="Side colour"
-                    />
-                    {form.sides.length > 2 && (
-                      <button
-                        type="button"
-                        className="scenario-remove-btn"
-                        onClick={() => removeSide(si)}
-                        title="Remove side"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Deployment zone */}
-                  <div className="scenario-zone-row">
-                    <label className="scenario-preplaced-label">
+            {/* Main area: side panel + map panel */}
+            <div className="scenario-editor-main">
+              {/* Side panel */}
+              <div className="scenario-side-panel">
+                {form.sides.map((side, si) => (
+                  <div key={si} className="scenario-side">
+                    <div className="scenario-side-header">
+                      <span className="scenario-side-label">Side {si + 1}</span>
                       <input
-                        type="checkbox"
-                        checked={side.hasZone}
+                        type="text"
+                        className="scenario-side-name"
+                        value={side.name}
                         onChange={(e) =>
                           setForm(
                             (f) =>
                               f && {
                                 ...f,
                                 sides: updateSide(f.sides, si, {
-                                  hasZone: e.target.checked,
+                                  name: e.target.value,
                                 }),
                               },
                           )
                         }
                       />
-                      Deployment zone
-                    </label>
-                    {side.hasZone && (
-                      <>
-                        <label className="scenario-coord-label">
-                          x
-                          <input
-                            type="number"
-                            min={0}
-                            className="scenario-coord-input"
-                            value={side.zoneX}
-                            onChange={(e) =>
-                              setForm(
-                                (f) =>
-                                  f && {
-                                    ...f,
-                                    sides: updateSide(f.sides, si, {
-                                      zoneX: e.target.value,
-                                    }),
-                                  },
-                              )
-                            }
-                          />
-                        </label>
-                        <label className="scenario-coord-label">
-                          y
-                          <input
-                            type="number"
-                            min={0}
-                            className="scenario-coord-input"
-                            value={side.zoneY}
-                            onChange={(e) =>
-                              setForm(
-                                (f) =>
-                                  f && {
-                                    ...f,
-                                    sides: updateSide(f.sides, si, {
-                                      zoneY: e.target.value,
-                                    }),
-                                  },
-                              )
-                            }
-                          />
-                        </label>
-                        <label className="scenario-coord-label">
-                          w
-                          <input
-                            type="number"
-                            min={1}
-                            className="scenario-coord-input"
-                            value={side.zoneWidth}
-                            onChange={(e) =>
-                              setForm(
-                                (f) =>
-                                  f && {
-                                    ...f,
-                                    sides: updateSide(f.sides, si, {
-                                      zoneWidth: e.target.value,
-                                    }),
-                                  },
-                              )
-                            }
-                          />
-                        </label>
-                        <label className="scenario-coord-label">
-                          h
-                          <input
-                            type="number"
-                            min={1}
-                            className="scenario-coord-input"
-                            value={side.zoneHeight}
-                            onChange={(e) =>
-                              setForm(
-                                (f) =>
-                                  f && {
-                                    ...f,
-                                    sides: updateSide(f.sides, si, {
-                                      zoneHeight: e.target.value,
-                                    }),
-                                  },
-                              )
-                            }
-                          />
-                        </label>
-                      </>
-                    )}
-                  </div>
+                      <input
+                        type="color"
+                        value={side.colour}
+                        onChange={(e) =>
+                          setForm(
+                            (f) =>
+                              f && {
+                                ...f,
+                                sides: updateSide(f.sides, si, {
+                                  colour: e.target.value,
+                                }),
+                              },
+                          )
+                        }
+                        title="Side colour"
+                      />
+                      {form.sides.length > 2 && (
+                        <button
+                          type="button"
+                          className="scenario-remove-btn"
+                          onClick={() => removeSide(si)}
+                          title="Remove side"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
 
-                  {/* Unit list */}
-                  <div className="scenario-unit-list">
-                    {side.units.length === 0 && (
-                      <span className="scenario-empty-units">No units</span>
-                    )}
-                    {side.units.map((u, ui) => {
-                      const def = definitions.find(
-                        (d) => d.id === u.definitionId,
-                      );
-                      return (
-                        <div key={ui} className="scenario-unit-row">
-                          <span className="scenario-unit-name">
-                            {def?.name ?? u.definitionId}
-                          </span>
-                          <label className="scenario-preplaced-label">
-                            <input
-                              type="checkbox"
-                              checked={u.prePlaced}
-                              onChange={(e) =>
-                                setForm(
-                                  (f) =>
-                                    f && {
-                                      ...f,
-                                      sides: updateUnit(
-                                        f.sides,
-                                        si,
-                                        ui,
-                                        { prePlaced: e.target.checked },
-                                      ),
-                                    },
-                                )
-                              }
-                            />
-                            pre-placed
-                          </label>
-                          {u.prePlaced && (
-                            <>
-                              <label className="scenario-coord-label">
-                                x
-                                <input
-                                  type="number"
-                                  min={0}
-                                  className="scenario-coord-input"
-                                  value={u.x}
-                                  onChange={(e) =>
-                                    setForm(
-                                      (f) =>
-                                        f && {
-                                          ...f,
-                                          sides: updateUnit(
-                                            f.sides,
-                                            si,
-                                            ui,
-                                            { x: e.target.value },
-                                          ),
-                                        },
-                                    )
-                                  }
-                                />
-                              </label>
-                              <label className="scenario-coord-label">
-                                y
-                                <input
-                                  type="number"
-                                  min={0}
-                                  className="scenario-coord-input"
-                                  value={u.y}
-                                  onChange={(e) =>
-                                    setForm(
-                                      (f) =>
-                                        f && {
-                                          ...f,
-                                          sides: updateUnit(
-                                            f.sides,
-                                            si,
-                                            ui,
-                                            { y: e.target.value },
-                                          ),
-                                        },
-                                    )
-                                  }
-                                />
-                              </label>
-                            </>
-                          )}
+                    {/* Deployment zone row */}
+                    <div className="scenario-zone-row">
+                      <span className="scenario-zone-label">
+                        Zone:{" "}
+                        {side.deploymentZone
+                          ? `${side.deploymentZone.x},${side.deploymentZone.y} ${side.deploymentZone.width}×${side.deploymentZone.height}`
+                          : "none"}
+                      </span>
+                      {zoneSideIdx === si ? (
+                        <button
+                          type="button"
+                          className="scenario-zone-btn active"
+                          onClick={() => setZoneSideIdx(-1)}
+                        >
+                          Done
+                        </button>
+                      ) : (
+                        <>
                           <button
                             type="button"
-                            className="scenario-remove-btn"
-                            onClick={() => removeUnit(si, ui)}
+                            className="scenario-zone-btn"
+                            onClick={() => setZoneSideIdx(si)}
                           >
-                            ×
+                            {side.deploymentZone ? "Edit" : "Define"}
                           </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          {side.deploymentZone && (
+                            <button
+                              type="button"
+                              className="scenario-remove-btn"
+                              title="Clear zone"
+                              onClick={() =>
+                                setForm((f) => {
+                                  if (!f) return f;
+                                  return {
+                                    ...f,
+                                    sides: f.sides.map((s, idx) => {
+                                      if (idx !== si) return s;
+                                      const { deploymentZone: _dz, ...rest } = s;
+                                      return rest;
+                                    }),
+                                  };
+                                })
+                              }
+                            >
+                              ×
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-                  {/* Add unit row */}
-                  <div className="scenario-add-unit-row">
-                    <select
-                      value={side.addDefId}
-                      onChange={(e) =>
-                        setForm(
-                          (f) =>
-                            f && {
+                    {/* Unit list */}
+                    <div className="scenario-unit-list">
+                      {side.units.length === 0 && (
+                        <span className="scenario-empty-units">No units</span>
+                      )}
+                      {side.units.map((u, ui) => {
+                        const def = definitions.find(
+                          (d) => d.id === u.definitionId,
+                        );
+                        const isPlaced =
+                          u.x !== undefined && u.y !== undefined;
+                        return (
+                          <div
+                            key={ui}
+                            className={`scenario-unit-row${isPlaced ? " placed" : ""}`}
+                          >
+                            {!isPlaced ? (
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData(
+                                    "scenarioRef",
+                                    `${si}:${ui}`,
+                                  );
+                                  e.dataTransfer.effectAllowed = "move";
+                                }}
+                                style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, minWidth: 0 }}
+                              >
+                                <span className="drag-handle">⠿</span>
+                                <span className="scenario-unit-name">
+                                  {def?.name ?? String(u.definitionId)}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="scenario-unit-name">
+                                  {def?.name ?? String(u.definitionId)}
+                                </span>
+                                <span className="scenario-unit-pos">
+                                  at {u.x},{u.y}
+                                </span>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              className="scenario-remove-btn"
+                              onClick={() => {
+                                if (isPlaced) {
+                                  unplace(si, ui);
+                                } else {
+                                  removeUnit(si, ui);
+                                }
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Add unit row */}
+                    <div className="scenario-add-unit-row">
+                      <select
+                        value={side.addDefId}
+                        onChange={(e) =>
+                          setForm(
+                            (f) =>
+                              f && {
+                                ...f,
+                                sides: updateSide(f.sides, si, {
+                                  addDefId: e.target.value,
+                                }),
+                              },
+                          )
+                        }
+                      >
+                        <option value="">— add unit from roster —</option>
+                        {definitions.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} ({d.type.name})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!side.addDefId}
+                        onClick={() => addUnit(si)}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {form.sides.length < 4 && (
+                  <button
+                    type="button"
+                    className="scenario-add-side-btn"
+                    onClick={addSide}
+                  >
+                    + Add side
+                  </button>
+                )}
+              </div>
+
+              {/* Map panel */}
+              <div className="scenario-map-panel">
+                {selectedMap ? (
+                  <ScenarioMapEditor
+                    map={selectedMap}
+                    placedUnits={placedUnits}
+                    zones={zones}
+                    zoneSideIdx={zoneSideIdx}
+                    onPlace={(x, y, si, ui) => {
+                      setForm((f) =>
+                        f
+                          ? {
                               ...f,
-                              sides: updateSide(f.sides, si, {
-                                addDefId: e.target.value,
+                              sides: f.sides.map((s, idx) =>
+                                idx !== si
+                                  ? s
+                                  : {
+                                      ...s,
+                                      units: s.units.map((u, uidx) =>
+                                        uidx !== ui ? u : { ...u, x, y },
+                                      ),
+                                    },
+                              ),
+                            }
+                          : f,
+                      );
+                    }}
+                    onUnplace={(si, ui) => unplace(si, ui)}
+                    onZoneDefined={(zone) => {
+                      setForm((f) =>
+                        f
+                          ? {
+                              ...f,
+                              sides: updateSide(f.sides, zoneSideIdx, {
+                                deploymentZone: zone,
                               }),
-                            },
-                        )
-                      }
-                    >
-                      <option value="">— add unit from roster —</option>
-                      {definitions.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name} ({d.type.name})
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      disabled={!side.addDefId}
-                      onClick={() => addUnit(si)}
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {form.sides.length < 4 && (
-                <button
-                  type="button"
-                  className="scenario-add-side-btn"
-                  onClick={addSide}
-                >
-                  + Add side
-                </button>
-              )}
+                            }
+                          : f,
+                      );
+                      setZoneSideIdx(-1);
+                    }}
+                  />
+                ) : (
+                  <span className="scenario-map-empty">
+                    Select a map above to begin placing units
+                  </span>
+                )}
+              </div>
             </div>
 
+            {/* Footer */}
             <div className="scenario-form-footer">
               <button type="submit" disabled={!form.mapId}>
                 {editingId ? "Save changes" : "Create scenario"}
@@ -679,11 +688,8 @@ export function ScenarioManager({ onClose }: Props) {
 
   // List view
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal-panel scenario-manager-panel"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="modal-overlay">
+      <div className="modal-panel scenario-manager-panel">
         <div className="modal-header">
           <h2>Scenarios</h2>
           <button className="close-btn" onClick={onClose}>
@@ -703,7 +709,8 @@ export function ScenarioManager({ onClose }: Props) {
               0,
             );
             const prePlaced = s.sides.reduce(
-              (n, side) => n + side.units.filter((u) => u.x !== undefined).length,
+              (n, side) =>
+                n + side.units.filter((u) => u.x !== undefined).length,
               0,
             );
             return (
@@ -740,10 +747,7 @@ export function ScenarioManager({ onClose }: Props) {
 
         <div className="map-manager-footer">
           <button onClick={handleNew}>+ New Scenario</button>
-          <button
-            onClick={handleExportAll}
-            disabled={scenarios.length === 0}
-          >
+          <button onClick={handleExportAll} disabled={scenarios.length === 0}>
             Export all
           </button>
           <label className="import-btn">
