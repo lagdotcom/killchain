@@ -34,12 +34,30 @@ function OverlayTint({ x, y, reason }: Tint) {
   );
 }
 
-export function GridOverlay({ tints }: { tints: Tint[] }) {
+interface GridOverlayProps {
+  tints: Tint[];
+  logHoverCell?: { x: Cells; y: Cells } | undefined;
+}
+
+export function GridOverlay({ tints, logHoverCell }: GridOverlayProps) {
   return (
     <g>
       {tints.map((tint) => (
         <OverlayTint key={tint.id} {...tint} />
       ))}
+      {logHoverCell && (
+        <rect
+          className="logHoverHighlight"
+          x={logHoverCell.x * cellSize}
+          y={logHoverCell.y * cellSize}
+          width={cellSize}
+          height={cellSize}
+          fill="none"
+          stroke="#ffd"
+          strokeWidth={2}
+          pointerEvents="none"
+        />
+      )}
     </g>
   );
 }

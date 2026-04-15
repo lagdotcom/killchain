@@ -102,9 +102,10 @@ function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
 interface GameGridProps {
   onRegisterPan?: (fn: (x: Cells, y: Cells) => void) => void;
   onEditCell?: ((x: Cells, y: Cells) => void) | undefined;
+  logHoverCell?: { x: Cells; y: Cells } | undefined;
 }
 
-function GameGrid({ onRegisterPan, onEditCell }: GameGridProps) {
+function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const dispatch = useAppDispatch();
   const activeSide = useSelector(selectActiveSide);
   const activeUnit = useSelector(selectActiveUnit);
@@ -260,7 +261,7 @@ function GameGrid({ onRegisterPan, onEditCell }: GameGridProps) {
             onClick={canSelect(unit) ? handleClickUnit : undefined}
           />
         ))}
-        <GridOverlay tints={tints} />
+        <GridOverlay tints={tints} logHoverCell={logHoverCell} />
       </g>
     </svg>
   );

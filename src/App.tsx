@@ -36,6 +36,9 @@ function AppContent() {
   >(null);
   const [showMapManager, setShowMapManager] = useState(false);
   const [editBrush, setEditBrush] = useState<EditBrush | null>(null);
+  const [logHoverCell, setLogHoverCell] = useState<
+    { x: Cells; y: Cells } | undefined
+  >(undefined);
 
   const handleEditCell = useCallback(
     (x: Cells, y: Cells) => {
@@ -77,10 +80,15 @@ function AppContent() {
           <GameGrid
             onRegisterPan={(fn) => setPanToCellFn(() => fn)}
             onEditCell={editBrush ? handleEditCell : undefined}
+            logHoverCell={logHoverCell}
           />
         </div>
       </div>
-      <MessageLog panToCell={(x, y) => panToCellFn?.(x, y)} />
+      <MessageLog
+        panToCell={(x, y) => panToCellFn?.(x, y)}
+        onHoverCell={(x, y) => setLogHoverCell({ x, y })}
+        onUnhoverCell={() => setLogHoverCell(undefined)}
+      />
       {showMapManager && (
         <MapManager onClose={() => setShowMapManager(false)} />
       )}
