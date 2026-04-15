@@ -18,12 +18,14 @@ import { SurprisePhase } from "./SurprisePhase.js";
 interface SidebarProps {
   isEditingTerrain: boolean;
   onOpenMapManager: () => void;
+  onOpenRosterManager: () => void;
   onToggleEditTerrain: () => void;
 }
 
 export function Sidebar({
   isEditingTerrain,
   onOpenMapManager,
+  onOpenRosterManager,
   onToggleEditTerrain,
 }: SidebarProps) {
   const dispatch = useAppDispatch();
@@ -54,6 +56,9 @@ export function Sidebar({
           </button>
           <button onClick={onOpenMapManager} title="Map manager">
             🗺️
+          </button>
+          <button onClick={onOpenRosterManager} title="Unit roster">
+            ⚔️
           </button>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import type { Feet, SideId } from "../flavours.js";
+import type { Feet, SideId, UnitDefinitionId } from "../flavours.js";
 
 export interface UnitType {
   name: string;
@@ -27,6 +27,15 @@ export interface Unit {
 }
 
 export type MoraleStatus = "Normal" | "Shaken" | "Rout";
+
+/** A side-agnostic unit template stored in the roster. */
+export interface UnitDefinition {
+  id: UnitDefinitionId;
+  name: string;
+  shortName?: string;
+  type: UnitType;
+  missile?: boolean;
+}
 
 export interface Terrain {
   type: TerrainType;

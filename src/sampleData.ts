@@ -1,9 +1,9 @@
 import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 import SeedRandom from "seed-random";
 
-import type { Cells, Feet, MapId, SideId } from "./flavours.js";
+import type { Cells, Feet, MapId, SideId, UnitDefinitionId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
-import type { TerrainType, UnitType } from "./killchain/types.js";
+import type { TerrainType, UnitDefinition, UnitType } from "./killchain/types.js";
 import {
   heavyHorse,
   lightFoot,
@@ -49,6 +49,45 @@ export const defaultUnits = [
 export const defaultSides: SideSetup[] = [
   { id: 0, name: "Regnum-Fey Alliance", colour: "#49e" },
   { id: 1, name: "Horde of Grund", colour: "#f66" },
+];
+
+/** Initial roster pre-populated with the units from the default battle. */
+export const defaultDefinitions: UnitDefinition[] = [
+  {
+    id: "def-heralds-of-mikius" as UnitDefinitionId,
+    name: "Heralds of Mikius",
+    type: heavyHorse,
+    missile: true,
+  },
+  {
+    id: "def-bakhtavornery" as UnitDefinitionId,
+    name: "Bakhtavornery",
+    type: lightFoot,
+    missile: true,
+  },
+  {
+    id: "def-eyin-eweko" as UnitDefinitionId,
+    name: "Eyin Eweko",
+    type: lightFoot,
+    missile: true,
+  },
+  {
+    id: "def-chosen-of-grund" as UnitDefinitionId,
+    name: "Chosen of Grund",
+    type: mediumFoot,
+    missile: true,
+  },
+  {
+    id: "def-beloved-of-grund" as UnitDefinitionId,
+    name: "Beloved of Grund",
+    type: mediumFoot,
+    missile: true,
+  },
+  {
+    id: "def-outriders-of-grund" as UnitDefinitionId,
+    name: "Outriders of Grund",
+    type: lightHorse,
+  },
 ];
 
 const noiseView =

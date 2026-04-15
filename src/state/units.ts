@@ -7,6 +7,7 @@ import type { Unit } from "../killchain/types.js";
 import {
   attackAction,
   changePhaseAction,
+  deployUnitAction,
   initiativeAction,
   moraleAction,
   moveAction,
@@ -29,6 +30,27 @@ const unitsSlice = createSlice({
     builder
       .addCase(setupBattleAction, (state, { payload: { units } }) =>
         unitsAdapter.setAll(state, units),
+      )
+      .addCase(
+        deployUnitAction,
+        (state, { payload: { definition, sideId, unitId } }) => {
+          const { shortName, missile, ...rest } = definition;
+          unitsAdapter.addOne(state, {
+            id: unitId,
+            name: rest.name,
+            ...(shortName !== undefined && { shortName }),
+            type: rest.type,
+            ...(missile !== undefined && { missile }),
+            side: sideId,
+            x: NaN,
+            y: NaN,
+            flankCount: 0,
+            damage: 0,
+            moved: 0,
+            status: "Normal",
+            ready: false,
+          });
+        },
       )
       .addCase(placeUnitAction, (state, { payload: { unit, x, y } }) =>
         unitsAdapter.updateOne(state, { id: unit.id, changes: { x, y } }),

@@ -2,6 +2,7 @@ import {
   type Action,
   type ActionCreator,
   createAction,
+  nanoid,
   type ThunkAction,
 } from "@reduxjs/toolkit";
 
@@ -14,7 +15,7 @@ import {
   Phase,
   phaseChanges,
 } from "../killchain/rules.js";
-import type { MoraleStatus } from "../killchain/types.js";
+import type { MoraleStatus, UnitDefinition } from "../killchain/types.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { canFleeBoard, findBestMove } from "../movement.js";
 import { manhattanDistance, rollDice } from "../tools.js";
@@ -112,6 +113,18 @@ export const setupBattleAction = createAction<{
   sides: SideSetup[];
   units: UnitEntity[];
 }>("battle/setup");
+
+/** Deploy a roster unit definition to a side's unplaced pool. */
+export const deployUnitAction = createAction(
+  "battle/deployUnit",
+  (definition: UnitDefinition, sideId: SideId) => ({
+    payload: {
+      definition,
+      sideId,
+      unitId: nanoid() as UnitId,
+    },
+  }),
+);
 
 export const surpriseAction = createAction<{
   results: SurpriseRollResult[];
