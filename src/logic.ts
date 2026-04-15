@@ -1,5 +1,5 @@
 import type { Tint, TintReason } from "./components/GridOverlay.js";
-import type { Feet, UnitId } from "./flavours.js";
+import type { Cells, Feet, UnitId } from "./flavours.js";
 import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import {
   longRangeMax,
@@ -7,7 +7,7 @@ import {
   Phase,
   shortRangeMax,
 } from "./killchain/rules.js";
-import type { TerrainType } from "./killchain/types.js";
+import type { DeploymentZone, TerrainType } from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
 import {
   type PathNode,
@@ -34,6 +34,35 @@ const nodeToTint = (
   cost,
   reason,
 });
+
+export function isInDeploymentZone(
+  zone: DeploymentZone,
+  x: Cells,
+  y: Cells,
+): boolean {
+  return (
+    x >= zone.x &&
+    x < zone.x + zone.width &&
+    y >= zone.y &&
+    y < zone.y + zone.height
+  );
+}
+
+export function getDeploymentZoneTints(zone: DeploymentZone): Tint[] {
+  const tints: Tint[] = [];
+  for (let cx = zone.x; cx < zone.x + zone.width; cx++) {
+    for (let cy = zone.y; cy < zone.y + zone.height; cy++) {
+      tints.push({
+        id: xyId(cx as Cells, cy as Cells),
+        x: cx as Cells,
+        y: cy as Cells,
+        cost: 0 as Feet,
+        reason: "deployable",
+      });
+    }
+  }
+  return tints;
+}
 
 export function getTints(
   activeUnit: UnitEntity | undefined,

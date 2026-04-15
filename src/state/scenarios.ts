@@ -2,18 +2,16 @@ import { createEntityAdapter, createSlice, nanoid } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 import type { Cells, MapId, ScenarioId, SideId, UnitDefinitionId } from "../flavours.js";
+import type { DeploymentZone } from "../killchain/types.js";
+
+export type { DeploymentZone };
 
 // ---------------------------------------------------------------------------
-// Future-proof extension points — currently empty stubs.
-// Fill these in as the features are implemented rather than deleting them.
+// Future-proof extension points — empty stubs until implemented.
 // ---------------------------------------------------------------------------
-
-/** Future: restrict where a side may place units during deployment.
- *  e.g. { rows: { yMin: 0, yMax: 3 } } or { cells: TerrainId[] } */
-export interface DeploymentZone {}
 
 /** Future: a condition that causes a side to win or the battle to end.
- *  e.g. { type: "rout_all" } or { type: "occupy_cell", cellId, sideId } */
+ *  e.g. { type: "rout_all" | "occupy_cell" | "exit_unit"; sideId?: SideId } */
 export interface VictoryCondition {}
 
 /** Future: per-scenario overrides for optional rules.

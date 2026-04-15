@@ -1,7 +1,7 @@
 import type { Cells, Feet } from "../flavours.js";
 import { cellSize } from "../ui.js";
 
-export type TintReason = "short" | "medium" | "long" | "reachable";
+export type TintReason = "short" | "medium" | "long" | "reachable" | "deployable";
 
 export interface Tint {
   id: string;
@@ -16,6 +16,7 @@ const reasonColours: Record<TintReason, string> = {
   medium: "#ff0",
   long: "#f00",
   reachable: "#fff",
+  deployable: "#08f",
 };
 
 function OverlayTint({ x, y, reason }: Tint) {

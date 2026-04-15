@@ -170,10 +170,11 @@ export const loadScenarioAction =
     dispatch(
       setupBattleAction({
         map: scenario.mapId,
-        sides: scenario.sides.map(({ id, name, colour }) => ({
+        sides: scenario.sides.map(({ id, name, colour, deploymentZone }) => ({
           id,
           name,
           colour,
+          ...(deploymentZone !== undefined && { deploymentZone }),
         })),
         units,
       }),

@@ -11,16 +11,16 @@ import {
   Phase,
 } from "../killchain/rules.js";
 import { KillChainEngine } from "../KillChainEngine.js";
-import { getTints } from "../logic.js";
+import { getDeploymentZoneTints, getTints, isInDeploymentZone } from "../logic.js";
 import { attack, moveAction, placeUnitAction } from "../state/actions.js";
 import { setActiveUnitId } from "../state/battle.js";
 import {
   selectActiveSide,
   selectActiveUnit,
-  selectAllSides,
   selectMap,
   selectPhase,
   selectPlacedUnits,
+  selectSideEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
 import type { SideEntity } from "../state/sides.js";
@@ -110,7 +110,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const activeSide = useSelector(selectActiveSide);
   const activeUnit = useSelector(selectActiveUnit);
   const phase = useSelector(selectPhase);
-  const sides = useSelector(selectAllSides);
+  const sides = useSelector(selectSideEntities);
   const map = useSelector(selectMap);
   const units = useSelector(selectUnitEntities);
 
@@ -123,9 +123,11 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
 
   const handleDrop = useCallback(
     (x: Cells, y: Cells, unitId: UnitId, sideId: SideId) => {
-      dispatch(
-        placeUnitAction({ side: sides[sideId]!, unit: units[unitId]!, x, y }),
-      );
+      const side = sides[sideId];
+      if (!side) return;
+      if (side.deploymentZone && !isInDeploymentZone(side.deploymentZone, x, y))
+        return;
+      dispatch(placeUnitAction({ side, unit: units[unitId]!, x, y }));
     },
     [dispatch, sides, units],
   );
@@ -153,10 +155,12 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
     [activeSide, activeUnit, map, phase],
   );
 
-  const tints = useMemo(
-    () => (map ? getTints(activeUnit, phase, map, units) : []),
-    [activeUnit, map, phase, units],
-  );
+  const tints = useMemo(() => {
+    const movement = map ? getTints(activeUnit, phase, map, units) : [];
+    if (phase === Phase.Placement && activeSide?.deploymentZone)
+      return [...getDeploymentZoneTints(activeSide.deploymentZone), ...movement];
+    return movement;
+  }, [activeSide, activeUnit, map, phase, units]);
 
   const targetNumbers = useMemo(() => {
     if (!activeUnit || !map) return {};

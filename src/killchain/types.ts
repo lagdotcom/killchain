@@ -1,4 +1,4 @@
-import type { Feet, SideId, UnitDefinitionId } from "../flavours.js";
+import type { Cells, Feet, SideId, UnitDefinitionId } from "../flavours.js";
 
 export interface UnitType {
   name: string;
@@ -27,6 +27,18 @@ export interface Unit {
 }
 
 export type MoraleStatus = "Normal" | "Shaken" | "Rout";
+
+/**
+ * Axis-aligned rectangular region that restricts where a side may
+ * drop units during the Placement phase.  The region covers columns
+ * [x, x+width) and rows [y, y+height).
+ */
+export interface DeploymentZone {
+  x: Cells;
+  y: Cells;
+  width: Cells;
+  height: Cells;
+}
 
 /** A side-agnostic unit template stored in the roster. */
 export interface UnitDefinition {

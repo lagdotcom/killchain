@@ -37,6 +37,11 @@ interface SideForm {
   units: UnitSetupForm[];
   /** Tracks the dropdown selection for "add unit" — not saved to state. */
   addDefId: string;
+  hasZone: boolean;
+  zoneX: string;
+  zoneY: string;
+  zoneWidth: string;
+  zoneHeight: string;
 }
 
 interface ScenarioForm {
@@ -54,6 +59,11 @@ const blankSide = (n: number): SideForm => ({
   colour: n === 1 ? "#4488ee" : n === 2 ? "#ee4444" : "#44bb44",
   units: [],
   addDefId: "",
+  hasZone: false,
+  zoneX: "0",
+  zoneY: "0",
+  zoneWidth: "5",
+  zoneHeight: "5",
 });
 
 const blankForm: ScenarioForm = {
@@ -70,6 +80,11 @@ function scenarioToForm(s: Scenario): ScenarioForm {
       name: side.name,
       colour: side.colour,
       addDefId: "",
+      hasZone: side.deploymentZone !== undefined,
+      zoneX: side.deploymentZone ? String(side.deploymentZone.x) : "0",
+      zoneY: side.deploymentZone ? String(side.deploymentZone.y) : "0",
+      zoneWidth: side.deploymentZone ? String(side.deploymentZone.width) : "5",
+      zoneHeight: side.deploymentZone ? String(side.deploymentZone.height) : "5",
       units: side.units.map((u) => ({
         definitionId: u.definitionId,
         prePlaced: u.x !== undefined,
@@ -89,6 +104,14 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
         id: i as SideId,
         name: side.name.trim() || `Side ${i + 1}`,
         colour: side.colour,
+        ...(side.hasZone && {
+          deploymentZone: {
+            x: Math.max(0, parseInt(side.zoneX, 10) || 0) as Cells,
+            y: Math.max(0, parseInt(side.zoneY, 10) || 0) as Cells,
+            width: Math.max(1, parseInt(side.zoneWidth, 10) || 1) as Cells,
+            height: Math.max(1, parseInt(side.zoneHeight, 10) || 1) as Cells,
+          },
+        }),
         units: side.units.map((u) => ({
           definitionId: u.definitionId,
           ...(u.prePlaced && u.x !== "" && u.y !== ""
@@ -389,6 +412,112 @@ export function ScenarioManager({ onClose }: Props) {
                       >
                         ×
                       </button>
+                    )}
+                  </div>
+
+                  {/* Deployment zone */}
+                  <div className="scenario-zone-row">
+                    <label className="scenario-preplaced-label">
+                      <input
+                        type="checkbox"
+                        checked={side.hasZone}
+                        onChange={(e) =>
+                          setForm(
+                            (f) =>
+                              f && {
+                                ...f,
+                                sides: updateSide(f.sides, si, {
+                                  hasZone: e.target.checked,
+                                }),
+                              },
+                          )
+                        }
+                      />
+                      Deployment zone
+                    </label>
+                    {side.hasZone && (
+                      <>
+                        <label className="scenario-coord-label">
+                          x
+                          <input
+                            type="number"
+                            min={0}
+                            className="scenario-coord-input"
+                            value={side.zoneX}
+                            onChange={(e) =>
+                              setForm(
+                                (f) =>
+                                  f && {
+                                    ...f,
+                                    sides: updateSide(f.sides, si, {
+                                      zoneX: e.target.value,
+                                    }),
+                                  },
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="scenario-coord-label">
+                          y
+                          <input
+                            type="number"
+                            min={0}
+                            className="scenario-coord-input"
+                            value={side.zoneY}
+                            onChange={(e) =>
+                              setForm(
+                                (f) =>
+                                  f && {
+                                    ...f,
+                                    sides: updateSide(f.sides, si, {
+                                      zoneY: e.target.value,
+                                    }),
+                                  },
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="scenario-coord-label">
+                          w
+                          <input
+                            type="number"
+                            min={1}
+                            className="scenario-coord-input"
+                            value={side.zoneWidth}
+                            onChange={(e) =>
+                              setForm(
+                                (f) =>
+                                  f && {
+                                    ...f,
+                                    sides: updateSide(f.sides, si, {
+                                      zoneWidth: e.target.value,
+                                    }),
+                                  },
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="scenario-coord-label">
+                          h
+                          <input
+                            type="number"
+                            min={1}
+                            className="scenario-coord-input"
+                            value={side.zoneHeight}
+                            onChange={(e) =>
+                              setForm(
+                                (f) =>
+                                  f && {
+                                    ...f,
+                                    sides: updateSide(f.sides, si, {
+                                      zoneHeight: e.target.value,
+                                    }),
+                                  },
+                              )
+                            }
+                          />
+                        </label>
+                      </>
                     )}
                   </div>
 

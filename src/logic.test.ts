@@ -4,7 +4,8 @@ import type { Cells, SideId, TerrainId, UnitId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import { heavyFoot, heavyHorse } from "./killchain/units.js";
-import { getTints } from "./logic.js";
+import type { DeploymentZone } from "./killchain/types.js";
+import { getDeploymentZoneTints, getTints, isInDeploymentZone } from "./logic.js";
 import type { MapEntity } from "./state/maps.js";
 import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
@@ -242,5 +243,71 @@ describe("getTints — flying unit", () => {
 
     expect(flyingCoords).toContain("6,5");
     expect(groundCoords).not.toContain("6,5");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deployment zone helpers
+// ---------------------------------------------------------------------------
+
+function zone(x: number, y: number, width: number, height: number): DeploymentZone {
+  return {
+    x: x as Cells,
+    y: y as Cells,
+    width: width as Cells,
+    height: height as Cells,
+  };
+}
+
+describe("isInDeploymentZone", () => {
+  test("returns true for a cell inside the zone", () => {
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2 as Cells, 3 as Cells)).toBe(true);
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 5 as Cells, 5 as Cells)).toBe(true);
+  });
+
+  test("returns false for a cell outside the zone", () => {
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 1 as Cells, 3 as Cells)).toBe(false); // x too low
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 6 as Cells, 3 as Cells)).toBe(false); // x == x+width
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2 as Cells, 2 as Cells)).toBe(false); // y too low
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2 as Cells, 6 as Cells)).toBe(false); // y == y+height
+  });
+
+  test("boundary cells on the far edge are excluded (half-open interval)", () => {
+    // zone(0,0,3,3) covers x in [0,3), y in [0,3)
+    expect(isInDeploymentZone(zone(0, 0, 3, 3), 2 as Cells, 2 as Cells)).toBe(true);
+    expect(isInDeploymentZone(zone(0, 0, 3, 3), 3 as Cells, 0 as Cells)).toBe(false);
+    expect(isInDeploymentZone(zone(0, 0, 3, 3), 0 as Cells, 3 as Cells)).toBe(false);
+  });
+
+  test("1×1 zone contains only its own cell", () => {
+    const z = zone(5, 7, 1, 1);
+    expect(isInDeploymentZone(z, 5 as Cells, 7 as Cells)).toBe(true);
+    expect(isInDeploymentZone(z, 4 as Cells, 7 as Cells)).toBe(false);
+    expect(isInDeploymentZone(z, 5 as Cells, 8 as Cells)).toBe(false);
+  });
+});
+
+describe("getDeploymentZoneTints", () => {
+  test("returns width × height tints", () => {
+    const tints = getDeploymentZoneTints(zone(1, 2, 3, 4));
+    expect(tints).toHaveLength(12); // 3 × 4
+  });
+
+  test("all tints have reason 'deployable'", () => {
+    const tints = getDeploymentZoneTints(zone(0, 0, 2, 2));
+    expect(tints.every((t) => t.reason === "deployable")).toBe(true);
+  });
+
+  test("tints cover exactly the zone cells", () => {
+    const tints = getDeploymentZoneTints(zone(2, 3, 2, 2));
+    const coords = tints.map((t) => `${t.x},${t.y}`).sort();
+    expect(coords).toEqual(["2,3", "2,4", "3,3", "3,4"].sort());
+  });
+
+  test("tint IDs match xyId of their cell", () => {
+    const tints = getDeploymentZoneTints(zone(0, 0, 2, 1));
+    for (const t of tints) {
+      expect(t.id).toBe(xyId(t.x, t.y));
+    }
   });
 });
