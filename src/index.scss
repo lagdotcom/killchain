@@ -183,3 +183,297 @@ body,
   pointer-events: none;
   opacity: 0.2;
 }
+
+// ---------------------------------------------------------------------------
+// Map container + edit mode
+// ---------------------------------------------------------------------------
+
+.map-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.map.editMode {
+  cursor: crosshair;
+}
+
+// ---------------------------------------------------------------------------
+// Terrain palette (edit mode toolbar)
+// ---------------------------------------------------------------------------
+
+.terrain-palette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--padding);
+  background: var(--panel-bg);
+  flex-shrink: 0;
+
+  .palette-label {
+    color: #aaa;
+    font-size: var(--font-size);
+    white-space: nowrap;
+  }
+
+  .palette-btn {
+    padding: 2px 8px;
+    font-size: var(--font-size);
+    cursor: pointer;
+
+    &.active {
+      outline: 2px solid white;
+    }
+  }
+
+  .terrain-btn {
+    background: var(--terrain-color, #888);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .palette-done {
+    margin-left: auto;
+    font-size: var(--font-size);
+    cursor: pointer;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar map section
+// ---------------------------------------------------------------------------
+
+.map-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #444;
+  margin-bottom: 4px;
+
+  .map-section-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .map-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .map-dims {
+    font-size: 10px;
+    color: #888;
+  }
+
+  .map-section-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+
+    button {
+      padding: 2px 6px;
+      font-size: 14px;
+      cursor: pointer;
+
+      &.active {
+        outline: 2px solid white;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Map manager modal
+// ---------------------------------------------------------------------------
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-panel {
+  background: #1e1e1e;
+  color: var(--text-color);
+  padding: var(--padding);
+  border-radius: var(--border-radius);
+  border: 1px solid #444;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.map-manager-panel {
+  width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 {
+      font-size: 16px;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+
+      &:hover {
+        color: white;
+      }
+    }
+  }
+
+  .map-manager-warning {
+    font-size: var(--font-size);
+    color: #fa0;
+    padding: 4px 0;
+  }
+
+  .map-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .map-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+
+    &.active {
+      background: rgba(255, 255, 255, 0.12);
+      outline: 1px solid #666;
+    }
+
+    .map-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .map-item-name {
+      display: block;
+      font-weight: bold;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .map-item-dims {
+      font-size: 10px;
+      color: #888;
+    }
+
+    .map-item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+
+      button {
+        font-size: var(--font-size);
+        padding: 2px 8px;
+        cursor: pointer;
+
+        &:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  .map-manager-footer {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    button,
+    .import-btn {
+      font-size: var(--font-size);
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+  }
+
+  .map-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size);
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      input,
+      select {
+        background: #333;
+        border: 1px solid #555;
+        color: white;
+        padding: 3px 6px;
+        border-radius: var(--border-radius);
+        font-size: var(--font-size);
+      }
+
+      input[type="text"] {
+        flex: 1;
+      }
+
+      input[type="number"] {
+        width: 70px;
+      }
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .seed-row {
+      flex-wrap: wrap;
+      gap: 6px;
+
+      input[type="number"] {
+        width: 80px;
+      }
+
+      input:disabled {
+        opacity: 0.4;
+      }
+    }
+
+    button[type="submit"] {
+      align-self: flex-start;
+      padding: 4px 14px;
+      cursor: pointer;
+    }
+  }
+}

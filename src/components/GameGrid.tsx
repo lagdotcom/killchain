@@ -101,9 +101,10 @@ function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
 
 interface GameGridProps {
   onRegisterPan?: (fn: (x: Cells, y: Cells) => void) => void;
+  onEditCell?: ((x: Cells, y: Cells) => void) | undefined;
 }
 
-function GameGrid({ onRegisterPan }: GameGridProps) {
+function GameGrid({ onRegisterPan, onEditCell }: GameGridProps) {
   const dispatch = useAppDispatch();
   const activeSide = useSelector(selectActiveSide);
   const activeUnit = useSelector(selectActiveUnit);
@@ -173,6 +174,11 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
 
   const handleClickTerrain = useCallback(
     (x: Cells, y: Cells) => {
+      if (onEditCell) {
+        onEditCell(x, y);
+        return;
+      }
+
       const tint = tints.find((t) => t.x === x && t.y === y);
 
       switch (phase) {
@@ -185,7 +191,7 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
 
       dispatch(setActiveUnitId(undefined));
     },
-    [activeUnit, dispatch, phase, tints],
+    [activeUnit, dispatch, onEditCell, phase, tints],
   );
 
   const handleClickUnit = useCallback(
@@ -237,7 +243,12 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
   }, [centre, gotoCell, onRegisterPan]);
 
   return (
-    <svg ref={svgRef} width="100%" height="100%" className="map">
+    <svg
+      ref={svgRef}
+      width="100%"
+      height="100%"
+      className={`map${onEditCell ? " editMode" : ""}`}
+    >
       <g ref={gRef}>
         {terrainCells}
         {placedUnits.map((unit) => (

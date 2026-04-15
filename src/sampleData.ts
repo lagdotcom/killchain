@@ -62,6 +62,7 @@ export function generateGridMap(
   width: Cells,
   height: Cells,
   seed?: number,
+  name?: string,
 ): MapEntity {
   const noise = createNoise2D(
     seed !== undefined ? SeedRandom(String(seed)) : undefined,
@@ -89,6 +90,7 @@ export function generateGridMap(
 
   return {
     id,
+    ...(name !== undefined && { name }),
     layout: "square",
     cellSize,
     width,

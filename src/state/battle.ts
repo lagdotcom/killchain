@@ -71,6 +71,10 @@ export const battleSlice = createSlice({
     setActiveUnitId(state, { payload }: PayloadAction<UnitId | undefined>) {
       state.activeUnitId = payload;
     },
+    setMap(state, { payload }: PayloadAction<MapId>) {
+      state.mapId = payload;
+      state.activeUnitId = undefined;
+    },
   },
   extraReducers: (builder) =>
     builder
@@ -165,6 +169,7 @@ export const battleSlice = createSlice({
       }),
 });
 
-export const { allowPass, nextSide, setActiveUnitId } = battleSlice.actions;
+export const { allowPass, nextSide, setActiveUnitId, setMap } =
+  battleSlice.actions;
 
 export default battleSlice.reducer;
