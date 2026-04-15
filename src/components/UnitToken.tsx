@@ -7,12 +7,18 @@ import { classnames } from "../tools.js";
 import { armourAbbreviation, moraleColours } from "../ui.js";
 
 interface UnitTokenProps {
+  attackTargetNumber?: number | undefined;
   cellSize: Pixels;
   onClick: undefined | ((unit: UnitEntity) => void);
   unit: UnitEntity;
 }
 
-function UnitToken({ cellSize, onClick, unit }: UnitTokenProps) {
+function UnitToken({
+  attackTargetNumber,
+  cellSize,
+  onClick,
+  unit,
+}: UnitTokenProps) {
   const activeUnitId = useSelector(selectActiveUnitId);
   const sides = useSelector(selectSideEntities);
 
@@ -30,10 +36,12 @@ function UnitToken({ cellSize, onClick, unit }: UnitTokenProps) {
 
   const moraleColor = moraleColours[unit.status];
 
-  const label = unit.name
-    .split(" ")
-    .map((w) => w[0])
-    .join("");
+  const label =
+    unit.shortName ??
+    unit.name
+      .split(" ")
+      .map((w) => w[0])
+      .join("");
 
   return (
     <g
@@ -108,6 +116,12 @@ function UnitToken({ cellSize, onClick, unit }: UnitTokenProps) {
       <text x={0} y={-4} fontSize={14} fontWeight="bold">
         {label}
       </text>
+
+      {attackTargetNumber !== undefined && (
+        <text x={0} y={radius + 14} fontSize={11} fill="#ffd">
+          {attackTargetNumber}+
+        </text>
+      )}
 
       <title>{`${unit.name} (${unit.type.name}) - ${side?.name ?? "Unknown"}`}</title>
     </g>

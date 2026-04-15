@@ -55,15 +55,17 @@ export function getTints(
       ).map((node) => nodeToTint(node, rangeName(node.cost)));
 
     case Phase.Move: {
+      const flying = !!activeUnit.type.flying;
       const reachable = Array.from(
         searchByTerrain(
           new KillChainEngine(map, unitEntities),
           map,
-          activeUnit.type.mounted
+          activeUnit.type.mounted && !flying
             ? invalidTerrainForMountedUnits
             : invalidTerrain,
           xyId(activeUnit.x, activeUnit.y),
           activeUnit.type.move - activeUnit.moved,
+          flying,
         ).values(),
       );
 

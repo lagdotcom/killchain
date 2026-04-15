@@ -1,7 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { Cells, SideId } from "./flavours.js";
-import { xyId } from "./killchain/EuclideanEngine.js";
+import * as tools from "./tools.js";
 import { Phase } from "./killchain/rules.js";
 import { heavyFoot } from "./killchain/units.js";
 import {
@@ -9,14 +9,15 @@ import {
   initiativeAction,
   rollMorale,
 } from "./state/actions.js";
+import type { BattleState } from "./state/battle.js";
+import { mapsAdapter, type MapEntity } from "./state/maps.js";
 import { selectAllUnits, selectCanPassNow } from "./state/selectors.js";
 import type { SideEntity } from "./state/sides.js";
 import { sidesAdapter } from "./state/sides.js";
 import { makeStore } from "./state/store.js";
-import type { TerrainEntity } from "./state/terrain.js";
-import { terrainAdapter } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 import { unitsAdapter } from "./state/units.js";
+import { makeGridMap } from "./testHelpers.js";
 
 function makeSide(id: SideId): SideEntity {
   return {
@@ -37,7 +38,7 @@ function makeUnit(
   return {
     id: `u${_uid++}`,
     name: "Unit",
-    type: heavyFoot, // move=6
+    type: heavyFoot, // move=60ft, cellSize=10 → 6 cells
     missile: false,
     flankCount: 0,
     damage: 0,
@@ -48,31 +49,29 @@ function makeUnit(
   };
 }
 
-function makeFlatTerrain(width: Cells, height: Cells): TerrainEntity[] {
-  const result: TerrainEntity[] = [];
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      result.push({
-        id: xyId(x, y),
-        x,
-        y,
-        type: "Open",
-        elevation: 0,
-      });
-    }
-  }
-  return result;
-}
+const defaultBattleState: BattleState = {
+  activeUnitId: undefined,
+  canPass: false,
+  mapId: undefined,
+  messages: [],
+  phase: Phase.Placement,
+  sideOrder: [],
+  sideIndex: NaN,
+  turn: 0,
+};
 
 function makeStoreWith(
   units: UnitEntity[],
   sides: SideEntity[] = [],
-  terrain: TerrainEntity[] = [],
+  map?: MapEntity,
 ) {
   return makeStore({
     units: unitsAdapter.setAll(unitsAdapter.getInitialState(), units),
     sides: sidesAdapter.setAll(sidesAdapter.getInitialState(), sides),
-    terrain: terrainAdapter.setAll(terrainAdapter.getInitialState(), terrain),
+    ...(map && {
+      maps: mapsAdapter.setAll(mapsAdapter.getInitialState(), [map]),
+      battle: { ...defaultBattleState, mapId: map.id },
+    }),
   });
 }
 
@@ -141,12 +140,11 @@ describe("initiativeAction", () => {
 
 describe("executeRoutMovement", () => {
   test("Rout unit moves further from nearest enemy (terrain-aware)", () => {
-    // Rout unit at (10,10), far from all edges (nearest edge is 9 away, move=6).
-    // Pathfinding finds the best reachable cell within move=6 on a flat grid.
-    const terrain = makeFlatTerrain(20, 20);
+    // Rout unit at (10,10), far from all edges (nearest edge is 9 away, move=6 cells).
+    // Pathfinding finds the best reachable cell within move=60ft on a flat grid.
     const rout = makeUnit({ side: 0, x: 10, y: 10, status: "Rout" });
     const enemy = makeUnit({ side: 1, x: 7, y: 10, status: "Normal" });
-    const store = makeStoreWith([rout, enemy], [], terrain);
+    const store = makeStoreWith([rout, enemy], [], makeGridMap(20, 20));
 
     store.dispatch(executeRoutMovement());
 
@@ -160,11 +158,10 @@ describe("executeRoutMovement", () => {
   });
 
   test("Rout unit moves further from enemy along y-axis when dy dominates", () => {
-    // Rout unit at (10,10), far from all edges (nearest edge is 9 away, move=6).
-    const terrain = makeFlatTerrain(20, 20);
+    // Rout unit at (10,10), far from all edges (nearest edge is 9 away, move=6 cells).
     const rout = makeUnit({ side: 0, x: 10, y: 10, status: "Rout" });
     const enemy = makeUnit({ side: 1, x: 10, y: 7, status: "Normal" });
-    const store = makeStoreWith([rout, enemy], [], terrain);
+    const store = makeStoreWith([rout, enemy], [], makeGridMap(20, 20));
 
     store.dispatch(executeRoutMovement());
 
@@ -178,11 +175,10 @@ describe("executeRoutMovement", () => {
   });
 
   test("Rout unit is removed when movement carries it off the board", () => {
-    // Rout unit at (17,5), enemy at (10,5): edge x=19 is 2 steps away (< move=6) → fled
-    const terrain = makeFlatTerrain(20, 20);
+    // Rout unit at (17,5), enemy at (10,5): edge x=19 is 2 cells away (< move=6) → fled
     const rout = makeUnit({ side: 0, x: 17, y: 5, status: "Rout" });
     const enemy = makeUnit({ side: 1, x: 10, y: 5, status: "Normal" });
-    const store = makeStoreWith([rout, enemy], [], terrain);
+    const store = makeStoreWith([rout, enemy], [], makeGridMap(20, 20));
 
     store.dispatch(executeRoutMovement());
 
@@ -205,10 +201,9 @@ describe("executeRoutMovement", () => {
   });
 
   test("Rout unit with no enemies moves toward nearest board edge", () => {
-    // Rout unit at (1,5): edge x=0 is 1 step away (< move=6) → fled, unit removed
-    const terrain = makeFlatTerrain(20, 20);
+    // Rout unit at (1,5): edge x=0 is 1 cell away (< move=6) → fled, unit removed
     const rout = makeUnit({ side: 0, x: 1, y: 5, status: "Rout" });
-    const store = makeStoreWith([rout], [], terrain);
+    const store = makeStoreWith([rout], [], makeGridMap(20, 20));
 
     store.dispatch(executeRoutMovement());
 
@@ -219,11 +214,10 @@ describe("executeRoutMovement", () => {
   test("enemy Rout units are not counted as enemies when calculating direction", () => {
     // Rout unit (side 0) at (5,5). Only other unit is a Rout unit on side 1.
     // No living enemies; rout1 does not block (rout units excluded from pathfinding).
-    // Edge x=0 is 5 steps away (< move=6) → fled, unit removed
-    const terrain = makeFlatTerrain(20, 20);
+    // Edge x=0 is 5 cells away (< move=6) → fled, unit removed
     const rout0 = makeUnit({ side: 0, x: 5, y: 5, status: "Rout" });
     const rout1 = makeUnit({ side: 1, x: 2, y: 5, status: "Rout" });
-    const store = makeStoreWith([rout0, rout1], [], terrain);
+    const store = makeStoreWith([rout0, rout1], [], makeGridMap(20, 20));
 
     store.dispatch(executeRoutMovement());
 
@@ -280,6 +274,120 @@ describe("rollMorale with no losing side", () => {
       (u) => u.id === normalSide1.id,
     )!;
     expect(updated.status).toBe("Normal");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rollMorale: roll of 12 always fails regardless of unit morale
+// ---------------------------------------------------------------------------
+
+describe("rollMorale — roll of 12 always fails", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("unit with morale 12 still fails when roll is 12", () => {
+    vi.spyOn(tools, "rollDice").mockReturnValue(6); // 6+6=12
+    const unit = makeUnit({
+      side: 0,
+      x: 0,
+      y: 0,
+      status: "Normal",
+      type: { ...heavyFoot, morale: 12 },
+    });
+    const side = makeSide(0);
+    const store = makeStoreWith([unit], [side]);
+
+    store.dispatch(rollMorale(side));
+
+    const updated = selectAllUnits(store.getState()).find(
+      (u) => u.id === unit.id,
+    )!;
+    expect(updated.status).toBe("Shaken");
+  });
+
+  test("unit with morale 11 passes when roll is 11", () => {
+    vi.spyOn(tools, "rollDice").mockReturnValueOnce(5).mockReturnValueOnce(6); // 5+6=11
+    const unit = makeUnit({
+      side: 0,
+      x: 0,
+      y: 0,
+      status: "Normal",
+      type: { ...heavyFoot, morale: 11 },
+    });
+    const side = makeSide(0);
+    const store = makeStoreWith([unit], [side]);
+
+    store.dispatch(rollMorale(side));
+
+    const updated = selectAllUnits(store.getState()).find(
+      (u) => u.id === unit.id,
+    )!;
+    expect(updated.status).toBe("Normal");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rollMorale: steadfast units auto-pass without rolling
+// ---------------------------------------------------------------------------
+
+describe("rollMorale — steadfast units", () => {
+  test("steadfast Normal unit stays Normal (no result pushed)", () => {
+    const unit = makeUnit({
+      side: 0,
+      x: 0,
+      y: 0,
+      status: "Normal",
+      type: { ...heavyFoot, steadfast: true },
+    });
+    const side = makeSide(0);
+    const store = makeStoreWith([unit], [side]);
+
+    store.dispatch(rollMorale(side));
+
+    const updated = selectAllUnits(store.getState()).find(
+      (u) => u.id === unit.id,
+    )!;
+    expect(updated.status).toBe("Normal");
+  });
+
+  test("steadfast Shaken unit auto-recovers to Normal (roll logged as NaN)", () => {
+    const unit = makeUnit({
+      side: 0,
+      x: 0,
+      y: 0,
+      status: "Shaken",
+      type: { ...heavyFoot, steadfast: true },
+    });
+    const store = makeStoreWith([unit]);
+
+    store.dispatch(rollMorale(undefined));
+
+    const updated = selectAllUnits(store.getState()).find(
+      (u) => u.id === unit.id,
+    )!;
+    expect(updated.status).toBe("Normal");
+  });
+
+  test("steadfast unit is counted as alive for victory check", () => {
+    const steadfast = makeUnit({
+      side: 0,
+      x: 0,
+      y: 0,
+      status: "Normal",
+      type: { ...heavyFoot, steadfast: true },
+    });
+    const side = makeSide(0);
+    const store = makeStoreWith([steadfast], [side]);
+
+    // Steadfast unit should not cause a "rout" outcome even in morale phase
+    store.dispatch(rollMorale(side));
+
+    const updated = selectAllUnits(store.getState()).find(
+      (u) => u.id === steadfast.id,
+    )!;
+    // Steadfast unit never becomes Rout
+    expect(updated.status).not.toBe("Rout");
   });
 });
 

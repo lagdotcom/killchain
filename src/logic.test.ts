@@ -1,10 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId, UnitId } from "./flavours.js";
+import type { Cells, SideId, TerrainId, UnitId } from "./flavours.js";
+import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
-import { heavyFoot } from "./killchain/units.js";
+import { heavyFoot, heavyHorse } from "./killchain/units.js";
 import { getTints } from "./logic.js";
 import type { MapEntity } from "./state/maps.js";
+import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 import { makeGridMap } from "./testHelpers.js";
 
@@ -196,5 +198,49 @@ describe("getTints — Shaken unit must exit melee", () => {
     expect(coords).not.toContain("5,5");
     // And the unit must have some valid moves (not completely blocked)
     expect(coords.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Flying units: ignore terrain costs and invalid terrain
+// ---------------------------------------------------------------------------
+
+describe("getTints — flying unit", () => {
+  test("flying unit can reach cells beyond Woods that a non-flying unit cannot", () => {
+    // Row y=5 is all Woods except (0,5). heavyFoot move=60ft, cellSize=10.
+    // Non-flying: Woods costs 20ft/cell → 3 cells max → reaches (3,5).
+    // Flying: flat 10ft/cell → 6 cells max → reaches (6,5).
+    const overrides: Record<TerrainId, Partial<TerrainEntity>> = {};
+    for (let x = 1; x <= 9; x++) overrides[xyId(x as Cells, 5 as Cells)] = { type: "Woods" };
+    const map = makeGridMap(10, 10, 10, overrides);
+
+    const flyingType = { ...heavyFoot, flying: true };
+    const flyingUnit = makeUnit({ side: 0, x: 0, y: 5, type: flyingType });
+    const normalUnit = makeUnit({ side: 0, x: 0, y: 5 });
+
+    const flyingCoords = tintCoords(flyingUnit, [flyingUnit], map);
+    const normalCoords = tintCoords(normalUnit, [normalUnit], map);
+
+    expect(flyingCoords).toContain("6,5");
+    expect(normalCoords).not.toContain("6,5");
+    expect(flyingCoords).toContain("3,5");
+    expect(normalCoords).toContain("3,5");
+  });
+
+  test("flying+mounted unit can enter Marsh that non-flying mounted unit cannot", () => {
+    const overrides: Record<TerrainId, Partial<TerrainEntity>> = {
+      [xyId(6 as Cells, 5 as Cells)]: { type: "Marsh" },
+    };
+    const map = makeGridMap(10, 10, 10, overrides);
+
+    const flyingMountedType = { ...heavyHorse, flying: true };
+    const flyingUnit = makeUnit({ side: 0, x: 5, y: 5, type: flyingMountedType });
+    const groundUnit = makeUnit({ side: 0, x: 5, y: 5, type: heavyHorse });
+
+    const flyingCoords = tintCoords(flyingUnit, [flyingUnit], map);
+    const groundCoords = tintCoords(groundUnit, [groundUnit], map);
+
+    expect(flyingCoords).toContain("6,5");
+    expect(groundCoords).not.toContain("6,5");
   });
 });

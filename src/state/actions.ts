@@ -330,8 +330,15 @@ export const rollMorale: Thunk =
         continue;
       }
 
+      if (unit.type.steadfast) {
+        if (unit.status === "Shaken")
+          results.push({ unit, roll: NaN, pass: true, status: "Normal" });
+        remaining.set(unit.side, (remaining.get(unit.side) ?? 0) + 1);
+        continue;
+      }
+
       const roll = rollDice(6) + rollDice(6);
-      const pass = roll <= unit.type.morale;
+      const pass = roll <= unit.type.morale && roll !== 12;
       const status: MoraleStatus = pass
         ? "Normal"
         : unit.status === "Normal"

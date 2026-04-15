@@ -1,4 +1,5 @@
 import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
+import SeedRandom from "seed-random";
 
 import type { Cells, Feet, MapId, SideId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
@@ -60,8 +61,11 @@ export function generateGridMap(
   cellSize: Feet,
   width: Cells,
   height: Cells,
+  seed?: number,
 ): MapEntity {
-  const noise = createNoise2D();
+  const noise = createNoise2D(
+    seed !== undefined ? SeedRandom(String(seed)) : undefined,
+  );
   const getTerrainType = noiseView(noise, 10);
   const getElevation = noiseView(noise, 14, 200);
 

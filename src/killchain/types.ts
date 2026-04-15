@@ -5,6 +5,8 @@ export interface UnitType {
   hits: number;
   armour: Armour;
   mounted?: boolean;
+  flying?: boolean;
+  steadfast?: boolean;
   move: Feet;
   morale: number;
 }
@@ -13,6 +15,7 @@ export type Armour = "Unarmoured" | "Light" | "Medium" | "Heavy";
 
 export interface Unit {
   name: string;
+  shortName?: string;
   type: UnitType;
   missile?: boolean;
   flankCount: number;

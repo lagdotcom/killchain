@@ -4,7 +4,13 @@ import { useSelector } from "react-redux";
 import type { Cells, Feet, SideId, UnitId } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
 import { xyId } from "../killchain/EuclideanEngine.js";
-import { longRangeMax, Phase } from "../killchain/rules.js";
+import {
+  applyAttackModifiers,
+  getAttackModifiers,
+  longRangeMax,
+  Phase,
+} from "../killchain/rules.js";
+import { KillChainEngine } from "../KillChainEngine.js";
 import { getTints } from "../logic.js";
 import { attack, moveAction, placeUnitAction } from "../state/actions.js";
 import { setActiveUnitId } from "../state/battle.js";
@@ -150,6 +156,21 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
     [activeUnit, map, phase, units],
   );
 
+  const targetNumbers = useMemo(() => {
+    if (!activeUnit || !map) return {};
+    if (phase !== Phase.Missile && phase !== Phase.Melee) return {};
+    const missile = phase === Phase.Missile && !!activeUnit.missile;
+    const g = new KillChainEngine(map, units);
+    return Object.fromEntries(
+      placedUnits
+        .filter((u) => canAttackTarget(activeUnit, u, phase, map.cellSize))
+        .map((u) => [
+          u.id,
+          applyAttackModifiers(getAttackModifiers(g, missile, activeUnit, u)),
+        ]),
+    );
+  }, [activeUnit, map, phase, placedUnits, units]);
+
   const handleClickTerrain = useCallback(
     (x: Cells, y: Cells) => {
       const tint = tints.find((t) => t.x === x && t.y === y);
@@ -224,6 +245,7 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
             key={unit.id}
             unit={unit}
             cellSize={cellSize}
+            attackTargetNumber={targetNumbers[unit.id]}
             onClick={canSelect(unit) ? handleClickUnit : undefined}
           />
         ))}
