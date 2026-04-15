@@ -300,6 +300,7 @@ describe("selectCanPassNow", () => {
       battle: {
         activeUnitId: undefined,
         canPass,
+        mapId: "",
         messages: [],
         phase: Phase.Move,
         sideOrder: [activeSideId],
@@ -364,6 +365,7 @@ describe("selectCanPassNow", () => {
       battle: {
         activeUnitId: undefined,
         canPass: true,
+        mapId: "",
         messages: [],
         phase: Phase.Melee, // not Move
         sideOrder: [0],

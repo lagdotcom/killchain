@@ -37,7 +37,7 @@ test.each([
   [heavyHorse, 10, 7],
   [heavyHorse, 15, 8],
 ])("missile attack on $armour at range $1 -> $2", (type, range, expected) => {
-  const g = new EuclideanEngine();
+  const g = new EuclideanEngine(10);
   const attacker = g.addUnit({ side: 0, type: unarmouredTroops }, 0, 0);
   const defender = g.addUnit({ side: 1, type }, range, 0);
 
@@ -96,7 +96,7 @@ test("fighting uphill gives no bonus", () => {
 });
 
 test("missile beyond max range is impossible", () => {
-  const g = new EuclideanEngine();
+  const g = new EuclideanEngine(10);
   const attacker = g.addUnit({ side: 0, type: unarmouredTroops }, 0, 0);
   const defender = g.addUnit({ side: 1, type: unarmouredTroops }, 16, 0);
 

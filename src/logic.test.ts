@@ -1,32 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId, TerrainId, UnitId } from "./flavours.js";
-import { xyId } from "./killchain/EuclideanEngine.js";
+import type { Cells, SideId, UnitId } from "./flavours.js";
 import { Phase } from "./killchain/rules.js";
 import { heavyFoot } from "./killchain/units.js";
 import { getTints } from "./logic.js";
-import type { TerrainEntity } from "./state/terrain.js";
+import type { MapEntity } from "./state/maps.js";
 import type { UnitEntity } from "./state/units.js";
-
-function makeGrid(
-  width: Cells,
-  height: Cells,
-): Record<TerrainId, TerrainEntity> {
-  const result: Record<TerrainId, TerrainEntity> = {};
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const id = xyId(x, y);
-      result[id] = {
-        id,
-        x,
-        y,
-        type: "Open",
-        elevation: 0,
-      };
-    }
-  }
-  return result;
-}
+import { makeGridMap } from "./testHelpers.js";
 
 let _uid = 0;
 function makeUnit(
@@ -53,9 +33,9 @@ function unitMap(...units: UnitEntity[]): Record<UnitId, UnitEntity> {
 function tintCoords(
   activeUnit: UnitEntity,
   units: UnitEntity[],
-  terrain: Record<TerrainId, TerrainEntity>,
+  map: MapEntity,
 ) {
-  return getTints(activeUnit, Phase.Move, terrain, unitMap(...units)).map(
+  return getTints(activeUnit, Phase.Move, map, unitMap(...units)).map(
     ({ x, y }) => `${x},${y}`,
   );
 }
@@ -66,7 +46,7 @@ function tintCoords(
 
 describe("getTints — Normal unit", () => {
   test("can advance toward an enemy", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     const unit = makeUnit({ side: 0, x: 2, y: 5, status: "Normal" });
     const enemy = makeUnit({ side: 1, x: 8, y: 5, status: "Normal" });
 
@@ -83,7 +63,7 @@ describe("getTints — Normal unit", () => {
 
 describe("getTints — Shaken unit withdrawal filter", () => {
   test("cannot move to a square closer to the enemy", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     // enemy is at (8,5), unit is at (4,5) — dist=4
     const unit = makeUnit({ side: 0, x: 4, y: 5, status: "Shaken" });
     const enemy = makeUnit({ side: 1, x: 8, y: 5, status: "Normal" });
@@ -97,7 +77,7 @@ describe("getTints — Shaken unit withdrawal filter", () => {
   });
 
   test("can stay in place or retreat away from enemy", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     const unit = makeUnit({ side: 0, x: 4, y: 5, status: "Shaken" });
     const enemy = makeUnit({ side: 1, x: 8, y: 5, status: "Normal" });
 
@@ -110,7 +90,7 @@ describe("getTints — Shaken unit withdrawal filter", () => {
   });
 
   test("cannot advance toward any enemy, even when retreating from another", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     // Enemy A at (8,5) dist=4; Enemy B at (1,5) dist=3
     const unit = makeUnit({ side: 0, x: 4, y: 5, status: "Shaken" });
     const enemyA = makeUnit({ side: 1, x: 8, y: 5, status: "Normal" });
@@ -127,7 +107,7 @@ describe("getTints — Shaken unit withdrawal filter", () => {
   });
 
   test("can move when there are no enemies", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     const unit = makeUnit({ side: 0, x: 5, y: 5, status: "Shaken" });
 
     const coords = tintCoords(unit, [unit], terrain);
@@ -139,7 +119,7 @@ describe("getTints — Shaken unit withdrawal filter", () => {
   });
 
   test("Rout enemies are not counted for the withdrawal filter", () => {
-    const terrain = makeGrid(15, 10);
+    const terrain = makeGridMap(15, 10);
     // Rout enemy at (12,5) — far enough that the Shaken unit can advance
     // toward it without entering its cell (move=6, unit at (4,5), dist=8).
     // Since it's Rout it does not constrain the withdrawal filter, so (5,5)
@@ -161,7 +141,7 @@ describe("getTints — Shaken unit withdrawal filter", () => {
 
 describe("getTints — Shaken unit must exit melee", () => {
   test("current position is excluded when in melee contact", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     // enemy at (5,6), unit at (5,5) — dist=1
     const unit = makeUnit({ side: 0, x: 5, y: 5, status: "Shaken" });
     const enemy = makeUnit({ side: 1, x: 5, y: 6, status: "Normal" });
@@ -173,7 +153,7 @@ describe("getTints — Shaken unit must exit melee", () => {
   });
 
   test("squares adjacent to the enemy are excluded", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     const unit = makeUnit({ side: 0, x: 5, y: 5, status: "Shaken" });
     const enemy = makeUnit({ side: 1, x: 5, y: 6, status: "Normal" });
 
@@ -185,7 +165,7 @@ describe("getTints — Shaken unit must exit melee", () => {
   });
 
   test("squares at distance >= 2 from the enemy are included", () => {
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     const unit = makeUnit({ side: 0, x: 5, y: 5, status: "Shaken" });
     const enemy = makeUnit({ side: 1, x: 5, y: 6, status: "Normal" });
 
@@ -201,7 +181,7 @@ describe("getTints — Shaken unit must exit melee", () => {
     // Shaken unit at (5,5), enemy A at (5,6) — melee, enemy B at (5,3) — dist=2
     // Moving to (5,4) exits melee with A (dist=2) but approaches B (dist=1 < 2).
     // satisfiesBoth = empty; fallback (exit-melee only) should include (5,4).
-    const terrain = makeGrid(10, 10);
+    const terrain = makeGridMap(10, 10);
     const unit = makeUnit({ side: 0, x: 5, y: 5, status: "Shaken" });
     const enemyA = makeUnit({ side: 1, x: 5, y: 6, status: "Normal" });
     const enemyB = makeUnit({ side: 1, x: 5, y: 3, status: "Normal" });

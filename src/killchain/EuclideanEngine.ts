@@ -1,6 +1,6 @@
 import type { MarkOptional } from "ts-essentials";
 
-import type { Cells } from "../flavours.js";
+import type { Cells, Feet } from "../flavours.js";
 import { manhattanDistance } from "../tools.js";
 import type { KillChain, Terrain, TerrainType, Unit } from "./types.js";
 
@@ -13,7 +13,7 @@ export class EuclideanEngine implements KillChain<XY> {
   public terrain: Map<XY, Terrain>;
   public units: Set<Unit>;
 
-  constructor() {
+  constructor(public cellSize: Feet = 1) {
     this.positionCache = new Map();
     this.positions = new Map();
     this.terrain = new Map();
@@ -54,8 +54,11 @@ export class EuclideanEngine implements KillChain<XY> {
     return p;
   }
 
-  getDistance(a: Unit, b: Unit) {
-    return manhattanDistance(this.getPosition(a), this.getPosition(b));
+  getDistance(a: Unit, b: Unit): Feet {
+    return (
+      manhattanDistance(this.getPosition(a), this.getPosition(b)) *
+      this.cellSize
+    );
   }
 
   getPosition(u: Unit) {
