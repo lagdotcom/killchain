@@ -37,6 +37,7 @@ const rosterSlice = createSlice({
     },
     removeDefinition: rosterAdapter.removeOne,
     setAllDefinitions: rosterAdapter.setAll,
+    upsertDefinitions: rosterAdapter.upsertMany,
   },
 });
 
@@ -45,6 +46,7 @@ export const {
   updateDefinition,
   removeDefinition,
   setAllDefinitions,
+  upsertDefinitions,
 } = rosterSlice.actions;
 
 export default rosterSlice.reducer;

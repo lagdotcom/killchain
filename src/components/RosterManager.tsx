@@ -223,10 +223,9 @@ export function RosterManager({ onClose }: Props) {
   // ---- Render --------------------------------------------------------------
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div
         className="modal-panel roster-manager-panel"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
           <h2>Unit Roster</h2>

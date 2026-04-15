@@ -76,6 +76,7 @@ const scenariosSlice = createSlice({
     removeScenario: scenariosAdapter.removeOne,
     /** Replace the entire list (used by JSON import). */
     setAllScenarios: scenariosAdapter.setAll,
+    upsertScenario: scenariosAdapter.upsertOne,
   },
 });
 
@@ -84,6 +85,7 @@ export const {
   updateScenario,
   removeScenario,
   setAllScenarios,
+  upsertScenario,
 } = scenariosSlice.actions;
 
 export default scenariosSlice.reducer;

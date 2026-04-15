@@ -58,8 +58,9 @@ const mapsSlice = createSlice({
       if (payload.changes.elevation !== undefined)
         cell.elevation = payload.changes.elevation;
     },
+    upsertMap: mapsAdapter.upsertOne,
   },
 });
 
-export const { addMap, deleteMap, renameMap, updateCell } = mapsSlice.actions;
+export const { addMap, deleteMap, renameMap, updateCell, upsertMap } = mapsSlice.actions;
 export default mapsSlice.reducer;
