@@ -2,10 +2,12 @@ import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 
 import type { SideId, UnitId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
+import type { DeploymentZone } from "../killchain/types.js";
 import { without } from "../tools.js";
 import {
   attackAction,
   changePhaseAction,
+  deployUnitAction,
   initiativeAction,
   placeUnitAction,
   setupBattleAction,
@@ -17,6 +19,7 @@ export interface SideEntity {
   id: SideId;
   colour: string;
   name: string;
+  deploymentZone?: DeploymentZone;
   unplacedIds: UnitId[];
   surprised: boolean;
   casualties: number;
@@ -44,6 +47,10 @@ const sidesSlice = createSlice({
           })),
         ),
       )
+      .addCase(deployUnitAction, (state, { payload: { sideId, unitId } }) => {
+        const side = state.entities[sideId];
+        if (side) side.unplacedIds.push(unitId);
+      })
       .addCase(placeUnitAction, (state, { payload: { side, unit } }) =>
         sidesAdapter.updateOne(state, {
           id: side.id,

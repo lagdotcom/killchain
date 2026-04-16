@@ -2,6 +2,7 @@ import {
   type Action,
   type ActionCreator,
   createAction,
+  nanoid,
   type ThunkAction,
 } from "@reduxjs/toolkit";
 
@@ -14,16 +15,18 @@ import {
   Phase,
   phaseChanges,
 } from "../killchain/rules.js";
-import type { MoraleStatus } from "../killchain/types.js";
+import type { MoraleStatus, UnitDefinition } from "../killchain/types.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { canFleeBoard, findBestMove } from "../movement.js";
 import { manhattanDistance, rollDice } from "../tools.js";
 import { allowPass, type BattleState, nextSide } from "./battle.js";
+import type { Scenario } from "./scenarios.js";
 import {
   selectActiveUnit,
   selectAllSides,
   selectAllUnits,
   selectBattle,
+  selectDefinitionEntities,
   selectMap,
   selectUnitEntities,
 } from "./selectors.js";
@@ -113,9 +116,70 @@ export const setupBattleAction = createAction<{
   units: UnitEntity[];
 }>("battle/setup");
 
+/** Deploy a roster unit definition to a side's unplaced pool. */
+export const deployUnitAction = createAction(
+  "battle/deployUnit",
+  (definition: UnitDefinition, sideId: SideId) => ({
+    payload: {
+      definition,
+      sideId,
+      unitId: nanoid() as UnitId,
+    },
+  }),
+);
+
 export const surpriseAction = createAction<{
   results: SurpriseRollResult[];
 }>("battle/surprise");
+
+/** Instantiate and load a scenario, replacing the current battle. */
+export const loadScenarioAction =
+  (scenario: Scenario): ThunkAction<void, AppState, void, Action> =>
+  (dispatch, getState) => {
+    const defs = selectDefinitionEntities(getState());
+
+    const units: UnitEntity[] = scenario.sides.flatMap((side, si) =>
+      side.units
+        .map((setup, ui): UnitEntity | null => {
+          const def = defs[setup.definitionId];
+          if (!def) {
+            console.warn(
+              `loadScenario: definition "${setup.definitionId}" not found in roster — unit skipped`,
+            );
+            return null;
+          }
+          return {
+            id: `${scenario.id}-s${si}-u${ui}` as UnitId,
+            name: def.name,
+            ...(def.shortName !== undefined && { shortName: def.shortName }),
+            type: def.type,
+            ...(def.missile !== undefined && { missile: def.missile }),
+            side: side.id,
+            x: setup.x ?? NaN,
+            y: setup.y ?? NaN,
+            flankCount: 0,
+            damage: 0,
+            moved: 0,
+            status: "Normal" as MoraleStatus,
+            ready: false,
+          };
+        })
+        .filter((u): u is UnitEntity => u !== null),
+    );
+
+    dispatch(
+      setupBattleAction({
+        map: scenario.mapId,
+        sides: scenario.sides.map(({ id, name, colour, deploymentZone }) => ({
+          id,
+          name,
+          colour,
+          ...(deploymentZone !== undefined && { deploymentZone }),
+        })),
+        units,
+      }),
+    );
+  };
 
 function shouldChangePhase(battle: BattleState) {
   switch (battle.phase) {
@@ -330,8 +394,15 @@ export const rollMorale: Thunk =
         continue;
       }
 
+      if (unit.type.steadfast) {
+        if (unit.status === "Shaken")
+          results.push({ unit, roll: NaN, pass: true, status: "Normal" });
+        remaining.set(unit.side, (remaining.get(unit.side) ?? 0) + 1);
+        continue;
+      }
+
       const roll = rollDice(6) + rollDice(6);
-      const pass = roll <= unit.type.morale;
+      const pass = roll <= unit.type.morale && roll !== 12;
       const status: MoraleStatus = pass
         ? "Normal"
         : unit.status === "Normal"

@@ -1,5 +1,5 @@
 import type { Tint, TintReason } from "./components/GridOverlay.js";
-import type { Feet, UnitId } from "./flavours.js";
+import type { Cells, Feet, UnitId } from "./flavours.js";
 import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import {
   longRangeMax,
@@ -7,7 +7,7 @@ import {
   Phase,
   shortRangeMax,
 } from "./killchain/rules.js";
-import type { TerrainType } from "./killchain/types.js";
+import type { DeploymentZone, TerrainType } from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
 import {
   type PathNode,
@@ -35,6 +35,19 @@ const nodeToTint = (
   reason,
 });
 
+export function isInDeploymentZone(
+  zone: DeploymentZone,
+  x: Cells,
+  y: Cells,
+): boolean {
+  return (
+    x >= zone.x &&
+    x < zone.x + zone.width &&
+    y >= zone.y &&
+    y < zone.y + zone.height
+  );
+}
+
 export function getTints(
   activeUnit: UnitEntity | undefined,
   phase: Phase,
@@ -55,15 +68,17 @@ export function getTints(
       ).map((node) => nodeToTint(node, rangeName(node.cost)));
 
     case Phase.Move: {
+      const flying = !!activeUnit.type.flying;
       const reachable = Array.from(
         searchByTerrain(
           new KillChainEngine(map, unitEntities),
           map,
-          activeUnit.type.mounted
+          activeUnit.type.mounted && !flying
             ? invalidTerrainForMountedUnits
             : invalidTerrain,
           xyId(activeUnit.x, activeUnit.y),
           activeUnit.type.move - activeUnit.moved,
+          flying,
         ).values(),
       );
 

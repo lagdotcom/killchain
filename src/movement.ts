@@ -26,9 +26,9 @@ export function canFleeBoard(
   map: MapEntity,
 ): boolean {
   const g = new KillChainEngine(map, unitEntities);
-  const invalidTerrain = unit.type.mounted
-    ? invalidTerrainForMounted
-    : noInvalidTerrain;
+  const flying = !!unit.type.flying;
+  const invalidTerrain =
+    unit.type.mounted && !flying ? invalidTerrainForMounted : noInvalidTerrain;
   const budget: Feet = unit.type.move - unit.moved;
 
   const reachable = searchByTerrain(
@@ -37,6 +37,7 @@ export function canFleeBoard(
     invalidTerrain,
     xyId(unit.x, unit.y),
     budget,
+    flying,
   );
 
   for (const node of reachable.values()) {
@@ -70,9 +71,9 @@ export function findBestMove(
   score: (candidate: XY) => number,
 ): MoveCandidate | undefined {
   const g = new KillChainEngine(map, unitEntities);
-  const invalidTerrain = unit.type.mounted
-    ? invalidTerrainForMounted
-    : noInvalidTerrain;
+  const flying = !!unit.type.flying;
+  const invalidTerrain =
+    unit.type.mounted && !flying ? invalidTerrainForMounted : noInvalidTerrain;
 
   const reachable = searchByTerrain(
     g,
@@ -80,6 +81,7 @@ export function findBestMove(
     invalidTerrain,
     xyId(unit.x, unit.y),
     unit.type.move - unit.moved,
+    flying,
   );
 
   let best: MoveCandidate | undefined;

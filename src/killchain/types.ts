@@ -1,10 +1,12 @@
-import type { Feet, SideId } from "../flavours.js";
+import type { Cells, Feet, SideId, UnitDefinitionId } from "../flavours.js";
 
 export interface UnitType {
   name: string;
   hits: number;
   armour: Armour;
   mounted?: boolean;
+  flying?: boolean;
+  steadfast?: boolean;
   move: Feet;
   morale: number;
 }
@@ -13,6 +15,7 @@ export type Armour = "Unarmoured" | "Light" | "Medium" | "Heavy";
 
 export interface Unit {
   name: string;
+  shortName?: string;
   type: UnitType;
   missile?: boolean;
   flankCount: number;
@@ -24,6 +27,27 @@ export interface Unit {
 }
 
 export type MoraleStatus = "Normal" | "Shaken" | "Rout";
+
+/**
+ * Axis-aligned rectangular region that restricts where a side may
+ * drop units during the Placement phase.  The region covers columns
+ * [x, x+width) and rows [y, y+height).
+ */
+export interface DeploymentZone {
+  x: Cells;
+  y: Cells;
+  width: Cells;
+  height: Cells;
+}
+
+/** A side-agnostic unit template stored in the roster. */
+export interface UnitDefinition {
+  id: UnitDefinitionId;
+  name: string;
+  shortName?: string;
+  type: UnitType;
+  missile?: boolean;
+}
 
 export interface Terrain {
   type: TerrainType;

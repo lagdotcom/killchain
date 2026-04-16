@@ -183,3 +183,769 @@ body,
   pointer-events: none;
   opacity: 0.2;
 }
+
+// ---------------------------------------------------------------------------
+// Map container + edit mode
+// ---------------------------------------------------------------------------
+
+.map-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.map.editMode {
+  cursor: crosshair;
+}
+
+// ---------------------------------------------------------------------------
+// Terrain palette (edit mode toolbar)
+// ---------------------------------------------------------------------------
+
+.terrain-palette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--padding);
+  background: var(--panel-bg);
+  flex-shrink: 0;
+
+  .palette-label {
+    color: #aaa;
+    font-size: var(--font-size);
+    white-space: nowrap;
+  }
+
+  .palette-btn {
+    padding: 2px 8px;
+    font-size: var(--font-size);
+    cursor: pointer;
+
+    &.active {
+      outline: 2px solid white;
+    }
+  }
+
+  .terrain-btn {
+    background: var(--terrain-color, #888);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .palette-done {
+    margin-left: auto;
+    font-size: var(--font-size);
+    cursor: pointer;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar map section
+// ---------------------------------------------------------------------------
+
+.map-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #444;
+  margin-bottom: 4px;
+
+  .map-section-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .map-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .map-dims {
+    font-size: 10px;
+    color: #888;
+  }
+
+  .map-section-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+
+    button {
+      padding: 2px 6px;
+      font-size: 14px;
+      cursor: pointer;
+
+      &.active {
+        outline: 2px solid white;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Full-screen manager pages
+// ---------------------------------------------------------------------------
+
+.manager-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--container-bg);
+  color: var(--text-color);
+  overflow: hidden;
+}
+
+.manager-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px var(--padding);
+  background: var(--panel-bg);
+  border-bottom: 1px solid #444;
+  flex-shrink: 0;
+
+  h2 {
+    font-size: 16px;
+    flex: 1;
+  }
+
+  .back-btn {
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: var(--font-size);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid #555;
+    color: white;
+    border-radius: var(--border-radius);
+
+    &:hover { background: rgba(255,255,255,0.14); }
+  }
+
+  .manager-header-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+
+    button, .import-btn {
+      font-size: var(--font-size);
+      padding: 4px 10px;
+      cursor: pointer;
+
+      &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+  }
+}
+
+.manager-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--padding);
+}
+
+.manager-body-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-manager-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  button,
+  .import-btn {
+    font-size: var(--font-size);
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Map manager (full-screen)
+// ---------------------------------------------------------------------------
+
+.map-manager-inner {
+  .map-manager-warning {
+    font-size: var(--font-size);
+    color: #fa0;
+    padding: 4px 0;
+  }
+
+  .map-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .map-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+
+    &.active {
+      background: rgba(255, 255, 255, 0.12);
+      outline: 1px solid #666;
+    }
+
+    .map-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .map-item-name {
+      display: block;
+      font-weight: bold;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .map-item-dims {
+      font-size: 10px;
+      color: #888;
+    }
+
+    .map-item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+
+      button {
+        font-size: var(--font-size);
+        padding: 2px 8px;
+        cursor: pointer;
+
+        &:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+}
+
+.map-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size);
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    input,
+    select {
+      background: #333;
+      border: 1px solid #555;
+      color: white;
+      padding: 3px 6px;
+      border-radius: var(--border-radius);
+      font-size: var(--font-size);
+    }
+
+    input[type="text"] {
+      flex: 1;
+    }
+
+    input[type="number"] {
+      width: 70px;
+    }
+  }
+
+  .form-row {
+    display: flex;
+    gap: 16px;
+  }
+
+  .seed-row {
+    flex-wrap: wrap;
+    gap: 6px;
+
+    input[type="number"] {
+      width: 80px;
+    }
+
+    input:disabled {
+      opacity: 0.4;
+    }
+  }
+
+  button[type="submit"] {
+    align-self: flex-start;
+    padding: 4px 14px;
+    cursor: pointer;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Roster manager (full-screen)
+// ---------------------------------------------------------------------------
+
+.roster-manager-inner {
+  .roster-deploy-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size);
+
+    select {
+      background: #333;
+      border: 1px solid #555;
+      color: white;
+      padding: 3px 6px;
+      border-radius: var(--border-radius);
+      font-size: var(--font-size);
+    }
+  }
+
+  .roster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .roster-empty {
+    font-size: var(--font-size);
+    color: #888;
+    padding: 4px 0;
+  }
+
+  .roster-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+
+    .roster-item-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .roster-item-name {
+      font-weight: bold;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .roster-item-type {
+      font-size: 10px;
+      color: #888;
+    }
+
+    .roster-item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+
+      button {
+        font-size: var(--font-size);
+        padding: 2px 8px;
+        cursor: pointer;
+
+        &:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  .roster-form-divider {
+    font-size: var(--font-size);
+    color: #aaa;
+    border-top: 1px solid #444;
+    padding-top: 6px;
+    margin-top: 2px;
+  }
+
+}
+
+.map-create-form.roster-form {
+  input[type="number"] {
+    width: 60px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Scenario manager (full-screen)
+// ---------------------------------------------------------------------------
+
+// Reuse map-create-form base styles for the scenario form
+.scenario-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: var(--font-size);
+
+  input[type="text"],
+  input[type="number"],
+  select {
+    background: #333;
+    border: 1px solid #555;
+    color: white;
+    padding: 3px 6px;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size);
+  }
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.scenario-form-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+.scenario-label-wide {
+  flex: 1;
+}
+
+// Sides container
+.scenario-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scenario-side {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scenario-side-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .scenario-side-label {
+    font-weight: bold;
+    font-size: 11px;
+    color: #aaa;
+    white-space: nowrap;
+  }
+
+  .scenario-side-name {
+    flex: 1;
+  }
+
+  input[type="color"] {
+    width: 28px;
+    height: 24px;
+    padding: 1px;
+    border: 1px solid #555;
+    border-radius: var(--border-radius);
+    background: #333;
+    cursor: pointer;
+  }
+}
+
+.scenario-remove-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+
+  &:hover {
+    color: #f88;
+  }
+}
+
+// Unit list inside a side
+.scenario-unit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 8px;
+}
+
+.scenario-empty-units {
+  font-size: var(--font-size);
+  color: #666;
+  font-style: italic;
+}
+
+.scenario-unit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size);
+
+  .scenario-unit-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .scenario-preplaced-label {
+    white-space: nowrap;
+    color: #aaa;
+  }
+
+  &.placed {
+    .scenario-unit-pos {
+      font-size: 10px;
+      color: #888;
+    }
+  }
+}
+
+.scenario-coord-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--font-size);
+  color: #aaa;
+}
+
+.scenario-coord-input {
+  width: 46px !important;
+}
+
+.scenario-add-unit-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding-left: 8px;
+
+  select {
+    flex: 1;
+  }
+
+  button {
+    font-size: var(--font-size);
+    padding: 2px 8px;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.scenario-add-side-btn {
+  align-self: flex-start;
+  font-size: var(--font-size);
+  padding: 3px 10px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid #555;
+  color: white;
+  border-radius: var(--border-radius);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+.scenario-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  gap: 8px;
+  padding: var(--padding);
+  min-height: 0;
+}
+
+.scenario-editor-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-shrink: 0;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--font-size);
+  }
+
+  .scenario-label-wide { flex: 1; }
+}
+
+.scenario-editor-main {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.scenario-side-panel {
+  width: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.scenario-map-panel {
+  flex: 1;
+  overflow: auto;
+  min-width: 0;
+  background: #111;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: flex-start;
+
+  .scenario-map-empty {
+    color: #666;
+    font-size: var(--font-size);
+    font-style: italic;
+    padding: 20px;
+  }
+}
+
+.scenario-map-scroll {
+  display: inline-block;
+  line-height: 0;
+}
+
+.scenario-zone-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size);
+  padding: 2px 0;
+
+  .scenario-zone-label {
+    flex: 1;
+    color: #aaa;
+    font-size: 11px;
+  }
+
+  .scenario-zone-btn {
+    font-size: var(--font-size);
+    padding: 1px 8px;
+    cursor: pointer;
+
+    &.active {
+      outline: 2px solid #08f;
+    }
+  }
+}
+
+.drag-handle {
+  color: #666;
+  cursor: grab;
+  font-size: 14px;
+  flex-shrink: 0;
+  padding-right: 2px;
+}
+
+// List view
+.scenario-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scenario-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius);
+}
+
+.scenario-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scenario-item-name {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.scenario-item-meta {
+  font-size: 10px;
+  color: #888;
+}
+
+.scenario-item-sides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.scenario-side-chip {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.scenario-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+
+  button {
+    font-size: var(--font-size);
+    padding: 2px 8px;
+    cursor: pointer;
+  }
+}

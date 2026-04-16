@@ -156,13 +156,16 @@ export function searchByTerrain(
   invalidTerrain: Set<TerrainType>,
   start: TerrainId,
   maxCost: Feet = Infinity,
+  flying = false,
 ) {
   return runSearch(
     map,
-    (from, to) =>
-      g.getUnitAt(to) || invalidTerrain.has(g.getTerrainAt(to).type)
-        ? Infinity
-        : getMovementCost(g, from, to),
+    (from, to) => {
+      if (g.getUnitAt(to)) return Infinity;
+      if (!flying && invalidTerrain.has(g.getTerrainAt(to).type))
+        return Infinity;
+      return flying ? map.cellSize : getMovementCost(g, from, to);
+    },
     start,
     maxCost,
   );

@@ -4,53 +4,35 @@ import { useSelector } from "react-redux";
 import type { Cells, Feet, SideId, UnitId } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
 import { xyId } from "../killchain/EuclideanEngine.js";
-import { longRangeMax, Phase } from "../killchain/rules.js";
-import { getTints } from "../logic.js";
+import {
+  applyAttackModifiers,
+  getAttackModifiers,
+  longRangeMax,
+  Phase,
+} from "../killchain/rules.js";
+import { KillChainEngine } from "../KillChainEngine.js";
+import { getTints, isInDeploymentZone } from "../logic.js";
 import { attack, moveAction, placeUnitAction } from "../state/actions.js";
 import { setActiveUnitId } from "../state/battle.js";
 import {
   selectActiveSide,
   selectActiveUnit,
-  selectAllSides,
   selectMap,
   selectPhase,
   selectPlacedUnits,
+  selectSideEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
 import type { SideEntity } from "../state/sides.js";
 import { useAppDispatch } from "../state/store.js";
 import type { TerrainEntity } from "../state/terrain.js";
 import type { UnitEntity } from "../state/units.js";
-import { enumerate, manhattanDistance } from "../tools.js";
+import { manhattanDistance } from "../tools.js";
 import { cellSize } from "../ui.js";
 import { GridOverlay } from "./GridOverlay.js";
-import TerrainCell, { type TerrainCellProps } from "./TerrainCell.js";
+import { type ZoneInfo, ZoneOverlay } from "./MapOverlays.js";
+import { getTerrainCells } from "./TerrainCell.js";
 import UnitToken from "./UnitToken.js";
-
-function getTerrainCells(
-  width: Cells,
-  height: Cells,
-  getTerrain: (x: Cells, y: Cells, e: number) => TerrainEntity,
-  onClick?: TerrainCellProps["onClick"],
-  onDrop?: TerrainCellProps["onDrop"],
-) {
-  return enumerate(height)
-    .flatMap((y) => enumerate(width).map((x) => getTerrain(x, y, -1)))
-    .map((data) => (
-      <TerrainCell
-        key={data.id}
-        x={data.x}
-        y={data.y}
-        terrain={data}
-        north={getTerrain(data.x, data.y - 1, data.elevation)}
-        south={getTerrain(data.x, data.y + 1, data.elevation)}
-        east={getTerrain(data.x + 1, data.y, data.elevation)}
-        west={getTerrain(data.x - 1, data.y, data.elevation)}
-        onClick={onClick}
-        onDrop={onDrop}
-      />
-    ));
-}
 
 function canAttack(
   unit: UnitEntity,
@@ -95,14 +77,16 @@ function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
 
 interface GameGridProps {
   onRegisterPan?: (fn: (x: Cells, y: Cells) => void) => void;
+  onEditCell?: ((x: Cells, y: Cells) => void) | undefined;
+  logHoverCell?: { x: Cells; y: Cells } | undefined;
 }
 
-function GameGrid({ onRegisterPan }: GameGridProps) {
+function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const dispatch = useAppDispatch();
   const activeSide = useSelector(selectActiveSide);
   const activeUnit = useSelector(selectActiveUnit);
   const phase = useSelector(selectPhase);
-  const sides = useSelector(selectAllSides);
+  const sides = useSelector(selectSideEntities);
   const map = useSelector(selectMap);
   const units = useSelector(selectUnitEntities);
 
@@ -115,9 +99,11 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
 
   const handleDrop = useCallback(
     (x: Cells, y: Cells, unitId: UnitId, sideId: SideId) => {
-      dispatch(
-        placeUnitAction({ side: sides[sideId]!, unit: units[unitId]!, x, y }),
-      );
+      const side = sides[sideId];
+      if (!side) return;
+      if (side.deploymentZone && !isInDeploymentZone(side.deploymentZone, x, y))
+        return;
+      dispatch(placeUnitAction({ side, unit: units[unitId]!, x, y }));
     },
     [dispatch, sides, units],
   );
@@ -150,8 +136,39 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
     [activeUnit, map, phase, units],
   );
 
+  const deploymentZones = useMemo((): ZoneInfo[] => {
+    if (phase !== Phase.Placement) return [];
+    return Object.values(sides).flatMap((s) =>
+      s.deploymentZone
+        ? [{ key: String(s.id), colour: s.colour, zone: s.deploymentZone }]
+        : [],
+    );
+  }, [phase, sides]);
+
+  const targetNumbers = useMemo(() => {
+    if (!activeUnit || !map) return {};
+    if (phase !== Phase.Missile && phase !== Phase.Melee) return {};
+    const g = new KillChainEngine(map, units);
+    return Object.fromEntries(
+      placedUnits
+        .filter((u) => canAttackTarget(activeUnit, u, phase, map.cellSize))
+        .map((u) => {
+          const missile = g.getDistance(activeUnit, u) > map.cellSize;
+          return [
+            u.id,
+            applyAttackModifiers(getAttackModifiers(g, missile, activeUnit, u)),
+          ];
+        }),
+    );
+  }, [activeUnit, map, phase, placedUnits, units]);
+
   const handleClickTerrain = useCallback(
     (x: Cells, y: Cells) => {
+      if (onEditCell) {
+        onEditCell(x, y);
+        return;
+      }
+
       const tint = tints.find((t) => t.x === x && t.y === y);
 
       switch (phase) {
@@ -164,7 +181,7 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
 
       dispatch(setActiveUnitId(undefined));
     },
-    [activeUnit, dispatch, phase, tints],
+    [activeUnit, dispatch, onEditCell, phase, tints],
   );
 
   const handleClickUnit = useCallback(
@@ -216,18 +233,25 @@ function GameGrid({ onRegisterPan }: GameGridProps) {
   }, [centre, gotoCell, onRegisterPan]);
 
   return (
-    <svg ref={svgRef} width="100%" height="100%" className="map">
+    <svg
+      ref={svgRef}
+      width="100%"
+      height="100%"
+      className={`map${onEditCell ? " editMode" : ""}`}
+    >
       <g ref={gRef}>
         {terrainCells}
+        <ZoneOverlay zones={deploymentZones} cs={cellSize} />
         {placedUnits.map((unit) => (
           <UnitToken
             key={unit.id}
             unit={unit}
             cellSize={cellSize}
+            attackTargetNumber={targetNumbers[unit.id]}
             onClick={canSelect(unit) ? handleClickUnit : undefined}
           />
         ))}
-        <GridOverlay tints={tints} />
+        <GridOverlay tints={tints} logHoverCell={logHoverCell} />
       </g>
     </svg>
   );

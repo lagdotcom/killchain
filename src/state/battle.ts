@@ -71,15 +71,31 @@ export const battleSlice = createSlice({
     setActiveUnitId(state, { payload }: PayloadAction<UnitId | undefined>) {
       state.activeUnitId = payload;
     },
+    setMap(state, { payload }: PayloadAction<MapId>) {
+      state.mapId = payload;
+      state.activeUnitId = undefined;
+    },
   },
   extraReducers: (builder) =>
     builder
-      .addCase(setupBattleAction, (state, { payload: { map, sides } }) => {
-        state.mapId = map;
-        state.sideOrder = shuffle(sides.map((side) => side.id));
-        state.sideIndex = 0;
-        state.phase = Phase.Placement;
-      })
+      .addCase(
+        setupBattleAction,
+        (state, { payload: { map, sides, units } }) => {
+          // Sides that still have deployable (unplaced) units rotate through Placement.
+          // Sides where every unit is pre-placed are skipped immediately.
+          const deployable = sides
+            .filter((s) => units.some((u) => u.side === s.id && isNaN(u.x)))
+            .map((s) => s.id);
+          state.activeUnitId = undefined;
+          state.canPass = deployable.length === 0;
+          state.mapId = map;
+          state.messages = [];
+          state.phase = Phase.Placement;
+          state.sideIndex = deployable.length > 0 ? 0 : NaN;
+          state.sideOrder = shuffle(deployable);
+          state.turn = 0;
+        },
+      )
       .addCase(placeUnitAction, (state, { payload: { side } }) => {
         if (side.unplacedIds.length === 1) {
           state.messages.push(sidePlacedAllUnits(side));
@@ -165,6 +181,7 @@ export const battleSlice = createSlice({
       }),
 });
 
-export const { allowPass, nextSide, setActiveUnitId } = battleSlice.actions;
+export const { allowPass, nextSide, setActiveUnitId, setMap } =
+  battleSlice.actions;
 
 export default battleSlice.reducer;

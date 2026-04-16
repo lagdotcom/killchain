@@ -1,5 +1,6 @@
 import type { Cells, Feet } from "../flavours.js";
 import { cellSize } from "../ui.js";
+import { CellHighlight } from "./MapOverlays.js";
 
 export type TintReason = "short" | "medium" | "long" | "reachable";
 
@@ -34,12 +35,25 @@ function OverlayTint({ x, y, reason }: Tint) {
   );
 }
 
-export function GridOverlay({ tints }: { tints: Tint[] }) {
+interface GridOverlayProps {
+  tints: Tint[];
+  logHoverCell?: { x: Cells; y: Cells } | undefined;
+}
+
+export function GridOverlay({ tints, logHoverCell }: GridOverlayProps) {
   return (
     <g>
       {tints.map((tint) => (
         <OverlayTint key={tint.id} {...tint} />
       ))}
+      {logHoverCell && (
+        <CellHighlight
+          x={logHoverCell.x}
+          y={logHoverCell.y}
+          cs={cellSize}
+          stroke="#ffd"
+        />
+      )}
     </g>
   );
 }

@@ -3,6 +3,8 @@ import { createSelector } from "@reduxjs/toolkit";
 import { Phase } from "../killchain/rules.js";
 import { isDefined } from "../tools.js";
 import { mapsAdapter } from "./maps.js";
+import { rosterAdapter } from "./roster.js";
+import { scenariosAdapter } from "./scenarios.js";
 import { sidesAdapter } from "./sides.js";
 import type { AppState } from "./store.js";
 import { terrainAdapter } from "./terrain.js";
@@ -10,6 +12,16 @@ import { unitsAdapter } from "./units.js";
 
 export const { selectAll: selectAllMaps, selectEntities: selectMapEntities } =
   mapsAdapter.getSelectors<AppState>((state) => state.maps);
+
+export const {
+  selectAll: selectAllDefinitions,
+  selectEntities: selectDefinitionEntities,
+} = rosterAdapter.getSelectors<AppState>((state) => state.roster);
+
+export const {
+  selectAll: selectAllScenarios,
+  selectEntities: selectScenarioEntities,
+} = scenariosAdapter.getSelectors<AppState>((state) => state.scenarios);
 
 export const { selectAll: selectAllSides, selectEntities: selectSideEntities } =
   sidesAdapter.getSelectors<AppState>((state) => state.sides);
