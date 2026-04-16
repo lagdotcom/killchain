@@ -23,7 +23,6 @@ Should be front-end options for optional rules (could be folded into Scenario st
 
 ## Units
 
-- Save and load units, export to json/whatever
 - Image instead of short name?
 
 ## Unit abilities
@@ -33,7 +32,6 @@ Should be front-end options for optional rules (could be folded into Scenario st
 
 ## Scenarios
 
-- Save and load map/unit setups, export to json/whatever
 - Sides can be allies to each other
 - **Victory conditions**: occupy cells, rout/disperse specific unit, escape area intact, etc.
 
