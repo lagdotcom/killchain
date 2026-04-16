@@ -58,18 +58,15 @@ export function ScenarioMapEditor({
 }: ScenarioMapEditorProps) {
   const [dragOverCell, setDragOverCell] = useState<{ x: number; y: number } | null>(null);
   const [draftZone, setDraftZone] = useState<DraftZone | null>(null);
-  const [zoneDrawing, setZoneDrawing] = useState(false);
 
   const svgWidth = map.width * editorCellSize;
   const svgHeight = map.height * editorCellSize;
 
   function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): { x: number; y: number } {
     const rect = e.currentTarget.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
     return {
-      x: Math.floor(px / editorCellSize),
-      y: Math.floor(py / editorCellSize),
+      x: Math.floor((e.clientX - rect.left) / editorCellSize),
+      y: Math.floor((e.clientY - rect.top) / editorCellSize),
     };
   }
 
@@ -77,13 +74,8 @@ export function ScenarioMapEditor({
 
   function handleDragOver(e: React.DragEvent<SVGSVGElement>) {
     e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-    const cx = Math.floor(px / editorCellSize);
-    const cy = Math.floor(py / editorCellSize);
-    setDragOverCell({ x: cx, y: cy });
+    e.dataTransfer.dropEffect = "move";
+    setDragOverCell(getCellFromEvent(e));
   }
 
   function handleDragLeave() {
@@ -100,12 +92,8 @@ export function ScenarioMapEditor({
     const sideIdx = parseInt(parts[0]!, 10);
     const unitIdx = parseInt(parts[1]!, 10);
     if (isNaN(sideIdx) || isNaN(unitIdx)) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-    const cx = Math.floor(px / editorCellSize) as Cells;
-    const cy = Math.floor(py / editorCellSize) as Cells;
-    onPlace(cx, cy, sideIdx, unitIdx);
+    const { x, y } = getCellFromEvent(e);
+    onPlace(x as Cells, y as Cells, sideIdx, unitIdx);
   }
 
   // ---- Zone drawing ---------------------------------------------------------
@@ -114,25 +102,24 @@ export function ScenarioMapEditor({
     if (zoneSideIdx < 0) return;
     const { x, y } = getCellFromEvent(e);
     setDraftZone({ ax: x, ay: y, bx: x, by: y });
-    setZoneDrawing(true);
   }
 
   function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
-    if (!zoneDrawing || !draftZone) return;
+    if (!draftZone) return;
     const { x, y } = getCellFromEvent(e);
     setDraftZone((d) => d ? { ...d, bx: x, by: y } : d);
   }
 
   function handleMouseUp(e: React.MouseEvent<SVGSVGElement>) {
-    if (!zoneDrawing || !draftZone) return;
+    if (!draftZone) return;
     const { x, y } = getCellFromEvent(e);
     const finalDraft = { ...draftZone, bx: x, by: y };
-    setZoneDrawing(false);
     setDraftZone(null);
     onZoneDefined(computeZone(finalDraft));
   }
 
   const cursor = zoneSideIdx >= 0 ? "crosshair" : "default";
+  const visibleDraftZone = draftZone ? computeZone(draftZone) : null;
 
   return (
     <div className="scenario-map-scroll">
@@ -154,7 +141,7 @@ export function ScenarioMapEditor({
           const colour = terrainColours[cell.type] ?? "#875";
           return (
             <rect
-              key={String(id)}
+              key={id}
               x={cell.x * editorCellSize}
               y={cell.y * editorCellSize}
               width={editorCellSize}
@@ -205,21 +192,18 @@ export function ScenarioMapEditor({
         ))}
 
         {/* Draft zone while drawing */}
-        {draftZone && (() => {
-          const zone = computeZone(draftZone);
-          return (
-            <rect
-              x={zone.x * editorCellSize}
-              y={zone.y * editorCellSize}
-              width={zone.width * editorCellSize}
-              height={zone.height * editorCellSize}
-              fill="white"
-              fillOpacity={0.3}
-              stroke="white"
-              strokeWidth={1}
-            />
-          );
-        })()}
+        {visibleDraftZone && (
+          <rect
+            x={visibleDraftZone.x * editorCellSize}
+            y={visibleDraftZone.y * editorCellSize}
+            width={visibleDraftZone.width * editorCellSize}
+            height={visibleDraftZone.height * editorCellSize}
+            fill="white"
+            fillOpacity={0.3}
+            stroke="white"
+            strokeWidth={1}
+          />
+        )}
 
         {/* Placed units */}
         {placedUnits.map((pu) => {
