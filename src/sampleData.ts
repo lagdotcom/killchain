@@ -160,6 +160,7 @@ export function generateGridMap(
   return {
     id,
     ...(name !== undefined && { name }),
+    ...(seed !== undefined && { seed }),
     layout: "square",
     cellSize,
     width,

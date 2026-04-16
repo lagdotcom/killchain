@@ -5,6 +5,7 @@ import type { Cells, MapId, ScenarioId, SideId, UnitDefinitionId } from "../flav
 import type { DeploymentZone } from "../killchain/types.js";
 import { Phase } from "../killchain/rules.js";
 import { loadScenarioAction } from "../state/actions.js";
+import { generateGridMap } from "../sampleData.js";
 import { upsertMap } from "../state/maps.js";
 import { upsertDefinitions } from "../state/roster.js";
 import {
@@ -160,16 +161,29 @@ export function ScenarioManager({ onClose }: Props) {
     if (confirm("Delete this scenario?")) dispatch(removeScenario(id));
   }
 
-  function handleExport(s: Scenario) {
+  /** Strip cells from seeded maps — they're fully reproducible from the seed. */
+  function compactMap(map: (typeof maps)[number]) {
+    if (map.seed === undefined) return map;
+    const { cells: _cells, ...rest } = map;
+    return rest;
+  }
+
+  function buildPkg(s: Scenario) {
     const map = maps.find((m) => m.id === s.mapId);
-    const usedDefIds = new Set(s.sides.flatMap((side) => side.units.map((u) => u.definitionId)));
+    const usedDefIds = new Set(
+      s.sides.flatMap((side) => side.units.map((u) => u.definitionId)),
+    );
     const usedDefs = definitions.filter((d) => usedDefIds.has(d.id));
-    const pkg = {
+    return {
       version: 1,
       scenario: s,
-      ...(map && { map }),
+      ...(map && { map: compactMap(map) }),
       ...(usedDefs.length > 0 && { definitions: usedDefs }),
     };
+  }
+
+  function handleExport(s: Scenario) {
+    const pkg = buildPkg(s);
     const json = JSON.stringify(pkg, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -181,17 +195,7 @@ export function ScenarioManager({ onClose }: Props) {
   }
 
   function handleExportAll() {
-    const pkgs = scenarios.map((s) => {
-      const map = maps.find((m) => m.id === s.mapId);
-      const usedDefIds = new Set(s.sides.flatMap((side) => side.units.map((u) => u.definitionId)));
-      const usedDefs = definitions.filter((d) => usedDefIds.has(d.id));
-      return {
-        version: 1,
-        scenario: s,
-        ...(map && { map }),
-        ...(usedDefs.length > 0 && { definitions: usedDefs }),
-      };
-    });
+    const pkgs = scenarios.map(buildPkg);
     const json = JSON.stringify(pkgs, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -209,22 +213,44 @@ export function ScenarioManager({ onClose }: Props) {
     reader.onload = (ev) => {
       try {
         const raw = JSON.parse(ev.target?.result as string);
-        const list = Array.isArray(raw) ? raw : [raw];
+        const list: unknown[] = Array.isArray(raw) ? raw : [raw];
         for (const item of list) {
-          if (item.version === 1 && item.scenario) {
-            // New self-contained format
-            if (item.map) dispatch(upsertMap(item.map));
-            if (item.definitions) dispatch(upsertDefinitions(item.definitions));
-            dispatch(upsertScenario(item.scenario));
-          } else if (typeof item.name === "string" && item.mapId) {
-            // Old format: raw Scenario object
-            dispatch(upsertScenario(item));
-          } else {
-            throw new Error("Unrecognised item");
+          if (
+            typeof item !== "object" ||
+            item === null ||
+            (item as Record<string, unknown>).version !== 1 ||
+            !(item as Record<string, unknown>).scenario
+          )
+            throw new Error("Invalid format — expected {version:1, scenario, ...}");
+
+          const pkg = item as Record<string, unknown>;
+
+          if (pkg.map) {
+            const m = pkg.map as Record<string, unknown>;
+            // Seeded maps exported without cells — regenerate from seed
+            if (m.seed !== undefined && !m.cells) {
+              dispatch(
+                upsertMap(
+                  generateGridMap(
+                    m.id as string,
+                    m.cellSize as number,
+                    m.width as number,
+                    m.height as number,
+                    m.seed as number,
+                    m.name as string | undefined,
+                  ),
+                ),
+              );
+            } else {
+              dispatch(upsertMap(pkg.map as Parameters<typeof upsertMap>[0]));
+            }
           }
+          if (pkg.definitions)
+            dispatch(upsertDefinitions(pkg.definitions as Parameters<typeof upsertDefinitions>[0]));
+          dispatch(upsertScenario(pkg.scenario as Parameters<typeof upsertScenario>[0]));
         }
-      } catch {
-        alert("Invalid scenario JSON.");
+      } catch (err) {
+        alert(`Invalid scenario JSON: ${err instanceof Error ? err.message : err}`);
       }
     };
     reader.readAsText(file);

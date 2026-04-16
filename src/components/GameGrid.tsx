@@ -165,15 +165,17 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const targetNumbers = useMemo(() => {
     if (!activeUnit || !map) return {};
     if (phase !== Phase.Missile && phase !== Phase.Melee) return {};
-    const missile = phase === Phase.Missile && !!activeUnit.missile;
     const g = new KillChainEngine(map, units);
     return Object.fromEntries(
       placedUnits
         .filter((u) => canAttackTarget(activeUnit, u, phase, map.cellSize))
-        .map((u) => [
-          u.id,
-          applyAttackModifiers(getAttackModifiers(g, missile, activeUnit, u)),
-        ]),
+        .map((u) => {
+          const missile = g.getDistance(activeUnit, u) > map.cellSize;
+          return [
+            u.id,
+            applyAttackModifiers(getAttackModifiers(g, missile, activeUnit, u)),
+          ];
+        }),
     );
   }, [activeUnit, map, phase, placedUnits, units]);
 

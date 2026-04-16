@@ -18,6 +18,9 @@ export interface MapEntity {
   width: Cells;
   height: Cells;
   cellSize: Feet;
+  /** If set, the terrain was procedurally generated from this seed and can be
+   *  reconstructed without storing the full cell data. */
+  seed?: number;
   cells: EntityState<TerrainEntity, TerrainId>;
 }
 
