@@ -1,5 +1,7 @@
 import type { Cells, SideId, UnitId } from "../flavours.js";
 import type { Terrain } from "../killchain/types.js";
+import type { TerrainEntity } from "../state/terrain.js";
+import { enumerate } from "../tools.js";
 import { cellSize, shadowSize, terrainColours } from "../ui.js";
 
 export interface TerrainCellProps {
@@ -137,3 +139,28 @@ function TerrainCell({
 }
 
 export default TerrainCell;
+
+export function getTerrainCells(
+  width: Cells,
+  height: Cells,
+  getTerrain: (x: Cells, y: Cells, e: number) => TerrainEntity,
+  onClick?: TerrainCellProps["onClick"],
+  onDrop?: TerrainCellProps["onDrop"],
+) {
+  return enumerate(height)
+    .flatMap((y) => enumerate(width).map((x) => getTerrain(x, y, -1)))
+    .map((data) => (
+      <TerrainCell
+        key={data.id}
+        x={data.x}
+        y={data.y}
+        terrain={data}
+        north={getTerrain(data.x, data.y - 1, data.elevation)}
+        south={getTerrain(data.x, data.y + 1, data.elevation)}
+        east={getTerrain(data.x + 1, data.y, data.elevation)}
+        west={getTerrain(data.x - 1, data.y, data.elevation)}
+        onClick={onClick}
+        onDrop={onDrop}
+      />
+    ));
+}

@@ -5,7 +5,7 @@ import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import { heavyFoot, heavyHorse } from "./killchain/units.js";
 import type { DeploymentZone } from "./killchain/types.js";
-import { getDeploymentZoneTints, getTints, isInDeploymentZone } from "./logic.js";
+import { getTints, isInDeploymentZone } from "./logic.js";
 import type { MapEntity } from "./state/maps.js";
 import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
@@ -287,27 +287,3 @@ describe("isInDeploymentZone", () => {
   });
 });
 
-describe("getDeploymentZoneTints", () => {
-  test("returns width × height tints", () => {
-    const tints = getDeploymentZoneTints(zone(1, 2, 3, 4));
-    expect(tints).toHaveLength(12); // 3 × 4
-  });
-
-  test("all tints have reason 'deployable'", () => {
-    const tints = getDeploymentZoneTints(zone(0, 0, 2, 2));
-    expect(tints.every((t) => t.reason === "deployable")).toBe(true);
-  });
-
-  test("tints cover exactly the zone cells", () => {
-    const tints = getDeploymentZoneTints(zone(2, 3, 2, 2));
-    const coords = tints.map((t) => `${t.x},${t.y}`).sort();
-    expect(coords).toEqual(["2,3", "2,4", "3,3", "3,4"].sort());
-  });
-
-  test("tint IDs match xyId of their cell", () => {
-    const tints = getDeploymentZoneTints(zone(0, 0, 2, 1));
-    for (const t of tints) {
-      expect(t.id).toBe(xyId(t.x, t.y));
-    }
-  });
-});

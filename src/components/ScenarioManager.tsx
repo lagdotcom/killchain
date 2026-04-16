@@ -24,7 +24,8 @@ import {
 } from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
 import { ScenarioMapEditor } from "./ScenarioMapEditor.js";
-import type { PlacedUnit, ZoneInfo } from "./ScenarioMapEditor.js";
+import type { PlacedUnit } from "./ScenarioMapEditor.js";
+import type { ZoneInfo } from "./MapOverlays.js";
 
 // ---------------------------------------------------------------------------
 // Local form types
@@ -392,7 +393,7 @@ export function ScenarioManager({ onClose }: Props) {
     const zones: ZoneInfo[] = form.sides
       .map((side, si) =>
         side.deploymentZone
-          ? { sideIdx: si, colour: side.colour, zone: side.deploymentZone }
+          ? { key: String(si), colour: side.colour, zone: side.deploymentZone }
           : null,
       )
       .filter((z): z is ZoneInfo => z !== null);

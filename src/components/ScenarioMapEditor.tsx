@@ -1,10 +1,13 @@
 import { useState } from "react";
 import type { Cells } from "../flavours.js";
+import { xyId } from "../killchain/EuclideanEngine.js";
 import type { DeploymentZone } from "../killchain/types.js";
 import type { MapEntity } from "../state/maps.js";
-import { terrainColours } from "../ui.js";
-
-const editorCellSize = 28;
+import type { TerrainEntity } from "../state/terrain.js";
+import { cellSize } from "../ui.js";
+import { CellHighlight, ZoneOverlay, type ZoneInfo } from "./MapOverlays.js";
+import { getTerrainCells } from "./TerrainCell.js";
+export type { ZoneInfo } from "./MapOverlays.js";
 
 export interface PlacedUnit {
   sideIdx: number;
@@ -13,12 +16,6 @@ export interface PlacedUnit {
   label: string;
   x: Cells;
   y: Cells;
-}
-
-export interface ZoneInfo {
-  sideIdx: number;
-  colour: string;
-  zone: DeploymentZone;
 }
 
 interface ScenarioMapEditorProps {
@@ -59,14 +56,18 @@ export function ScenarioMapEditor({
   const [dragOverCell, setDragOverCell] = useState<{ x: number; y: number } | null>(null);
   const [draftZone, setDraftZone] = useState<DraftZone | null>(null);
 
-  const svgWidth = map.width * editorCellSize;
-  const svgHeight = map.height * editorCellSize;
+  const svgWidth = map.width * cellSize;
+  const svgHeight = map.height * cellSize;
+
+  function getTerrain(x: Cells, y: Cells, defaultElevation: number = 0): TerrainEntity {
+    return map.cells.entities[xyId(x, y)] ?? { id: xyId(x, y), x, y, type: "Open", elevation: defaultElevation };
+  }
 
   function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): { x: number; y: number } {
     const rect = e.currentTarget.getBoundingClientRect();
     return {
-      x: Math.floor((e.clientX - rect.left) / editorCellSize),
-      y: Math.floor((e.clientY - rect.top) / editorCellSize),
+      x: Math.floor((e.clientX - rect.left) / cellSize),
+      y: Math.floor((e.clientY - rect.top) / cellSize),
     };
   }
 
@@ -134,70 +135,16 @@ export function ScenarioMapEditor({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       >
-        {/* Terrain cells */}
-        {map.cells.ids.map((id) => {
-          const cell = map.cells.entities[id];
-          if (!cell) return null;
-          const colour = terrainColours[cell.type] ?? "#875";
-          return (
-            <rect
-              key={id}
-              x={cell.x * editorCellSize}
-              y={cell.y * editorCellSize}
-              width={editorCellSize}
-              height={editorCellSize}
-              fill={colour}
-            />
-          );
-        })}
-
-        {/* Grid overlay */}
-        {Array.from({ length: map.width + 1 }, (_, i) => (
-          <line
-            key={`vg${i}`}
-            x1={i * editorCellSize}
-            y1={0}
-            x2={i * editorCellSize}
-            y2={svgHeight}
-            stroke="rgba(255,255,255,0.12)"
-            strokeWidth={0.5}
-          />
-        ))}
-        {Array.from({ length: map.height + 1 }, (_, i) => (
-          <line
-            key={`hg${i}`}
-            x1={0}
-            y1={i * editorCellSize}
-            x2={svgWidth}
-            y2={i * editorCellSize}
-            stroke="rgba(255,255,255,0.12)"
-            strokeWidth={0.5}
-          />
-        ))}
-
-        {/* Deployment zones */}
-        {zones.map((z) => (
-          <rect
-            key={`zone-${z.sideIdx}`}
-            x={z.zone.x * editorCellSize}
-            y={z.zone.y * editorCellSize}
-            width={z.zone.width * editorCellSize}
-            height={z.zone.height * editorCellSize}
-            fill={z.colour}
-            fillOpacity={0.25}
-            stroke={z.colour}
-            strokeWidth={1}
-            strokeOpacity={0.6}
-          />
-        ))}
+        {getTerrainCells(map.width, map.height, getTerrain)}
+        <ZoneOverlay zones={zones} cs={cellSize} />
 
         {/* Draft zone while drawing */}
         {visibleDraftZone && (
           <rect
-            x={visibleDraftZone.x * editorCellSize}
-            y={visibleDraftZone.y * editorCellSize}
-            width={visibleDraftZone.width * editorCellSize}
-            height={visibleDraftZone.height * editorCellSize}
+            x={visibleDraftZone.x * cellSize}
+            y={visibleDraftZone.y * cellSize}
+            width={visibleDraftZone.width * cellSize}
+            height={visibleDraftZone.height * cellSize}
             fill="white"
             fillOpacity={0.3}
             stroke="white"
@@ -207,9 +154,9 @@ export function ScenarioMapEditor({
 
         {/* Placed units */}
         {placedUnits.map((pu) => {
-          const cx = pu.x * editorCellSize + editorCellSize / 2;
-          const cy = pu.y * editorCellSize + editorCellSize / 2;
-          const r = editorCellSize * 0.35;
+          const cx = pu.x * cellSize + cellSize / 2;
+          const cy = pu.y * cellSize + cellSize / 2;
+          const r = cellSize * 0.35;
           return (
             <g
               key={`pu-${pu.sideIdx}-${pu.unitIdx}`}
@@ -222,7 +169,7 @@ export function ScenarioMapEditor({
                 y={cy}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontSize={editorCellSize * 0.3}
+                fontSize={cellSize * 0.3}
                 fill="white"
                 pointerEvents="none"
               >
@@ -233,18 +180,7 @@ export function ScenarioMapEditor({
         })}
 
         {/* Drag-over highlight */}
-        {dragOverCell && (
-          <rect
-            x={dragOverCell.x * editorCellSize}
-            y={dragOverCell.y * editorCellSize}
-            width={editorCellSize}
-            height={editorCellSize}
-            fill="none"
-            stroke="white"
-            strokeWidth={2}
-            pointerEvents="none"
-          />
-        )}
+        {dragOverCell && <CellHighlight x={dragOverCell.x} y={dragOverCell.y} cs={cellSize} />}
       </svg>
     </div>
   );

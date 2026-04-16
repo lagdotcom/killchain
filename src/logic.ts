@@ -48,21 +48,6 @@ export function isInDeploymentZone(
   );
 }
 
-export function getDeploymentZoneTints(zone: DeploymentZone): Tint[] {
-  const tints: Tint[] = [];
-  for (let cx = zone.x; cx < zone.x + zone.width; cx++) {
-    for (let cy = zone.y; cy < zone.y + zone.height; cy++) {
-      tints.push({
-        id: xyId(cx as Cells, cy as Cells),
-        x: cx as Cells,
-        y: cy as Cells,
-        cost: 0 as Feet,
-        reason: "deployable",
-      });
-    }
-  }
-  return tints;
-}
 
 export function getTints(
   activeUnit: UnitEntity | undefined,

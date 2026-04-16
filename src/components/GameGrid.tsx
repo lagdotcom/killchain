@@ -11,7 +11,7 @@ import {
   Phase,
 } from "../killchain/rules.js";
 import { KillChainEngine } from "../KillChainEngine.js";
-import { getDeploymentZoneTints, getTints, isInDeploymentZone } from "../logic.js";
+import { getTints, isInDeploymentZone } from "../logic.js";
 import { attack, moveAction, placeUnitAction } from "../state/actions.js";
 import { setActiveUnitId } from "../state/battle.js";
 import {
@@ -27,36 +27,13 @@ import type { SideEntity } from "../state/sides.js";
 import { useAppDispatch } from "../state/store.js";
 import type { TerrainEntity } from "../state/terrain.js";
 import type { UnitEntity } from "../state/units.js";
-import { enumerate, manhattanDistance } from "../tools.js";
+import { manhattanDistance } from "../tools.js";
 import { cellSize } from "../ui.js";
 import { GridOverlay } from "./GridOverlay.js";
-import TerrainCell, { type TerrainCellProps } from "./TerrainCell.js";
+import { ZoneOverlay, type ZoneInfo } from "./MapOverlays.js";
+import { getTerrainCells } from "./TerrainCell.js";
 import UnitToken from "./UnitToken.js";
 
-function getTerrainCells(
-  width: Cells,
-  height: Cells,
-  getTerrain: (x: Cells, y: Cells, e: number) => TerrainEntity,
-  onClick?: TerrainCellProps["onClick"],
-  onDrop?: TerrainCellProps["onDrop"],
-) {
-  return enumerate(height)
-    .flatMap((y) => enumerate(width).map((x) => getTerrain(x, y, -1)))
-    .map((data) => (
-      <TerrainCell
-        key={data.id}
-        x={data.x}
-        y={data.y}
-        terrain={data}
-        north={getTerrain(data.x, data.y - 1, data.elevation)}
-        south={getTerrain(data.x, data.y + 1, data.elevation)}
-        east={getTerrain(data.x + 1, data.y, data.elevation)}
-        west={getTerrain(data.x - 1, data.y, data.elevation)}
-        onClick={onClick}
-        onDrop={onDrop}
-      />
-    ));
-}
 
 function canAttack(
   unit: UnitEntity,
@@ -155,12 +132,17 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
     [activeSide, activeUnit, map, phase],
   );
 
-  const tints = useMemo(() => {
-    const movement = map ? getTints(activeUnit, phase, map, units) : [];
-    if (phase === Phase.Placement && activeSide?.deploymentZone)
-      return [...getDeploymentZoneTints(activeSide.deploymentZone), ...movement];
-    return movement;
-  }, [activeSide, activeUnit, map, phase, units]);
+  const tints = useMemo(
+    () => (map ? getTints(activeUnit, phase, map, units) : []),
+    [activeUnit, map, phase, units],
+  );
+
+  const deploymentZones = useMemo((): ZoneInfo[] => {
+    if (phase !== Phase.Placement) return [];
+    return Object.values(sides).flatMap((s) =>
+      s?.deploymentZone ? [{ key: String(s.id), colour: s.colour, zone: s.deploymentZone }] : [],
+    );
+  }, [phase, sides]);
 
   const targetNumbers = useMemo(() => {
     if (!activeUnit || !map) return {};
@@ -258,6 +240,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
     >
       <g ref={gRef}>
         {terrainCells}
+        <ZoneOverlay zones={deploymentZones} cs={cellSize} />
         {placedUnits.map((unit) => (
           <UnitToken
             key={unit.id}
