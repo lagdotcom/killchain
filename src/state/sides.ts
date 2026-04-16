@@ -15,6 +15,8 @@ import {
 } from "./actions.js";
 import { eachEntity } from "./tools.js";
 
+export type AiPersonality = "aggressive" | "defensive" | "berserker";
+
 export interface SideEntity {
   id: SideId;
   colour: string;
@@ -24,6 +26,7 @@ export interface SideEntity {
   surprised: boolean;
   casualties: number;
   initiative: number;
+  aiPersonality?: AiPersonality;
 }
 
 export const sidesAdapter = createEntityAdapter<SideEntity>();

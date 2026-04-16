@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useAiPlayer } from "./hooks/useAiPlayer.js";
 import { Provider, useSelector } from "react-redux";
 
 import GameGrid from "./components/GameGrid.js";
@@ -55,6 +56,7 @@ if (!persisted) {
 function AppContent() {
   const dispatch = useAppDispatch();
   const map = useSelector(selectMap);
+  useAiPlayer();
 
   const [panToCellFn, setPanToCellFn] = useState<
     ((x: Cells, y: Cells) => void) | null

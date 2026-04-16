@@ -110,3 +110,8 @@ export const selectTurn = createSelector(
   [selectBattle],
   (battle) => battle.turn,
 );
+
+export const selectActiveSideIsAI = createSelector(
+  [selectActiveSide],
+  (side) => side?.aiPersonality !== undefined,
+);

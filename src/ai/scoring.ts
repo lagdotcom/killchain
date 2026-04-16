@@ -1,0 +1,68 @@
+import type { XY } from "../killchain/EuclideanEngine.js";
+import { getAttackRollTarget } from "../killchain/rules.js";
+import type { DeploymentZone } from "../killchain/types.js";
+import type { KillChainEngine } from "../KillChainEngine.js";
+import type { MapEntity } from "../state/maps.js";
+import type { UnitEntity } from "../state/units.js";
+import { manhattanDistance } from "../tools.js";
+import type { AiConfig } from "./types.js";
+
+export function scoreAttackTarget(
+  attacker: UnitEntity,
+  defender: UnitEntity,
+  g: KillChainEngine,
+  missile: boolean,
+): number {
+  const target = getAttackRollTarget(g, missile, attacker, defender);
+  // Unreachable targets (target > 6) get worst score
+  if (target > 6) return -Infinity;
+
+  const killBonus = defender.damage + 1 >= defender.type.hits ? 100 : 0;
+  const shakenBonus = defender.status === "Shaken" ? 10 : 0;
+  return -target + killBonus + shakenBonus;
+}
+
+export function scoreMoveCell(
+  cell: XY,
+  enemies: UnitEntity[],
+  config: AiConfig,
+  unit: UnitEntity,
+): number {
+  if (enemies.length === 0) return 0;
+
+  const nearest = enemies.reduce((a, b) =>
+    manhattanDistance(cell, a) < manhattanDistance(cell, b) ? a : b,
+  );
+  const dist = manhattanDistance(cell, nearest);
+
+  if (config.holdBackIfDamaged && unit.damage > 0) return dist;
+  return -dist;
+}
+
+export function scorePlacementCell(
+  cell: XY,
+  zone: DeploymentZone | undefined,
+  unit: UnitEntity,
+  existingPlacements: XY[],
+  map: MapEntity,
+): number {
+  // Determine which row is "front" (closest to map centre)
+  let frontY: number;
+  if (zone) {
+    const zoneMidY = zone.y + zone.height / 2;
+    frontY = zoneMidY < map.height / 2 ? zone.y + zone.height - 1 : zone.y;
+  } else {
+    // No zone: front row is the one closest to vertical centre
+    frontY = cell.y < map.height / 2 ? map.height / 3 : (2 * map.height) / 3;
+  }
+
+  const distToFront = Math.abs(cell.y - frontY);
+
+  // Missile units prefer the rear (far from front), melee units prefer the front
+  const rowScore = unit.missile ? distToFront : -distToFront;
+
+  // Spread penalty: discourage stacking same column
+  const stackPenalty = existingPlacements.filter((p) => p.x === cell.x).length * 3;
+
+  return rowScore - stackPenalty;
+}

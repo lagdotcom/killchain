@@ -60,7 +60,7 @@ export const defaultUnits = [
 
 export const defaultSides: SideSetup[] = [
   { id: 0, name: "Regnum-Fey Alliance", colour: "#49e" },
-  { id: 1, name: "Horde of Grund", colour: "#f66" },
+  { id: 1, name: "Horde of Grund", colour: "#f66", aiPersonality: "aggressive" },
 ];
 
 /** Initial roster pre-populated with the units from the default battle. */

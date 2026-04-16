@@ -9,6 +9,7 @@ import type {
   UnitDefinitionId,
 } from "../flavours.js";
 import type { DeploymentZone } from "../killchain/types.js";
+import type { AiPersonality } from "./sides.js";
 
 export type { DeploymentZone };
 
@@ -45,6 +46,7 @@ export interface ScenarioSideSetup {
   units: ScenarioUnitSetup[];
   /** Future: restrict cells this side can deploy to. */
   deploymentZone?: DeploymentZone;
+  aiPersonality?: AiPersonality;
 }
 
 export interface Scenario {
