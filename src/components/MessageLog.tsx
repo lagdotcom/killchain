@@ -10,7 +10,11 @@ interface MessageLogProps {
   onUnhoverCell?: () => void;
 }
 
-export function MessageLog({ panToCell, onHoverCell, onUnhoverCell }: MessageLogProps) {
+export function MessageLog({
+  panToCell,
+  onHoverCell,
+  onUnhoverCell,
+}: MessageLogProps) {
   const log = useSelector(selectLogMessages);
   const map = useSelector(selectMap);
 

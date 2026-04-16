@@ -2,6 +2,7 @@ import { useId, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 import type { SideId, UnitDefinitionId } from "../flavours.js";
+import { Phase } from "../killchain/rules.js";
 import type { Armour, UnitDefinition } from "../killchain/types.js";
 import {
   heavyFoot,
@@ -25,7 +26,6 @@ import {
   selectBattle,
 } from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
-import { Phase } from "../killchain/rules.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -123,7 +123,7 @@ export function RosterManager({ onClose }: Props) {
   const sides = useSelector(selectAllSides);
   const battle = useSelector(selectBattle);
 
-  const [form, setForm] = useState<DefForm>(blankForm);
+  const [form, setForm] = useState(blankForm);
   const [editingId, setEditingId] = useState<UnitDefinitionId | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deployTarget, setDeployTarget] = useState<SideId | "">(
@@ -164,7 +164,7 @@ export function RosterManager({ onClose }: Props) {
     setForm(blankForm);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     const partial = formToDefinition(form);
     if (editingId) {
@@ -187,7 +187,7 @@ export function RosterManager({ onClose }: Props) {
 
   function handleDeploy(def: UnitDefinition) {
     if (!inPlacement || deployTarget === "") return;
-    dispatch(deployUnitAction(def, deployTarget as SideId));
+    dispatch(deployUnitAction(def, deployTarget));
   }
 
   // ---- Export / Import -----------------------------------------------------
@@ -225,7 +225,9 @@ export function RosterManager({ onClose }: Props) {
   return (
     <div className="manager-page">
       <div className="manager-header">
-        <button className="back-btn" onClick={onClose}>← Back</button>
+        <button className="back-btn" onClick={onClose}>
+          ← Back
+        </button>
         <h2>Unit Roster</h2>
       </div>
       <div className="manager-body">
@@ -235,11 +237,13 @@ export function RosterManager({ onClose }: Props) {
               <span className="palette-label">Deploy to:</span>
               <select
                 value={String(deployTarget)}
-                onChange={(e) =>
+                onChange={(e) => {
                   setDeployTarget(
-                    e.target.value === "" ? "" : (Number(e.target.value) as SideId),
-                  )
-                }
+                    e.target.value === ""
+                      ? ""
+                      : (Number(e.target.value) as SideId),
+                  );
+                }}
               >
                 {sides.map((s) => (
                   <option key={s.id} value={String(s.id)}>
@@ -273,13 +277,27 @@ export function RosterManager({ onClose }: Props) {
                   {inPlacement && (
                     <button
                       disabled={deployTarget === ""}
-                      onClick={() => handleDeploy(def)}
+                      onClick={() => {
+                        handleDeploy(def);
+                      }}
                     >
                       Deploy
                     </button>
                   )}
-                  <button onClick={() => handleStartEdit(def)}>Edit</button>
-                  <button onClick={() => handleDelete(def.id)}>Delete</button>
+                  <button
+                    onClick={() => {
+                      handleStartEdit(def);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDelete(def.id);
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -294,7 +312,10 @@ export function RosterManager({ onClose }: Props) {
             >
               {showCreate ? "Cancel" : "+ New Unit"}
             </button>
-            <button onClick={handleExportAll} disabled={definitions.length === 0}>
+            <button
+              onClick={handleExportAll}
+              disabled={definitions.length === 0}
+            >
               Export JSON
             </button>
             <label className="import-btn">
@@ -320,9 +341,9 @@ export function RosterManager({ onClose }: Props) {
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, name: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, name: e.target.value }));
+                  }}
                   placeholder="e.g. Heralds of Mikius"
                 />
               </label>
@@ -332,9 +353,9 @@ export function RosterManager({ onClose }: Props) {
                   type="text"
                   maxLength={4}
                   value={form.shortName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, shortName: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, shortName: e.target.value }));
+                  }}
                   placeholder="auto"
                 />
               </label>
@@ -342,9 +363,9 @@ export function RosterManager({ onClose }: Props) {
                 <input
                   type="checkbox"
                   checked={form.missile}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, missile: e.target.checked }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, missile: e.target.checked }));
+                  }}
                 />
                 Missile weapon
               </label>
@@ -355,7 +376,9 @@ export function RosterManager({ onClose }: Props) {
                 Preset
                 <select
                   value={form.typeName}
-                  onChange={(e) => handlePreset(e.target.value)}
+                  onChange={(e) => {
+                    handlePreset(e.target.value);
+                  }}
                 >
                   <option value="">— pick preset —</option>
                   {unitTypePresets.map((p) => (
@@ -370,9 +393,9 @@ export function RosterManager({ onClose }: Props) {
                 <input
                   type="text"
                   value={form.typeName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, typeName: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, typeName: e.target.value }));
+                  }}
                 />
               </label>
               <div className="form-row">
@@ -383,9 +406,9 @@ export function RosterManager({ onClose }: Props) {
                     min={1}
                     max={10}
                     value={form.hits}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, hits: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, hits: e.target.value }));
+                    }}
                   />
                 </label>
                 <label>
@@ -395,9 +418,9 @@ export function RosterManager({ onClose }: Props) {
                     min={1}
                     step={30}
                     value={form.move}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, move: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, move: e.target.value }));
+                    }}
                   />
                 </label>
                 <label>
@@ -407,9 +430,9 @@ export function RosterManager({ onClose }: Props) {
                     min={1}
                     max={11}
                     value={form.morale}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, morale: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, morale: e.target.value }));
+                    }}
                   />
                 </label>
               </div>
@@ -417,9 +440,12 @@ export function RosterManager({ onClose }: Props) {
                 Armour
                 <select
                   value={form.armour}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, armour: e.target.value as Armour }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({
+                      ...f,
+                      armour: e.target.value as Armour,
+                    }));
+                  }}
                 >
                   {armourOptions.map((a) => (
                     <option key={a} value={a}>
@@ -433,9 +459,9 @@ export function RosterManager({ onClose }: Props) {
                   <input
                     type="checkbox"
                     checked={form.mounted}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, mounted: e.target.checked }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, mounted: e.target.checked }));
+                    }}
                   />
                   Mounted
                 </label>
@@ -443,9 +469,9 @@ export function RosterManager({ onClose }: Props) {
                   <input
                     type="checkbox"
                     checked={form.flying}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, flying: e.target.checked }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, flying: e.target.checked }));
+                    }}
                   />
                   Flying
                 </label>
@@ -453,9 +479,9 @@ export function RosterManager({ onClose }: Props) {
                   <input
                     type="checkbox"
                     checked={form.steadfast}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, steadfast: e.target.checked }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, steadfast: e.target.checked }));
+                    }}
                   />
                   Steadfast
                 </label>

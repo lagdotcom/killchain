@@ -1,7 +1,13 @@
-import { createEntityAdapter, createSlice, nanoid } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import { createEntityAdapter, createSlice, nanoid } from "@reduxjs/toolkit";
 
-import type { Cells, MapId, ScenarioId, SideId, UnitDefinitionId } from "../flavours.js";
+import type {
+  Cells,
+  MapId,
+  ScenarioId,
+  SideId,
+  UnitDefinitionId,
+} from "../flavours.js";
 import type { DeploymentZone } from "../killchain/types.js";
 
 export type { DeploymentZone };
@@ -12,10 +18,12 @@ export type { DeploymentZone };
 
 /** Future: a condition that causes a side to win or the battle to end.
  *  e.g. { type: "rout_all" | "occupy_cell" | "exit_unit"; sideId?: SideId } */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface VictoryCondition {}
 
 /** Future: per-scenario overrides for optional rules.
  *  e.g. cavalryCharge?: boolean; morale12AlwaysFails?: boolean */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RuleOverrides {}
 
 // ---------------------------------------------------------------------------
@@ -61,6 +69,7 @@ const scenariosSlice = createSlice({
   initialState: scenariosAdapter.getInitialState(),
   reducers: {
     addScenario: {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       reducer: scenariosAdapter.addOne,
       prepare: (s: Omit<Scenario, "id">) => ({
         payload: { ...s, id: nanoid() as ScenarioId },
@@ -68,14 +77,19 @@ const scenariosSlice = createSlice({
     },
     updateScenario(
       state,
-      { payload }: PayloadAction<{ id: ScenarioId; changes: Omit<Scenario, "id"> }>,
+      {
+        payload,
+      }: PayloadAction<{ id: ScenarioId; changes: Omit<Scenario, "id"> }>,
     ) {
       const existing = state.entities[payload.id];
       if (existing) Object.assign(existing, payload.changes);
     },
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     removeScenario: scenariosAdapter.removeOne,
     /** Replace the entire list (used by JSON import). */
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     setAllScenarios: scenariosAdapter.setAll,
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     upsertScenario: scenariosAdapter.upsertOne,
   },
 });

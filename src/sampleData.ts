@@ -1,10 +1,20 @@
-import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 import SeedRandom from "seed-random";
+import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 
-import type { Cells, Feet, MapId, ScenarioId, SideId, UnitDefinitionId } from "./flavours.js";
+import type {
+  Cells,
+  Feet,
+  MapId,
+  ScenarioId,
+  SideId,
+  UnitDefinitionId,
+} from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
-import type { TerrainType, UnitDefinition, UnitType } from "./killchain/types.js";
-import type { Scenario } from "./state/scenarios.js";
+import type {
+  TerrainType,
+  UnitDefinition,
+  UnitType,
+} from "./killchain/types.js";
 import {
   heavyHorse,
   lightFoot,
@@ -13,6 +23,7 @@ import {
 } from "./killchain/units.js";
 import type { SideSetup } from "./state/actions.js";
 import type { MapEntity } from "./state/maps.js";
+import type { Scenario } from "./state/scenarios.js";
 import { terrainAdapter, type TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
 

@@ -15,6 +15,7 @@ const rosterSlice = createSlice({
   initialState: rosterAdapter.getInitialState(),
   reducers: {
     addDefinition: {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       reducer: rosterAdapter.addOne,
       prepare: (def: Omit<UnitDefinition, "id">) => ({
         payload: { ...def, id: nanoid() as UnitDefinitionId },
@@ -24,19 +25,20 @@ const rosterSlice = createSlice({
       state,
       {
         payload,
-      }: PayloadAction<{ id: UnitDefinitionId; changes: Partial<Omit<UnitDefinition, "id">> }>,
+      }: PayloadAction<{
+        id: UnitDefinitionId;
+        changes: Partial<Omit<UnitDefinition, "id">>;
+      }>,
     ) {
       const def = state.entities[payload.id];
       if (!def) return;
       Object.assign(def, payload.changes);
-      // exactOptionalPropertyTypes: clear optional fields when set to undefined
-      if ("shortName" in payload.changes && payload.changes.shortName === undefined)
-        delete def.shortName;
-      if ("missile" in payload.changes && payload.changes.missile === undefined)
-        delete def.missile;
     },
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     removeDefinition: rosterAdapter.removeOne,
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     setAllDefinitions: rosterAdapter.setAll,
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     upsertDefinitions: rosterAdapter.upsertMany,
   },
 });

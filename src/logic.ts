@@ -48,7 +48,6 @@ export function isInDeploymentZone(
   );
 }
 
-
 export function getTints(
   activeUnit: UnitEntity | undefined,
   phase: Phase,

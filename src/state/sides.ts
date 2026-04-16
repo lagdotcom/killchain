@@ -47,13 +47,10 @@ const sidesSlice = createSlice({
           })),
         ),
       )
-      .addCase(
-        deployUnitAction,
-        (state, { payload: { sideId, unitId } }) => {
-          const side = state.entities[sideId];
-          if (side) side.unplacedIds.push(unitId);
-        },
-      )
+      .addCase(deployUnitAction, (state, { payload: { sideId, unitId } }) => {
+        const side = state.entities[sideId];
+        if (side) side.unplacedIds.push(unitId);
+      })
       .addCase(placeUnitAction, (state, { payload: { side, unit } }) =>
         sidesAdapter.updateOne(state, {
           id: side.id,

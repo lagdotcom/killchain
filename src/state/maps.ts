@@ -61,9 +61,11 @@ const mapsSlice = createSlice({
       if (payload.changes.elevation !== undefined)
         cell.elevation = payload.changes.elevation;
     },
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     upsertMap: mapsAdapter.upsertOne,
   },
 });
 
-export const { addMap, deleteMap, renameMap, updateCell, upsertMap } = mapsSlice.actions;
+export const { addMap, deleteMap, renameMap, updateCell, upsertMap } =
+  mapsSlice.actions;
 export default mapsSlice.reducer;

@@ -7,7 +7,7 @@ import { MessageLog } from "./components/MessageLog.js";
 import { RosterManager } from "./components/RosterManager.js";
 import { ScenarioManager } from "./components/ScenarioManager.js";
 import { Sidebar } from "./components/Sidebar.js";
-import { TerrainPalette, type EditBrush } from "./components/TerrainPalette.js";
+import { type EditBrush, TerrainPalette } from "./components/TerrainPalette.js";
 import type { Cells, TerrainId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import {
@@ -32,12 +32,24 @@ const initialMap = generateGridMap("default", 10, 20, 20, undefined, "Default");
 const persisted = loadPersistedState();
 const store = makeStore({
   maps: persisted?.maps ?? mapsAdapter.getInitialState(undefined, [initialMap]),
-  roster: persisted?.roster ?? rosterAdapter.getInitialState(undefined, defaultDefinitions),
-  scenarios: persisted?.scenarios ?? scenariosAdapter.getInitialState(undefined, [defaultScenario]),
+  roster:
+    persisted?.roster ??
+    rosterAdapter.getInitialState(undefined, defaultDefinitions),
+  scenarios:
+    persisted?.scenarios ??
+    scenariosAdapter.getInitialState(undefined, [defaultScenario]),
 });
-store.subscribe(() => persistState(store.getState()));
+store.subscribe(() => {
+  persistState(store.getState());
+});
 if (!persisted) {
-  store.dispatch(setupBattleAction({ map: initialMap.id, sides: defaultSides, units: defaultUnits }));
+  store.dispatch(
+    setupBattleAction({
+      map: initialMap.id,
+      sides: defaultSides,
+      units: defaultUnits,
+    }),
+  );
 }
 
 function AppContent() {
@@ -48,7 +60,9 @@ function AppContent() {
     ((x: Cells, y: Cells) => void) | null
   >(null);
   const [view, setView] = useState<AppView>("game");
-  const onBack = () => setView("game");
+  const onBack = () => {
+    setView("game");
+  };
   const [editBrush, setEditBrush] = useState<EditBrush | null>(null);
   const [logHoverCell, setLogHoverCell] = useState<
     { x: Cells; y: Cells } | undefined
@@ -62,10 +76,25 @@ function AppContent() {
       if (!cell) return;
 
       if (editBrush.mode === "terrain") {
-        dispatch(updateCell({ mapId: map.id, cellId, changes: { type: editBrush.type } }));
+        dispatch(
+          updateCell({
+            mapId: map.id,
+            cellId,
+            changes: { type: editBrush.type },
+          }),
+        );
       } else {
-        const newElevation = Math.max(0, Math.min(3, cell.elevation + editBrush.delta));
-        dispatch(updateCell({ mapId: map.id, cellId, changes: { elevation: newElevation } }));
+        const newElevation = Math.max(
+          0,
+          Math.min(3, cell.elevation + editBrush.delta),
+        );
+        dispatch(
+          updateCell({
+            mapId: map.id,
+            cellId,
+            changes: { elevation: newElevation },
+          }),
+        );
       }
     },
     [dispatch, editBrush, map],
@@ -74,21 +103,31 @@ function AppContent() {
   return (
     <div className="app">
       {view !== "game" ? (
-        view === "maps" ? <MapManager onClose={onBack} /> :
-        view === "roster" ? <RosterManager onClose={onBack} /> :
-        <ScenarioManager onClose={onBack} />
+        view === "maps" ? (
+          <MapManager onClose={onBack} />
+        ) : view === "roster" ? (
+          <RosterManager onClose={onBack} />
+        ) : (
+          <ScenarioManager onClose={onBack} />
+        )
       ) : (
         <>
           <div className="app-main">
             <Sidebar
-              onOpenMapManager={() => setView("maps")}
-              onOpenRosterManager={() => setView("roster")}
-              onOpenScenarioManager={() => setView("scenarios")}
-              onToggleEditTerrain={() =>
+              onOpenMapManager={() => {
+                setView("maps");
+              }}
+              onOpenRosterManager={() => {
+                setView("roster");
+              }}
+              onOpenScenarioManager={() => {
+                setView("scenarios");
+              }}
+              onToggleEditTerrain={() => {
                 setEditBrush((b) =>
                   b ? null : { mode: "terrain", type: "Open" },
-                )
-              }
+                );
+              }}
               isEditingTerrain={editBrush !== null}
             />
             <div className="map-container">
@@ -96,11 +135,15 @@ function AppContent() {
                 <TerrainPalette
                   brush={editBrush}
                   onBrushChange={setEditBrush}
-                  onDone={() => setEditBrush(null)}
+                  onDone={() => {
+                    setEditBrush(null);
+                  }}
                 />
               )}
               <GameGrid
-                onRegisterPan={(fn) => setPanToCellFn(() => fn)}
+                onRegisterPan={(fn) => {
+                  setPanToCellFn(() => fn);
+                }}
                 onEditCell={editBrush ? handleEditCell : undefined}
                 logHoverCell={logHoverCell}
               />
@@ -108,8 +151,12 @@ function AppContent() {
           </div>
           <MessageLog
             panToCell={(x, y) => panToCellFn?.(x, y)}
-            onHoverCell={(x, y) => setLogHoverCell({ x, y })}
-            onUnhoverCell={() => setLogHoverCell(undefined)}
+            onHoverCell={(x, y) => {
+              setLogHoverCell({ x, y });
+            }}
+            onUnhoverCell={() => {
+              setLogHoverCell(undefined);
+            }}
           />
         </>
       )}

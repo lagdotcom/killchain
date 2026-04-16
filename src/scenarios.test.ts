@@ -1,10 +1,16 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, MapId, ScenarioId, SideId, UnitDefinitionId } from "./flavours.js";
-import { heavyFoot, lightFoot } from "./killchain/units.js";
-import type { DeploymentZone, UnitDefinition } from "./killchain/types.js";
-import { loadScenarioAction } from "./state/actions.js";
+import type {
+  Cells,
+  MapId,
+  ScenarioId,
+  SideId,
+  UnitDefinitionId,
+} from "./flavours.js";
 import { Phase } from "./killchain/rules.js";
+import type { DeploymentZone, UnitDefinition } from "./killchain/types.js";
+import { heavyFoot, lightFoot } from "./killchain/units.js";
+import { loadScenarioAction } from "./state/actions.js";
 import { rosterAdapter } from "./state/roster.js";
 import type { Scenario } from "./state/scenarios.js";
 import {
@@ -57,7 +63,10 @@ function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
 }
 
 function storeWithDefs(...defs: UnitDefinition[]) {
-  const rosterState = rosterAdapter.setAll(rosterAdapter.getInitialState(), defs);
+  const rosterState = rosterAdapter.setAll(
+    rosterAdapter.getInitialState(),
+    defs,
+  );
   return makeStore({ roster: rosterState });
 }
 
@@ -67,10 +76,7 @@ function storeWithDefs(...defs: UnitDefinition[]) {
 
 describe("loadScenarioAction", () => {
   test("creates units for each side from roster definitions", () => {
-    const store = storeWithDefs(
-      makeDef("def1"),
-      makeDef("def2"),
-    );
+    const store = storeWithDefs(makeDef("def1"), makeDef("def2"));
     store.dispatch(loadScenarioAction(makeScenario()));
 
     const units = selectAllUnits(store.getState());
@@ -82,7 +88,9 @@ describe("loadScenarioAction", () => {
     const store = storeWithDefs(makeDef("def1")); // def2 missing
     const warnings: string[] = [];
     const origWarn = console.warn;
-    console.warn = (...args: unknown[]) => { warnings.push(String(args[0])); };
+    console.warn = (...args: unknown[]) => {
+      warnings.push(String(args[0]));
+    };
 
     store.dispatch(loadScenarioAction(makeScenario()));
 

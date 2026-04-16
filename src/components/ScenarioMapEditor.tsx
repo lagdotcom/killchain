@@ -1,12 +1,14 @@
 import { useState } from "react";
+
 import type { Cells } from "../flavours.js";
 import { xyId } from "../killchain/EuclideanEngine.js";
 import type { DeploymentZone } from "../killchain/types.js";
 import type { MapEntity } from "../state/maps.js";
 import type { TerrainEntity } from "../state/terrain.js";
 import { cellSize } from "../ui.js";
-import { CellHighlight, ZoneOverlay, type ZoneInfo } from "./MapOverlays.js";
+import { CellHighlight, type ZoneInfo, ZoneOverlay } from "./MapOverlays.js";
 import { getTerrainCells } from "./TerrainCell.js";
+import { UnitTokenBase } from "./UnitToken.js";
 export type { ZoneInfo } from "./MapOverlays.js";
 
 export interface PlacedUnit {
@@ -53,17 +55,35 @@ export function ScenarioMapEditor({
   onUnplace,
   onZoneDefined,
 }: ScenarioMapEditorProps) {
-  const [dragOverCell, setDragOverCell] = useState<{ x: number; y: number } | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [draftZone, setDraftZone] = useState<DraftZone | null>(null);
 
   const svgWidth = map.width * cellSize;
   const svgHeight = map.height * cellSize;
 
-  function getTerrain(x: Cells, y: Cells, defaultElevation: number = 0): TerrainEntity {
-    return map.cells.entities[xyId(x, y)] ?? { id: xyId(x, y), x, y, type: "Open", elevation: defaultElevation };
+  function getTerrain(
+    x: Cells,
+    y: Cells,
+    defaultElevation: number = 0,
+  ): TerrainEntity {
+    return (
+      map.cells.entities[xyId(x, y)] ?? {
+        id: xyId(x, y),
+        x,
+        y,
+        type: "Open",
+        elevation: defaultElevation,
+      }
+    );
   }
 
-  function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): { x: number; y: number } {
+  function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): {
+    x: number;
+    y: number;
+  } {
     const rect = e.currentTarget.getBoundingClientRect();
     return {
       x: Math.floor((e.clientX - rect.left) / cellSize),
@@ -108,7 +128,7 @@ export function ScenarioMapEditor({
   function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
     if (!draftZone) return;
     const { x, y } = getCellFromEvent(e);
-    setDraftZone((d) => d ? { ...d, bx: x, by: y } : d);
+    setDraftZone((d) => (d ? { ...d, bx: x, by: y } : d));
   }
 
   function handleMouseUp(e: React.MouseEvent<SVGSVGElement>) {
@@ -153,34 +173,24 @@ export function ScenarioMapEditor({
         )}
 
         {/* Placed units */}
-        {placedUnits.map((pu) => {
-          const cx = pu.x * cellSize + cellSize / 2;
-          const cy = pu.y * cellSize + cellSize / 2;
-          const r = cellSize * 0.35;
-          return (
-            <g
-              key={`pu-${pu.sideIdx}-${pu.unitIdx}`}
-              style={{ cursor: "pointer" }}
-              onClick={() => onUnplace(pu.sideIdx, pu.unitIdx)}
-            >
-              <circle cx={cx} cy={cy} r={r} fill={pu.colour} stroke="white" strokeWidth={1} />
-              <text
-                x={cx}
-                y={cy}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={cellSize * 0.3}
-                fill="white"
-                pointerEvents="none"
-              >
-                {pu.label}
-              </text>
-            </g>
-          );
-        })}
+        {placedUnits.map((pu) => (
+          <UnitTokenBase
+            key={`pu-${pu.sideIdx}-${pu.unitIdx}`}
+            x={pu.x}
+            y={pu.y}
+            colour={pu.colour}
+            label={pu.label}
+            cs={cellSize}
+            onClick={() => {
+              onUnplace(pu.sideIdx, pu.unitIdx);
+            }}
+          />
+        ))}
 
         {/* Drag-over highlight */}
-        {dragOverCell && <CellHighlight x={dragOverCell.x} y={dragOverCell.y} cs={cellSize} />}
+        {dragOverCell && (
+          <CellHighlight x={dragOverCell.x} y={dragOverCell.y} cs={cellSize} />
+        )}
       </svg>
     </div>
   );

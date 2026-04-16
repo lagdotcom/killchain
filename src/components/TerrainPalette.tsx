@@ -21,8 +21,12 @@ export function TerrainPalette({ brush, onBrushChange, onDone }: Props) {
         <button
           key={type}
           className={`palette-btn terrain-btn${brush.mode === "terrain" && brush.type === type ? " active" : ""}`}
-          style={{ "--terrain-color": terrainColours[type] } as React.CSSProperties}
-          onClick={() => onBrushChange({ mode: "terrain", type })}
+          style={
+            { "--terrain-color": terrainColours[type] } as React.CSSProperties
+          }
+          onClick={() => {
+            onBrushChange({ mode: "terrain", type });
+          }}
           title={type}
         >
           {type}
@@ -31,14 +35,18 @@ export function TerrainPalette({ brush, onBrushChange, onDone }: Props) {
       <span className="palette-label">Elev:</span>
       <button
         className={`palette-btn${brush.mode === "elevate" && brush.delta === 1 ? " active" : ""}`}
-        onClick={() => onBrushChange({ mode: "elevate", delta: 1 })}
+        onClick={() => {
+          onBrushChange({ mode: "elevate", delta: 1 });
+        }}
         title="Raise elevation"
       >
         ↑
       </button>
       <button
         className={`palette-btn${brush.mode === "elevate" && brush.delta === -1 ? " active" : ""}`}
-        onClick={() => onBrushChange({ mode: "elevate", delta: -1 })}
+        onClick={() => {
+          onBrushChange({ mode: "elevate", delta: -1 });
+        }}
         title="Lower elevation"
       >
         ↓

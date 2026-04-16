@@ -16,11 +16,11 @@ import {
   phaseChanges,
 } from "../killchain/rules.js";
 import type { MoraleStatus, UnitDefinition } from "../killchain/types.js";
-import type { Scenario } from "./scenarios.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { canFleeBoard, findBestMove } from "../movement.js";
 import { manhattanDistance, rollDice } from "../tools.js";
 import { allowPass, type BattleState, nextSide } from "./battle.js";
+import type { Scenario } from "./scenarios.js";
 import {
   selectActiveUnit,
   selectAllSides,

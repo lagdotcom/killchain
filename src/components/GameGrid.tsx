@@ -30,10 +30,9 @@ import type { UnitEntity } from "../state/units.js";
 import { manhattanDistance } from "../tools.js";
 import { cellSize } from "../ui.js";
 import { GridOverlay } from "./GridOverlay.js";
-import { ZoneOverlay, type ZoneInfo } from "./MapOverlays.js";
+import { type ZoneInfo, ZoneOverlay } from "./MapOverlays.js";
 import { getTerrainCells } from "./TerrainCell.js";
 import UnitToken from "./UnitToken.js";
-
 
 function canAttack(
   unit: UnitEntity,
@@ -140,7 +139,9 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const deploymentZones = useMemo((): ZoneInfo[] => {
     if (phase !== Phase.Placement) return [];
     return Object.values(sides).flatMap((s) =>
-      s?.deploymentZone ? [{ key: String(s.id), colour: s.colour, zone: s.deploymentZone }] : [],
+      s.deploymentZone
+        ? [{ key: String(s.id), colour: s.colour, zone: s.deploymentZone }]
+        : [],
     );
   }, [phase, sides]);
 

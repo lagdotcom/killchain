@@ -162,8 +162,9 @@ export function searchByTerrain(
     map,
     (from, to) => {
       if (g.getUnitAt(to)) return Infinity;
-      if (!flying && invalidTerrain.has(g.getTerrainAt(to).type)) return Infinity;
-      return flying ? (map.cellSize as Feet) : getMovementCost(g, from, to);
+      if (!flying && invalidTerrain.has(g.getTerrainAt(to).type))
+        return Infinity;
+      return flying ? map.cellSize : getMovementCost(g, from, to);
     },
     start,
     maxCost,

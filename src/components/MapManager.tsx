@@ -4,13 +4,9 @@ import { useSelector } from "react-redux";
 import type { Cells, Feet, MapId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import { generateGridMap } from "../sampleData.js";
-import { addMap, deleteMap, type MapEntity } from "../state/maps.js";
 import { setMap } from "../state/battle.js";
-import {
-  selectAllMaps,
-  selectBattle,
-  selectMap,
-} from "../state/selectors.js";
+import { addMap, deleteMap, type MapEntity } from "../state/maps.js";
+import { selectAllMaps, selectBattle, selectMap } from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
 
 interface Props {
@@ -44,7 +40,7 @@ export function MapManager({ onClose }: Props) {
   const maps = useSelector(selectAllMaps);
   const activeMap = useSelector(selectMap);
   const battle = useSelector(selectBattle);
-  const [form, setForm] = useState<NewMapForm>(defaultForm);
+  const [form, setForm] = useState(defaultForm);
   const [showCreate, setShowCreate] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const formId = useId();
@@ -90,7 +86,7 @@ export function MapManager({ onClose }: Props) {
     e.target.value = "";
   }
 
-  function handleCreate(e: React.FormEvent) {
+  function handleCreate(e: React.SyntheticEvent) {
     e.preventDefault();
     const width = Math.max(4, Math.min(60, parseInt(form.width, 10) || 20));
     const height = Math.max(4, Math.min(60, parseInt(form.height, 10) || 20));
@@ -114,7 +110,9 @@ export function MapManager({ onClose }: Props) {
   return (
     <div className="manager-page">
       <div className="manager-header">
-        <button className="back-btn" onClick={onClose}>← Back</button>
+        <button className="back-btn" onClick={onClose}>
+          ← Back
+        </button>
         <h2>Map Manager</h2>
       </div>
       <div className="manager-body">
@@ -140,14 +138,24 @@ export function MapManager({ onClose }: Props) {
                 <div className="map-item-actions">
                   <button
                     disabled={!canActivate || map.id === activeMap?.id}
-                    onClick={() => handleActivate(map.id)}
+                    onClick={() => {
+                      handleActivate(map.id);
+                    }}
                   >
                     {map.id === activeMap?.id ? "Active" : "Use"}
                   </button>
-                  <button onClick={() => handleExport(map)}>Export</button>
+                  <button
+                    onClick={() => {
+                      handleExport(map);
+                    }}
+                  >
+                    Export
+                  </button>
                   <button
                     disabled={map.id === activeMap?.id}
-                    onClick={() => handleDelete(map.id)}
+                    onClick={() => {
+                      handleDelete(map.id);
+                    }}
                   >
                     Delete
                   </button>
@@ -157,7 +165,11 @@ export function MapManager({ onClose }: Props) {
           </div>
 
           <div className="map-manager-footer">
-            <button onClick={() => setShowCreate((v) => !v)}>
+            <button
+              onClick={() => {
+                setShowCreate((v) => !v);
+              }}
+            >
               {showCreate ? "Cancel" : "+ New Map"}
             </button>
             <label className="import-btn">
@@ -183,7 +195,9 @@ export function MapManager({ onClose }: Props) {
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, name: e.target.value }));
+                  }}
                 />
               </label>
               <div className="form-row">
@@ -194,9 +208,9 @@ export function MapManager({ onClose }: Props) {
                     min={4}
                     max={60}
                     value={form.width}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, width: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, width: e.target.value }));
+                    }}
                   />
                 </label>
                 <label>
@@ -206,9 +220,9 @@ export function MapManager({ onClose }: Props) {
                     min={4}
                     max={60}
                     value={form.height}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, height: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, height: e.target.value }));
+                    }}
                   />
                 </label>
               </div>
@@ -216,9 +230,9 @@ export function MapManager({ onClose }: Props) {
                 Cell size (ft)
                 <select
                   value={form.cellSize}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, cellSize: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, cellSize: e.target.value }));
+                  }}
                 >
                   <option value="5">5</option>
                   <option value="10">10</option>
@@ -230,18 +244,18 @@ export function MapManager({ onClose }: Props) {
                 <input
                   type="checkbox"
                   checked={form.useSeed}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, useSeed: e.target.checked }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, useSeed: e.target.checked }));
+                  }}
                 />
                 Use seed
                 <input
                   type="number"
                   disabled={!form.useSeed}
                   value={form.seed}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, seed: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, seed: e.target.value }));
+                  }}
                   placeholder="random"
                 />
               </label>

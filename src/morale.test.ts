@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { Cells, SideId } from "./flavours.js";
-import * as tools from "./tools.js";
 import { Phase } from "./killchain/rules.js";
 import { heavyFoot } from "./killchain/units.js";
 import {
@@ -10,7 +9,7 @@ import {
   rollMorale,
 } from "./state/actions.js";
 import type { BattleState } from "./state/battle.js";
-import { mapsAdapter, type MapEntity } from "./state/maps.js";
+import { type MapEntity, mapsAdapter } from "./state/maps.js";
 import { selectAllUnits, selectCanPassNow } from "./state/selectors.js";
 import type { SideEntity } from "./state/sides.js";
 import { sidesAdapter } from "./state/sides.js";
@@ -18,6 +17,7 @@ import { makeStore } from "./state/store.js";
 import type { UnitEntity } from "./state/units.js";
 import { unitsAdapter } from "./state/units.js";
 import { makeGridMap } from "./testHelpers.js";
+import * as tools from "./tools.js";
 
 function makeSide(id: SideId): SideEntity {
   return {

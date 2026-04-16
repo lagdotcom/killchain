@@ -47,7 +47,12 @@ export function GridOverlay({ tints, logHoverCell }: GridOverlayProps) {
         <OverlayTint key={tint.id} {...tint} />
       ))}
       {logHoverCell && (
-        <CellHighlight x={logHoverCell.x} y={logHoverCell.y} cs={cellSize} stroke="#ffd" />
+        <CellHighlight
+          x={logHoverCell.x}
+          y={logHoverCell.y}
+          cs={cellSize}
+          stroke="#ffd"
+        />
       )}
     </g>
   );
