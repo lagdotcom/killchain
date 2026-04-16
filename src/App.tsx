@@ -20,24 +20,25 @@ import {
 import { setupBattleAction } from "./state/actions.js";
 import { mapsAdapter } from "./state/maps.js";
 import { updateCell } from "./state/maps.js";
+import { loadPersistedState, persistState } from "./state/persistence.js";
 import { rosterAdapter } from "./state/roster.js";
 import { scenariosAdapter } from "./state/scenarios.js";
 import { selectMap } from "./state/selectors.js";
 import { makeStore, useAppDispatch } from "./state/store.js";
 
+type AppView = "game" | "maps" | "roster" | "scenarios";
+
 const initialMap = generateGridMap("default", 10, 20, 20, undefined, "Default");
+const persisted = loadPersistedState();
 const store = makeStore({
-  maps: mapsAdapter.getInitialState(undefined, [initialMap]),
-  roster: rosterAdapter.getInitialState(undefined, defaultDefinitions),
-  scenarios: scenariosAdapter.getInitialState(undefined, [defaultScenario]),
+  maps: persisted?.maps ?? mapsAdapter.getInitialState(undefined, [initialMap]),
+  roster: persisted?.roster ?? rosterAdapter.getInitialState(undefined, defaultDefinitions),
+  scenarios: persisted?.scenarios ?? scenariosAdapter.getInitialState(undefined, [defaultScenario]),
 });
-store.dispatch(
-  setupBattleAction({
-    map: initialMap.id,
-    sides: defaultSides,
-    units: defaultUnits,
-  }),
-);
+store.subscribe(() => persistState(store.getState()));
+if (!persisted) {
+  store.dispatch(setupBattleAction({ map: initialMap.id, sides: defaultSides, units: defaultUnits }));
+}
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -46,9 +47,8 @@ function AppContent() {
   const [panToCellFn, setPanToCellFn] = useState<
     ((x: Cells, y: Cells) => void) | null
   >(null);
-  const [showMapManager, setShowMapManager] = useState(false);
-  const [showRosterManager, setShowRosterManager] = useState(false);
-  const [showScenarioManager, setShowScenarioManager] = useState(false);
+  const [view, setView] = useState<AppView>("game");
+  const onBack = () => setView("game");
   const [editBrush, setEditBrush] = useState<EditBrush | null>(null);
   const [logHoverCell, setLogHoverCell] = useState<
     { x: Cells; y: Cells } | undefined
@@ -73,46 +73,45 @@ function AppContent() {
 
   return (
     <div className="app">
-      <div className="app-main">
-        <Sidebar
-          onOpenMapManager={() => setShowMapManager(true)}
-          onOpenRosterManager={() => setShowRosterManager(true)}
-          onOpenScenarioManager={() => setShowScenarioManager(true)}
-          onToggleEditTerrain={() =>
-            setEditBrush((b) =>
-              b ? null : { mode: "terrain", type: "Open" },
-            )
-          }
-          isEditingTerrain={editBrush !== null}
-        />
-        <div className="map-container">
-          {editBrush && (
-            <TerrainPalette
-              brush={editBrush}
-              onBrushChange={setEditBrush}
-              onDone={() => setEditBrush(null)}
+      {view !== "game" ? (
+        view === "maps" ? <MapManager onClose={onBack} /> :
+        view === "roster" ? <RosterManager onClose={onBack} /> :
+        <ScenarioManager onClose={onBack} />
+      ) : (
+        <>
+          <div className="app-main">
+            <Sidebar
+              onOpenMapManager={() => setView("maps")}
+              onOpenRosterManager={() => setView("roster")}
+              onOpenScenarioManager={() => setView("scenarios")}
+              onToggleEditTerrain={() =>
+                setEditBrush((b) =>
+                  b ? null : { mode: "terrain", type: "Open" },
+                )
+              }
+              isEditingTerrain={editBrush !== null}
             />
-          )}
-          <GameGrid
-            onRegisterPan={(fn) => setPanToCellFn(() => fn)}
-            onEditCell={editBrush ? handleEditCell : undefined}
-            logHoverCell={logHoverCell}
+            <div className="map-container">
+              {editBrush && (
+                <TerrainPalette
+                  brush={editBrush}
+                  onBrushChange={setEditBrush}
+                  onDone={() => setEditBrush(null)}
+                />
+              )}
+              <GameGrid
+                onRegisterPan={(fn) => setPanToCellFn(() => fn)}
+                onEditCell={editBrush ? handleEditCell : undefined}
+                logHoverCell={logHoverCell}
+              />
+            </div>
+          </div>
+          <MessageLog
+            panToCell={(x, y) => panToCellFn?.(x, y)}
+            onHoverCell={(x, y) => setLogHoverCell({ x, y })}
+            onUnhoverCell={() => setLogHoverCell(undefined)}
           />
-        </div>
-      </div>
-      <MessageLog
-        panToCell={(x, y) => panToCellFn?.(x, y)}
-        onHoverCell={(x, y) => setLogHoverCell({ x, y })}
-        onUnhoverCell={() => setLogHoverCell(undefined)}
-      />
-      {showMapManager && (
-        <MapManager onClose={() => setShowMapManager(false)} />
-      )}
-      {showRosterManager && (
-        <RosterManager onClose={() => setShowRosterManager(false)} />
-      )}
-      {showScenarioManager && (
-        <ScenarioManager onClose={() => setShowScenarioManager(false)} />
+        </>
       )}
     </div>
   );

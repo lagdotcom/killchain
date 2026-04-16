@@ -112,147 +112,143 @@ export function MapManager({ onClose }: Props) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal-panel map-manager-panel"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <h2>Map Manager</h2>
-          <button className="close-btn" onClick={onClose}>
-            ×
-          </button>
-        </div>
+    <div className="manager-page">
+      <div className="manager-header">
+        <button className="back-btn" onClick={onClose}>← Back</button>
+        <h2>Map Manager</h2>
+      </div>
+      <div className="manager-body">
+        <div className="manager-body-inner map-manager-inner">
+          {!canActivate && (
+            <p className="map-manager-warning">
+              Maps can only be switched during Placement phase.
+            </p>
+          )}
 
-        {!canActivate && (
-          <p className="map-manager-warning">
-            Maps can only be switched during Placement phase.
-          </p>
-        )}
-
-        <div className="map-list">
-          {maps.map((map) => (
-            <div
-              key={map.id}
-              className={`map-item${map.id === activeMap?.id ? " active" : ""}`}
-            >
-              <div className="map-item-info">
-                <span className="map-item-name">{mapDisplayName(map)}</span>
-                <span className="map-item-dims">
-                  {map.width}×{map.height}, {map.cellSize}ft cells
-                </span>
-              </div>
-              <div className="map-item-actions">
-                <button
-                  disabled={!canActivate || map.id === activeMap?.id}
-                  onClick={() => handleActivate(map.id)}
-                >
-                  {map.id === activeMap?.id ? "Active" : "Use"}
-                </button>
-                <button onClick={() => handleExport(map)}>Export</button>
-                <button
-                  disabled={map.id === activeMap?.id}
-                  onClick={() => handleDelete(map.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="map-manager-footer">
-          <button onClick={() => setShowCreate((v) => !v)}>
-            {showCreate ? "Cancel" : "+ New Map"}
-          </button>
-          <label className="import-btn">
-            Import JSON
-            <input
-              ref={importRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              style={{ display: "none" }}
-            />
-          </label>
-        </div>
-
-        {showCreate && (
-          <form
-            className="map-create-form"
-            id={formId}
-            onSubmit={handleCreate}
-          >
-            <label>
-              Name
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              />
-            </label>
-            <div className="form-row">
-              <label>
-                Width
-                <input
-                  type="number"
-                  min={4}
-                  max={60}
-                  value={form.width}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, width: e.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Height
-                <input
-                  type="number"
-                  min={4}
-                  max={60}
-                  value={form.height}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, height: e.target.value }))
-                  }
-                />
-              </label>
-            </div>
-            <label>
-              Cell size (ft)
-              <select
-                value={form.cellSize}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, cellSize: e.target.value }))
-                }
+          <div className="map-list">
+            {maps.map((map) => (
+              <div
+                key={map.id}
+                className={`map-item${map.id === activeMap?.id ? " active" : ""}`}
               >
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-              </select>
-            </label>
-            <label className="seed-row">
+                <div className="map-item-info">
+                  <span className="map-item-name">{mapDisplayName(map)}</span>
+                  <span className="map-item-dims">
+                    {map.width}×{map.height}, {map.cellSize}ft cells
+                  </span>
+                </div>
+                <div className="map-item-actions">
+                  <button
+                    disabled={!canActivate || map.id === activeMap?.id}
+                    onClick={() => handleActivate(map.id)}
+                  >
+                    {map.id === activeMap?.id ? "Active" : "Use"}
+                  </button>
+                  <button onClick={() => handleExport(map)}>Export</button>
+                  <button
+                    disabled={map.id === activeMap?.id}
+                    onClick={() => handleDelete(map.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="map-manager-footer">
+            <button onClick={() => setShowCreate((v) => !v)}>
+              {showCreate ? "Cancel" : "+ New Map"}
+            </button>
+            <label className="import-btn">
+              Import JSON
               <input
-                type="checkbox"
-                checked={form.useSeed}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, useSeed: e.target.checked }))
-                }
-              />
-              Use seed
-              <input
-                type="number"
-                disabled={!form.useSeed}
-                value={form.seed}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, seed: e.target.value }))
-                }
-                placeholder="random"
+                ref={importRef}
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                style={{ display: "none" }}
               />
             </label>
-            <button type="submit">Create</button>
-          </form>
-        )}
+          </div>
+
+          {showCreate && (
+            <form
+              className="map-create-form"
+              id={formId}
+              onSubmit={handleCreate}
+            >
+              <label>
+                Name
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </label>
+              <div className="form-row">
+                <label>
+                  Width
+                  <input
+                    type="number"
+                    min={4}
+                    max={60}
+                    value={form.width}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, width: e.target.value }))
+                    }
+                  />
+                </label>
+                <label>
+                  Height
+                  <input
+                    type="number"
+                    min={4}
+                    max={60}
+                    value={form.height}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, height: e.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+              <label>
+                Cell size (ft)
+                <select
+                  value={form.cellSize}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, cellSize: e.target.value }))
+                  }
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="30">30</option>
+                </select>
+              </label>
+              <label className="seed-row">
+                <input
+                  type="checkbox"
+                  checked={form.useSeed}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, useSeed: e.target.checked }))
+                  }
+                />
+                Use seed
+                <input
+                  type="number"
+                  disabled={!form.useSeed}
+                  value={form.seed}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, seed: e.target.value }))
+                  }
+                  placeholder="random"
+                />
+              </label>
+              <button type="submit">Create</button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

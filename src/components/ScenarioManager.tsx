@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 import type { Cells, MapId, ScenarioId, SideId, UnitDefinitionId } from "../flavours.js";
@@ -141,6 +141,7 @@ export function ScenarioManager({ onClose }: Props) {
   const [editingId, setEditingId] = useState<ScenarioId | null>(null);
   const [zoneSideIdx, setZoneSideIdx] = useState(-1);
   const importRef = useRef<HTMLInputElement>(null);
+  const formId = useId();
 
   const mapName = (id: string) =>
     maps.find((m) => m.id === id)?.name ?? id ?? "—";
@@ -397,16 +398,18 @@ export function ScenarioManager({ onClose }: Props) {
       .filter((z): z is ZoneInfo => z !== null);
 
     return (
-      <div className="modal-overlay">
-        <div className="modal-panel scenario-manager-panel editing">
-          <div className="modal-header">
-            <h2>{editingId ? "Edit Scenario" : "New Scenario"}</h2>
-            <button className="close-btn" onClick={onClose}>
-              ×
+      <div className="manager-page">
+        <div className="manager-header">
+          <button className="back-btn" onClick={handleCancelEdit}>← Back</button>
+          <h2>{editingId ? "Edit Scenario" : "New Scenario"}</h2>
+          <div className="manager-header-actions">
+            <button form={formId} type="submit" disabled={!form.mapId}>
+              {editingId ? "Save changes" : "Create scenario"}
             </button>
           </div>
+        </div>
 
-          <form className="scenario-editor" onSubmit={handleSave}>
+        <form className="scenario-editor" id={formId} onSubmit={handleSave}>
             {/* Top row: Name + Map */}
             <div className="scenario-editor-top">
               <label className="scenario-label-wide">
@@ -697,95 +700,75 @@ export function ScenarioManager({ onClose }: Props) {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="scenario-form-footer">
-              <button type="submit" disabled={!form.mapId}>
-                {editingId ? "Save changes" : "Create scenario"}
-              </button>
-              <button type="button" onClick={handleCancelEdit}>
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
     );
   }
 
   // List view
   return (
-    <div className="modal-overlay">
-      <div className="modal-panel scenario-manager-panel">
-        <div className="modal-header">
-          <h2>Scenarios</h2>
-          <button className="close-btn" onClick={onClose}>
-            ×
-          </button>
-        </div>
-
-        <div className="scenario-list">
-          {scenarios.length === 0 && (
-            <p className="roster-empty">
-              No scenarios yet. Create one or import from JSON.
-            </p>
-          )}
-          {scenarios.map((s) => {
-            const totalUnits = s.sides.reduce(
-              (n, side) => n + side.units.length,
-              0,
-            );
-            const prePlaced = s.sides.reduce(
-              (n, side) =>
-                n + side.units.filter((u) => u.x !== undefined).length,
-              0,
-            );
-            return (
-              <div key={s.id} className="scenario-item">
-                <div className="scenario-item-info">
-                  <span className="scenario-item-name">{s.name}</span>
-                  <span className="scenario-item-meta">
-                    Map: {mapName(s.mapId)} · {s.sides.length} sides ·{" "}
-                    {totalUnits} units
-                    {prePlaced > 0 && `, ${prePlaced} pre-placed`}
-                  </span>
-                  <span className="scenario-item-sides">
-                    {s.sides.map((side, i) => (
-                      <span
-                        key={i}
-                        className="scenario-side-chip"
-                        style={{ background: side.colour }}
-                      >
-                        {side.name}
-                      </span>
-                    ))}
-                  </span>
-                </div>
-                <div className="scenario-item-actions">
-                  <button onClick={() => handleLoad(s)}>Load</button>
-                  <button onClick={() => handleEdit(s)}>Edit</button>
-                  <button onClick={() => handleExport(s)}>Export</button>
-                  <button onClick={() => handleDelete(s.id)}>Delete</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="map-manager-footer">
-          <button onClick={handleNew}>+ New Scenario</button>
-          <button onClick={handleExportAll} disabled={scenarios.length === 0}>
-            Export all
-          </button>
+    <div className="manager-page">
+      <div className="manager-header">
+        <button className="back-btn" onClick={onClose}>← Back</button>
+        <h2>Scenarios</h2>
+        <div className="manager-header-actions">
+          <button onClick={handleNew}>+ New</button>
+          <button onClick={handleExportAll} disabled={scenarios.length === 0}>Export all</button>
           <label className="import-btn">
             Import JSON
-            <input
-              ref={importRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              style={{ display: "none" }}
-            />
+            <input ref={importRef} type="file" accept=".json" onChange={handleImport} style={{ display: "none" }} />
           </label>
+        </div>
+      </div>
+      <div className="manager-body">
+        <div className="manager-body-inner scenario-manager-inner">
+          <div className="scenario-list">
+            {scenarios.length === 0 && (
+              <p className="roster-empty">
+                No scenarios yet. Create one or import from JSON.
+              </p>
+            )}
+            {scenarios.map((s) => {
+              const totalUnits = s.sides.reduce(
+                (n, side) => n + side.units.length,
+                0,
+              );
+              const prePlaced = s.sides.reduce(
+                (n, side) =>
+                  n + side.units.filter((u) => u.x !== undefined).length,
+                0,
+              );
+              return (
+                <div key={s.id} className="scenario-item">
+                  <div className="scenario-item-info">
+                    <span className="scenario-item-name">{s.name}</span>
+                    <span className="scenario-item-meta">
+                      Map: {mapName(s.mapId)} · {s.sides.length} sides ·{" "}
+                      {totalUnits} units
+                      {prePlaced > 0 && `, ${prePlaced} pre-placed`}
+                    </span>
+                    <span className="scenario-item-sides">
+                      {s.sides.map((side, i) => (
+                        <span
+                          key={i}
+                          className="scenario-side-chip"
+                          style={{ background: side.colour }}
+                        >
+                          {side.name}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                  <div className="scenario-item-actions">
+                    <button onClick={() => handleLoad(s)}>Load</button>
+                    <button onClick={() => handleEdit(s)}>Edit</button>
+                    <button onClick={() => handleExport(s)}>Export</button>
+                    <button onClick={() => handleDelete(s.id)}>Delete</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

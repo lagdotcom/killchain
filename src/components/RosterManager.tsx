@@ -223,252 +223,249 @@ export function RosterManager({ onClose }: Props) {
   // ---- Render --------------------------------------------------------------
 
   return (
-    <div className="modal-overlay">
-      <div
-        className="modal-panel roster-manager-panel"
-      >
-        <div className="modal-header">
-          <h2>Unit Roster</h2>
-          <button className="close-btn" onClick={onClose}>
-            ×
-          </button>
-        </div>
-
-        {inPlacement && sides.length > 0 && (
-          <div className="roster-deploy-bar">
-            <span className="palette-label">Deploy to:</span>
-            <select
-              value={String(deployTarget)}
-              onChange={(e) =>
-                setDeployTarget(
-                  e.target.value === "" ? "" : (Number(e.target.value) as SideId),
-                )
-              }
-            >
-              {sides.map((s) => (
-                <option key={s.id} value={String(s.id)}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="roster-list">
-          {definitions.length === 0 && (
-            <p className="roster-empty">
-              No unit definitions yet. Create one or import a roster.
-            </p>
+    <div className="manager-page">
+      <div className="manager-header">
+        <button className="back-btn" onClick={onClose}>← Back</button>
+        <h2>Unit Roster</h2>
+      </div>
+      <div className="manager-body">
+        <div className="manager-body-inner roster-manager-inner">
+          {inPlacement && sides.length > 0 && (
+            <div className="roster-deploy-bar">
+              <span className="palette-label">Deploy to:</span>
+              <select
+                value={String(deployTarget)}
+                onChange={(e) =>
+                  setDeployTarget(
+                    e.target.value === "" ? "" : (Number(e.target.value) as SideId),
+                  )
+                }
+              >
+                {sides.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
-          {definitions.map((def) => (
-            <div key={def.id} className="roster-item">
-              <div className="roster-item-info">
-                <span className="roster-item-name">{def.name}</span>
-                <span className="roster-item-type">
-                  {def.type.name} — {def.type.armour}, {def.type.move}ft,
-                  morale {def.type.morale}
-                  {def.missile ? ", missile" : ""}
-                  {def.type.mounted ? ", mounted" : ""}
-                  {def.type.flying ? ", flying" : ""}
-                  {def.type.steadfast ? ", steadfast" : ""}
-                </span>
+
+          <div className="roster-list">
+            {definitions.length === 0 && (
+              <p className="roster-empty">
+                No unit definitions yet. Create one or import a roster.
+              </p>
+            )}
+            {definitions.map((def) => (
+              <div key={def.id} className="roster-item">
+                <div className="roster-item-info">
+                  <span className="roster-item-name">{def.name}</span>
+                  <span className="roster-item-type">
+                    {def.type.name} — {def.type.armour}, {def.type.move}ft,
+                    morale {def.type.morale}
+                    {def.missile ? ", missile" : ""}
+                    {def.type.mounted ? ", mounted" : ""}
+                    {def.type.flying ? ", flying" : ""}
+                    {def.type.steadfast ? ", steadfast" : ""}
+                  </span>
+                </div>
+                <div className="roster-item-actions">
+                  {inPlacement && (
+                    <button
+                      disabled={deployTarget === ""}
+                      onClick={() => handleDeploy(def)}
+                    >
+                      Deploy
+                    </button>
+                  )}
+                  <button onClick={() => handleStartEdit(def)}>Edit</button>
+                  <button onClick={() => handleDelete(def.id)}>Delete</button>
+                </div>
               </div>
-              <div className="roster-item-actions">
-                {inPlacement && (
-                  <button
-                    disabled={deployTarget === ""}
-                    onClick={() => handleDeploy(def)}
-                  >
-                    Deploy
-                  </button>
-                )}
-                <button onClick={() => handleStartEdit(def)}>Edit</button>
-                <button onClick={() => handleDelete(def.id)}>Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div className="map-manager-footer">
-          <button
-            onClick={() => {
-              if (showCreate && editingId) handleCancelForm();
-              else setShowCreate((v) => !v);
-            }}
-          >
-            {showCreate ? "Cancel" : "+ New Unit"}
-          </button>
-          <button onClick={handleExportAll} disabled={definitions.length === 0}>
-            Export JSON
-          </button>
-          <label className="import-btn">
-            Import JSON
-            <input
-              ref={importRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              style={{ display: "none" }}
-            />
-          </label>
-        </div>
-
-        {showCreate && (
-          <form
-            className="map-create-form roster-form"
-            id={formId}
-            onSubmit={handleSubmit}
-          >
-            <label>
-              Unit name
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-                placeholder="e.g. Heralds of Mikius"
-              />
-            </label>
-            <label>
-              Short name
-              <input
-                type="text"
-                maxLength={4}
-                value={form.shortName}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, shortName: e.target.value }))
-                }
-                placeholder="auto"
-              />
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={form.missile}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, missile: e.target.checked }))
-                }
-              />
-              Missile weapon
-            </label>
-
-            <div className="roster-form-divider">Unit type</div>
-
-            <label>
-              Preset
-              <select
-                value={form.typeName}
-                onChange={(e) => handlePreset(e.target.value)}
-              >
-                <option value="">— pick preset —</option>
-                {unitTypePresets.map((p) => (
-                  <option key={p.name} value={p.name}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Type name
-              <input
-                type="text"
-                value={form.typeName}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, typeName: e.target.value }))
-                }
-              />
-            </label>
-            <div className="form-row">
-              <label>
-                Hits
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={form.hits}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, hits: e.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Move (ft)
-                <input
-                  type="number"
-                  min={1}
-                  step={30}
-                  value={form.move}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, move: e.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Morale
-                <input
-                  type="number"
-                  min={1}
-                  max={11}
-                  value={form.morale}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, morale: e.target.value }))
-                  }
-                />
-              </label>
-            </div>
-            <label>
-              Armour
-              <select
-                value={form.armour}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, armour: e.target.value as Armour }))
-                }
-              >
-                {armourOptions.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="form-row">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={form.mounted}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, mounted: e.target.checked }))
-                  }
-                />
-                Mounted
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={form.flying}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, flying: e.target.checked }))
-                  }
-                />
-                Flying
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={form.steadfast}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, steadfast: e.target.checked }))
-                  }
-                />
-                Steadfast
-              </label>
-            </div>
-            <button type="submit">
-              {editingId ? "Save changes" : "Add to roster"}
+          <div className="map-manager-footer">
+            <button
+              onClick={() => {
+                if (showCreate && editingId) handleCancelForm();
+                else setShowCreate((v) => !v);
+              }}
+            >
+              {showCreate ? "Cancel" : "+ New Unit"}
             </button>
-          </form>
-        )}
+            <button onClick={handleExportAll} disabled={definitions.length === 0}>
+              Export JSON
+            </button>
+            <label className="import-btn">
+              Import JSON
+              <input
+                ref={importRef}
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                style={{ display: "none" }}
+              />
+            </label>
+          </div>
+
+          {showCreate && (
+            <form
+              className="map-create-form roster-form"
+              id={formId}
+              onSubmit={handleSubmit}
+            >
+              <label>
+                Unit name
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  placeholder="e.g. Heralds of Mikius"
+                />
+              </label>
+              <label>
+                Short name
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={form.shortName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, shortName: e.target.value }))
+                  }
+                  placeholder="auto"
+                />
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.missile}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, missile: e.target.checked }))
+                  }
+                />
+                Missile weapon
+              </label>
+
+              <div className="roster-form-divider">Unit type</div>
+
+              <label>
+                Preset
+                <select
+                  value={form.typeName}
+                  onChange={(e) => handlePreset(e.target.value)}
+                >
+                  <option value="">— pick preset —</option>
+                  {unitTypePresets.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Type name
+                <input
+                  type="text"
+                  value={form.typeName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, typeName: e.target.value }))
+                  }
+                />
+              </label>
+              <div className="form-row">
+                <label>
+                  Hits
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={form.hits}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, hits: e.target.value }))
+                    }
+                  />
+                </label>
+                <label>
+                  Move (ft)
+                  <input
+                    type="number"
+                    min={1}
+                    step={30}
+                    value={form.move}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, move: e.target.value }))
+                    }
+                  />
+                </label>
+                <label>
+                  Morale
+                  <input
+                    type="number"
+                    min={1}
+                    max={11}
+                    value={form.morale}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, morale: e.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+              <label>
+                Armour
+                <select
+                  value={form.armour}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, armour: e.target.value as Armour }))
+                  }
+                >
+                  {armourOptions.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="form-row">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={form.mounted}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, mounted: e.target.checked }))
+                    }
+                  />
+                  Mounted
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={form.flying}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, flying: e.target.checked }))
+                    }
+                  />
+                  Flying
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={form.steadfast}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, steadfast: e.target.checked }))
+                    }
+                  />
+                  Steadfast
+                </label>
+              </div>
+              <button type="submit">
+                {editingId ? "Save changes" : "Add to roster"}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
