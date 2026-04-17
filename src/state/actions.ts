@@ -28,9 +28,10 @@ import {
   selectBattle,
   selectDefinitionEntities,
   selectMap,
+  selectSideEntities,
   selectUnitEntities,
 } from "./selectors.js";
-import type { SideEntity } from "./sides.js";
+import { isAlly, isEnemy, type SideEntity } from "./sides.js";
 import type { AppState } from "./store.js";
 import type { UnitEntity } from "./units.js";
 
@@ -171,12 +172,13 @@ export const loadScenarioAction =
       setupBattleAction({
         map: scenario.mapId,
         sides: scenario.sides.map(
-          ({ id, name, colour, deploymentZone, aiPersonality }) => ({
+          ({ id, name, colour, deploymentZone, aiPersonality, allianceId }) => ({
             id,
             name,
             colour,
             ...(deploymentZone !== undefined && { deploymentZone }),
             ...(aiPersonality !== undefined && { aiPersonality }),
+            ...(allianceId !== undefined && { allianceId }),
           }),
         ),
         units,
@@ -312,6 +314,7 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
 
   const units = selectAllUnits(state);
   const unitEntities = selectUnitEntities(state);
+  const sideEntities = selectSideEntities(state);
 
   const routUnits = units.filter((u) => u.status === "Rout" && !isNaN(u.x));
   if (routUnits.length === 0) return;
@@ -339,7 +342,7 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
     }
 
     const enemies = units.filter(
-      (u) => u.side !== unit.side && u.status !== "Rout" && !isNaN(u.x),
+      (u) => isEnemy(unit.side, u.side, sideEntities) && u.status !== "Rout" && !isNaN(u.x),
     );
 
     const nearestEnemy =
@@ -421,10 +424,21 @@ export const rollMorale: Thunk =
     const aliveSides = [...remaining.entries()]
       .filter(([, count]) => count > 0)
       .map(([id]) => id);
-    if (aliveSides.length === 0) outcome = { type: "rout" };
-    else if (aliveSides.length === 1) {
+    const sideEntities = selectSideEntities(getState());
+    if (aliveSides.length === 0) {
+      outcome = { type: "rout" };
+    } else if (aliveSides.length === 1) {
       const winner = sides.find((s) => s.id === aliveSides[0]);
       if (winner) outcome = { type: "victory", who: winner };
+    } else {
+      // Victory if all surviving sides are in the same alliance.
+      const allAllied = aliveSides.every(
+        (id) => !isEnemy(aliveSides[0]!, id, sideEntities),
+      );
+      if (allAllied) {
+        const winner = sides.find((s) => s.id === aliveSides[0]);
+        if (winner) outcome = { type: "victory", who: winner };
+      }
     }
 
     dispatch(moraleAction({ side, results, outcome }));

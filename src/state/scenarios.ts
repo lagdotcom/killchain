@@ -53,6 +53,8 @@ export interface ScenarioSideSetup {
   /** Future: restrict cells this side can deploy to. */
   deploymentZone?: DeploymentZone;
   aiPersonality?: AiPersonality;
+  /** Sides sharing the same allianceId are friendly to each other. */
+  allianceId?: number;
 }
 
 export interface Scenario {

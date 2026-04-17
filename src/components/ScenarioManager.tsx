@@ -55,6 +55,7 @@ interface SideForm {
   addDefId: string;
   deploymentZone?: DeploymentZone;
   aiPersonality?: AiPersonality;
+  allianceId?: number;
 }
 
 interface ScenarioForm {
@@ -94,6 +95,9 @@ function scenarioToForm(s: Scenario): ScenarioForm {
       ...(side.aiPersonality !== undefined
         ? { aiPersonality: side.aiPersonality }
         : {}),
+      ...(side.allianceId !== undefined
+        ? { allianceId: side.allianceId }
+        : {}),
       units: side.units.map((u) => ({
         definitionId: u.definitionId,
         name: u.name,
@@ -119,6 +123,9 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
         }),
         ...(side.aiPersonality !== undefined && {
           aiPersonality: side.aiPersonality,
+        }),
+        ...(side.allianceId !== undefined && {
+          allianceId: side.allianceId,
         }),
         units: side.units.map((u) => ({
           definitionId: u.definitionId,
@@ -603,6 +610,40 @@ export function ScenarioManager({ onClose }: Props) {
                     </label>
                   </div>
 
+                  {/* Alliance/team row */}
+                  <div className="scenario-zone-row">
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                      <span className="scenario-zone-label">Team:</span>
+                      <select
+                        value={side.allianceId ?? ""}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setForm((f) => {
+                            if (!f) return f;
+                            return {
+                              ...f,
+                              sides: f.sides.map((s, idx) => {
+                                if (idx !== si) return s;
+                                if (raw === "") {
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                  const { allianceId: _aid, ...rest } = s;
+                                  return rest;
+                                }
+                                return { ...s, allianceId: Number(raw) };
+                              }),
+                            };
+                          });
+                        }}
+                      >
+                        <option value="">None</option>
+                        <option value="1">Team 1</option>
+                        <option value="2">Team 2</option>
+                        <option value="3">Team 3</option>
+                        <option value="4">Team 4</option>
+                      </select>
+                    </label>
+                  </div>
+
                   {/* Deployment zone row */}
                   <div className="scenario-zone-row">
                     <span className="scenario-zone-label">
@@ -770,7 +811,7 @@ export function ScenarioManager({ onClose }: Props) {
                                   );
                                 }}
                               />
-                              M
+                              Missile
                             </label>
                           </div>
                         </div>

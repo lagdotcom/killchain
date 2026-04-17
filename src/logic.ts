@@ -1,5 +1,5 @@
 import type { Tint, TintReason } from "./components/GridOverlay.js";
-import type { Cells, Feet, UnitId } from "./flavours.js";
+import type { Cells, Feet, SideId, UnitId } from "./flavours.js";
 import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import {
   longRangeMax,
@@ -15,6 +15,8 @@ import {
   searchByTerrain,
 } from "./pathfinding.js";
 import type { MapEntity } from "./state/maps.js";
+import { isEnemy } from "./state/alliance.js";
+import type { SideEntity } from "./state/sides.js";
 import type { UnitEntity } from "./state/units.js";
 import { manhattanDistance } from "./tools.js";
 
@@ -53,6 +55,7 @@ export function getTints(
   phase: Phase,
   map: MapEntity,
   unitEntities: Record<UnitId, UnitEntity>,
+  sideEntities: Partial<Record<SideId, SideEntity>>,
 ): Tint[] {
   if (!activeUnit) return [];
 
@@ -85,7 +88,9 @@ export function getTints(
       if (activeUnit.status === "Shaken") {
         const enemies = Object.values(unitEntities).filter(
           (u) =>
-            u.side !== activeUnit.side && u.status !== "Rout" && !isNaN(u.x),
+            isEnemy(activeUnit.side, u.side, sideEntities) &&
+            u.status !== "Rout" &&
+            !isNaN(u.x),
         );
 
         if (enemies.length > 0) {

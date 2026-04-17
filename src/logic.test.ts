@@ -38,7 +38,7 @@ function tintCoords(
   units: UnitEntity[],
   map: MapEntity,
 ) {
-  return getTints(activeUnit, Phase.Move, map, unitMap(...units)).map(
+  return getTints(activeUnit, Phase.Move, map, unitMap(...units), {}).map(
     ({ x, y }) => `${x},${y}`,
   );
 }

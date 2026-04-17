@@ -23,6 +23,7 @@ import {
   selectSideEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
+import { isEnemy } from "../state/sides.js";
 import type { SideEntity } from "../state/sides.js";
 import type { AppState } from "../state/store.js";
 import { manhattanDistance } from "../tools.js";
@@ -132,10 +133,11 @@ export const aiMissile: Thunk =
       // Re-read live state each iteration — previous attacks may have removed enemies.
       const liveUnits = selectAllUnits(getState());
       const unitEntities = selectUnitEntities(getState());
+      const sideEntities = selectSideEntities(getState());
       const g = new KillChainEngine(map, unitEntities);
 
       const targets = liveUnits.filter((e) => {
-        if (e.side === side.id || e.status === "Rout" || isNaN(e.x)) return false;
+        if (!isEnemy(side.id, e.side, sideEntities) || e.status === "Rout" || isNaN(e.x)) return false;
         if (e.damage >= e.type.hits) return false; // already destroyed
         const dist = manhattanDistance(unit, e) * map.cellSize;
         return dist > map.cellSize && dist <= longRangeMax;
@@ -193,8 +195,9 @@ export const aiMove: Thunk =
       const unit = unitEntities[unitId];
       if (!unit || unit.moved >= unit.type.move) continue;
 
+      const currentSideEntities = selectSideEntities(getState());
       const liveEnemies = selectAllUnits(getState()).filter(
-        (u) => u.side !== side.id && u.status !== "Rout" && !isNaN(u.x),
+        (u) => isEnemy(side.id, u.side, currentSideEntities) && u.status !== "Rout" && !isNaN(u.x),
       );
 
       // Shaken units must retreat and may not advance toward any enemy.
@@ -290,9 +293,10 @@ export const aiMelee: Thunk =
 
       const g = new KillChainEngine(map, unitEntities);
 
+      const meleeSideEntities = selectSideEntities(getState());
       const liveEnemies = selectAllUnits(getState()).filter(
         (u) =>
-          u.side !== side.id &&
+          isEnemy(side.id, u.side, meleeSideEntities) &&
           u.status !== "Rout" &&
           !isNaN(u.x) &&
           u.damage < u.type.hits, // skip already-downed units

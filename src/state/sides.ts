@@ -27,7 +27,11 @@ export interface SideEntity {
   casualties: number;
   initiative: number;
   aiPersonality?: AiPersonality;
+  /** Sides sharing the same defined allianceId are friendly to each other. */
+  allianceId?: number;
 }
+
+export { isAlly, isEnemy } from "./alliance.js";
 
 export const sidesAdapter = createEntityAdapter<SideEntity>();
 const sidesSlice = createSlice({
