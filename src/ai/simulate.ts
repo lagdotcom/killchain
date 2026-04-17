@@ -409,7 +409,13 @@ function main() {
   console.log(`Battles per matchup: ${n}\n`);
 
   type Personality = AiPersonality;
-  const personalities: Personality[] = ["aggressive", "defensive", "berserker"];
+  const personalities: Personality[] = [
+    "aggressive",
+    "defensive",
+    "berserker",
+    "tactical",
+    "skirmisher",
+  ];
 
   const matchups: [Personality, Personality][] = [];
   for (let i = 0; i < personalities.length; i++) {

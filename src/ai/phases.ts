@@ -40,7 +40,7 @@ type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 // ---------------------------------------------------------------------------
 
 export const aiPlacement: Thunk =
-  (side: SideEntity) => (dispatch, getState) => {
+  (side: SideEntity, _config: AiConfig) => (dispatch, getState) => {
     const map = selectMap(getState());
     if (!map) return;
 
@@ -116,54 +116,64 @@ export const aiPlacement: Thunk =
 // Missile
 // ---------------------------------------------------------------------------
 
-export const aiMissile: Thunk = (side: SideEntity) => (dispatch, getState) => {
-  const state = getState();
-  const map = selectMap(state);
-  if (!map) return;
+export const aiMissile: Thunk =
+  (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
+    const state = getState();
+    const map = selectMap(state);
+    if (!map) return;
 
-  const myUnits = selectAllUnits(state).filter(
-    (u) =>
-      u.side === side.id &&
-      u.missile &&
-      u.ready &&
-      u.status !== "Rout" &&
-      !isNaN(u.x),
-  );
+    const myUnits = selectAllUnits(state).filter(
+      (u) =>
+        u.side === side.id &&
+        u.missile &&
+        u.ready &&
+        u.status !== "Rout" &&
+        !isNaN(u.x),
+    );
 
-  for (const unit of myUnits) {
-    // Re-read live state each iteration — previous attacks may have removed enemies.
-    const liveUnits = selectAllUnits(getState());
-    const unitEntities = selectUnitEntities(getState());
-    const sideEntities = selectSideEntities(getState());
-    const g = new KillChainEngine(map, unitEntities);
+    for (const unit of myUnits) {
+      // Re-read live state each iteration — previous attacks may have removed enemies.
+      const liveUnits = selectAllUnits(getState());
+      const unitEntities = selectUnitEntities(getState());
+      const sideEntities = selectSideEntities(getState());
+      const g = new KillChainEngine(map, unitEntities);
 
-    const targets = liveUnits.filter((e) => {
-      if (
-        !isEnemy(side.id, e.side, sideEntities) ||
-        e.status === "Rout" ||
-        isNaN(e.x)
-      )
-        return false;
-      if (e.damage >= e.type.hits) return false; // already destroyed
-      const dist = manhattanDistance(unit, e) * map.cellSize;
-      return dist > map.cellSize && dist <= longRangeMax;
-    });
-    if (targets.length === 0) continue;
+      const targets = liveUnits.filter((e) => {
+        if (
+          !isEnemy(side.id, e.side, sideEntities) ||
+          e.status === "Rout" ||
+          isNaN(e.x)
+        )
+          return false;
+        if (e.damage >= e.type.hits) return false; // already destroyed
+        const dist = manhattanDistance(unit, e) * map.cellSize;
+        return dist > map.cellSize && dist <= longRangeMax;
+      });
+      if (targets.length === 0) continue;
 
-    let best = targets[0]!;
-    let bestScore = -Infinity;
-    for (const t of targets) {
-      const s = scoreAttackTarget(unit, t, g, true);
-      if (s > bestScore) {
-        bestScore = s;
-        best = t;
+      let best = targets[0]!;
+      let bestScore = -Infinity;
+      for (const t of targets) {
+        let s: number;
+        if (config.missilePriority === "strongest") {
+          s = t.type.hits - t.damage;
+        } else if (config.missilePriority === "weakest") {
+          s = scoreAttackTarget(unit, t, g, true, config.focusFire);
+        } else {
+          s =
+            scoreAttackTarget(unit, t, g, true, config.focusFire) -
+            manhattanDistance(unit, t) * 0.01;
+        }
+        if (s > bestScore) {
+          bestScore = s;
+          best = t;
+        }
       }
-    }
 
-    dispatch(setActiveUnitId(unit.id));
-    dispatch(attack(best));
-  }
-};
+      dispatch(setActiveUnitId(unit.id));
+      dispatch(attack(best));
+    }
+  };
 
 // ---------------------------------------------------------------------------
 // Move
@@ -258,23 +268,29 @@ export const aiMove: Thunk =
       )
         continue;
 
+      // neverPassMelee: always close to contact when any enemy is within 2 cells.
+      const seekMelee =
+        config.neverPassMelee &&
+        liveEnemies.some((e) => manhattanDistance(unit, e) <= 2);
+
       const effectiveConfig = retreating
         ? { ...config, holdBackIfDamaged: true }
         : config;
 
       const score = (cell: XY) =>
-        scoreMoveCell(cell, liveEnemies, effectiveConfig, unit);
+        scoreMoveCell(cell, liveEnemies, effectiveConfig, unit, map);
 
       const best = findBestMove(unit, unitEntities, map, score);
       if (!best) continue;
 
       // Don't advance if standing still scores better (avoids pointless shuffling).
-      if (!retreating && !config.chargeRecklessly) {
+      if (!retreating && !config.chargeRecklessly && !seekMelee) {
         const currentScore = scoreMoveCell(
           { x: unit.x, y: unit.y },
           liveEnemies,
           config,
           unit,
+          map,
         );
         if (score(best) < currentScore) continue;
       }
@@ -325,10 +341,10 @@ export const aiMelee: Thunk =
         if (config.targetPriority === "strongest") {
           s = t.type.hits - t.damage;
         } else if (config.targetPriority === "weakest") {
-          s = scoreAttackTarget(unit, t, g, false);
+          s = scoreAttackTarget(unit, t, g, false, config.focusFire);
         } else {
           s =
-            scoreAttackTarget(unit, t, g, false) -
+            scoreAttackTarget(unit, t, g, false, config.focusFire) -
             manhattanDistance(unit, t) * 0.01;
         }
         if (s > bestScore) {

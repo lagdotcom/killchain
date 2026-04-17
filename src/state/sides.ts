@@ -15,7 +15,12 @@ import {
 } from "./actions.js";
 import { eachEntity } from "./tools.js";
 
-export type AiPersonality = "aggressive" | "defensive" | "berserker";
+export type AiPersonality =
+  | "aggressive"
+  | "defensive"
+  | "berserker"
+  | "tactical"
+  | "skirmisher";
 
 export interface SideEntity {
   id: SideId;

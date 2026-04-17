@@ -213,7 +213,7 @@ describe("aiMissile", () => {
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0)));
+    store.dispatch(aiMissile(makeSide(0), AI_CONFIGS.aggressive!));
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === archer.id,
@@ -236,7 +236,7 @@ describe("aiMissile", () => {
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0)));
+    store.dispatch(aiMissile(makeSide(0), AI_CONFIGS.aggressive!));
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });
@@ -256,7 +256,7 @@ describe("aiMissile", () => {
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0, { allianceId: 1 })));
+    store.dispatch(aiMissile(makeSide(0, { allianceId: 1 }), AI_CONFIGS.aggressive!));
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });
