@@ -675,6 +675,7 @@ export function ScenarioManager({ onClose }: Props) {
                           className={`scenario-unit-row${isPlaced ? " placed" : ""}`}
                         >
                           <div
+                            className="scenario-unit-row-top"
                             draggable={!isPlaced}
                             onDragStart={
                               !isPlaced
@@ -687,98 +688,91 @@ export function ScenarioManager({ onClose }: Props) {
                                   }
                                 : undefined
                             }
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 2,
-                              flex: 1,
-                              minWidth: 0,
-                            }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                              {!isPlaced && <span className="drag-handle">⠿</span>}
-                              <span className="scenario-unit-type">
-                                {def?.type.name ?? String(u.definitionId)}
+                            {!isPlaced && (
+                              <span className="drag-handle">⠿</span>
+                            )}
+                            <input
+                              type="text"
+                              className="scenario-unit-name-input"
+                              value={u.name}
+                              placeholder="Unit name"
+                              onChange={(e) => {
+                                setForm(
+                                  (f) =>
+                                    f && {
+                                      ...f,
+                                      sides: updateUnit(f.sides, si, ui, {
+                                        name: e.target.value,
+                                      }),
+                                    },
+                                );
+                              }}
+                            />
+                            {isPlaced && (
+                              <span className="scenario-unit-pos">
+                                @{u.x},{u.y}
                               </span>
-                              {isPlaced && (
-                                <span className="scenario-unit-pos">
-                                  at {u.x},{u.y}
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                              <input
-                                type="text"
-                                className="scenario-unit-name-input"
-                                value={u.name}
-                                placeholder="Unit name"
-                                onChange={(e) => {
-                                  setForm(
-                                    (f) =>
-                                      f && {
-                                        ...f,
-                                        sides: updateUnit(f.sides, si, ui, {
-                                          name: e.target.value,
-                                        }),
-                                      },
-                                  );
-                                }}
-                              />
-                              <input
-                                type="text"
-                                className="scenario-unit-short-input"
-                                value={u.shortName}
-                                placeholder="Abbr"
-                                title="Short name (1-4 chars, shown on token)"
-                                maxLength={4}
-                                onChange={(e) => {
-                                  setForm(
-                                    (f) =>
-                                      f && {
-                                        ...f,
-                                        sides: updateUnit(f.sides, si, ui, {
-                                          shortName: e.target.value,
-                                        }),
-                                      },
-                                  );
-                                }}
-                              />
-                              <label
-                                className="scenario-unit-missile-label"
-                                title="Missile weapon"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={u.missile}
-                                  onChange={(e) => {
-                                    setForm(
-                                      (f) =>
-                                        f && {
-                                          ...f,
-                                          sides: updateUnit(f.sides, si, ui, {
-                                            missile: e.target.checked,
-                                          }),
-                                        },
-                                    );
-                                  }}
-                                />
-                                Missile
-                              </label>
-                            </div>
+                            )}
+                            <button
+                              type="button"
+                              className="scenario-remove-btn"
+                              onClick={() => {
+                                if (isPlaced) {
+                                  unplace(si, ui);
+                                } else {
+                                  removeUnit(si, ui);
+                                }
+                              }}
+                            >
+                              ×
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            className="scenario-remove-btn"
-                            onClick={() => {
-                              if (isPlaced) {
-                                unplace(si, ui);
-                              } else {
-                                removeUnit(si, ui);
-                              }
-                            }}
-                          >
-                            ×
-                          </button>
+                          <div className="scenario-unit-row-bottom">
+                            <span className="scenario-unit-type">
+                              {def?.type.name ?? String(u.definitionId)}
+                            </span>
+                            <input
+                              type="text"
+                              className="scenario-unit-short-input"
+                              value={u.shortName}
+                              placeholder="Abbr"
+                              title="Short name (1-4 chars, shown on token)"
+                              maxLength={4}
+                              onChange={(e) => {
+                                setForm(
+                                  (f) =>
+                                    f && {
+                                      ...f,
+                                      sides: updateUnit(f.sides, si, ui, {
+                                        shortName: e.target.value,
+                                      }),
+                                    },
+                                );
+                              }}
+                            />
+                            <label
+                              className="scenario-unit-missile-label"
+                              title="Missile weapon"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={u.missile}
+                                onChange={(e) => {
+                                  setForm(
+                                    (f) =>
+                                      f && {
+                                        ...f,
+                                        sides: updateUnit(f.sides, si, ui, {
+                                          missile: e.target.checked,
+                                        }),
+                                      },
+                                  );
+                                }}
+                              />
+                              M
+                            </label>
+                          </div>
                         </div>
                       );
                     })}
