@@ -1,16 +1,29 @@
-import { test } from "vitest";
+import { readFileSync } from "fs";
 
-import type { Cells, Feet, MapId, SideId, UnitId } from "../flavours.js";
+import type {
+  MapId,
+  ScenarioId,
+  SideId,
+  UnitDefinitionId,
+} from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
-import type { MoraleStatus } from "../killchain/types.js";
-import { lightFoot, lightHorse, mediumFoot } from "../killchain/units.js";
+import type { UnitDefinition } from "../killchain/types.js";
+import {
+  heavyFoot,
+  heavyHorse,
+  lightFoot,
+  lightHorse,
+  mediumFoot,
+  mediumHorse,
+  unarmouredTroops,
+} from "../killchain/units.js";
 import { generateGridMap } from "../sampleData.js";
-import type { SideSetup } from "../state/actions.js";
-import { setupBattleAction } from "../state/actions.js";
+import { loadScenarioAction } from "../state/actions.js";
 import { mapsAdapter } from "../state/maps.js";
+import { rosterAdapter } from "../state/roster.js";
+import type { Scenario } from "../state/scenarios.js";
 import { selectAllUnits, selectPhase, selectTurn } from "../state/selectors.js";
 import { makeStore } from "../state/store.js";
-import type { UnitEntity } from "../state/units.js";
 import { runAiTurn } from "./index.js";
 import type { AiPersonality } from "./types.js";
 
@@ -19,20 +32,13 @@ import type { AiPersonality } from "./types.js";
 // ---------------------------------------------------------------------------
 
 export interface BattleSetup {
-  side0Name: string;
+  scenario: Scenario;
+  /** Extra definitions merged with SIM_DEFINITIONS (for custom JSON scenarios). */
+  definitions?: UnitDefinition[];
   side0Personality: AiPersonality;
-  side1Name: string;
   side1Personality: AiPersonality;
-  army0: UnitTemplate[];
-  army1: UnitTemplate[];
   mapSeed?: number;
   maxIter?: number;
-}
-
-export interface UnitTemplate {
-  name: string;
-  type: UnitEntity["type"];
-  missile?: boolean;
 }
 
 export interface SideResult {
@@ -44,10 +50,173 @@ export interface SideResult {
 
 export interface BattleResult {
   outcome: "victory" | "rout" | "timeout";
-  winner: 0 | 1 | null; // side index of winner, or null
+  winner: 0 | 1 | null; // side index, or null on rout/draw/timeout
   turns: number;
   sides: [SideResult, SideResult];
 }
+
+// ---------------------------------------------------------------------------
+// Built-in unit definition roster
+// ---------------------------------------------------------------------------
+
+export const SIM_DEFINITIONS: UnitDefinition[] = [
+  { id: "sim-unarmoured" as UnitDefinitionId, type: unarmouredTroops },
+  { id: "sim-light-foot" as UnitDefinitionId, type: lightFoot },
+  { id: "sim-medium-foot" as UnitDefinitionId, type: mediumFoot },
+  { id: "sim-heavy-foot" as UnitDefinitionId, type: heavyFoot },
+  { id: "sim-light-horse" as UnitDefinitionId, type: lightHorse },
+  { id: "sim-medium-horse" as UnitDefinitionId, type: mediumHorse },
+  { id: "sim-heavy-horse" as UnitDefinitionId, type: heavyHorse },
+  // aliases matching the game's default roster IDs
+  { id: "def-light-foot" as UnitDefinitionId, type: lightFoot },
+  { id: "def-medium-foot" as UnitDefinitionId, type: mediumFoot },
+  { id: "def-light-horse" as UnitDefinitionId, type: lightHorse },
+  { id: "def-heavy-horse" as UnitDefinitionId, type: heavyHorse },
+];
+
+// ---------------------------------------------------------------------------
+// Built-in named scenarios (Scenario format)
+// ---------------------------------------------------------------------------
+
+const SIM_MAP_ID = "sim" as MapId;
+
+export const SCENARIOS: Record<string, Scenario> = {
+  standard: {
+    id: "sim-standard" as ScenarioId,
+    name: "Standard",
+    mapId: SIM_MAP_ID,
+    sides: [
+      {
+        id: 0 as SideId,
+        name: "Blue",
+        colour: "#48f",
+        units: [
+          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Cavalry" },
+          { definitionId: "sim-medium-foot" as UnitDefinitionId, name: "Infantry" },
+          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+        ],
+      },
+      {
+        id: 1 as SideId,
+        name: "Red",
+        colour: "#f44",
+        units: [
+          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Cavalry" },
+          { definitionId: "sim-medium-foot" as UnitDefinitionId, name: "Infantry" },
+          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+        ],
+      },
+    ],
+  },
+  infantry: {
+    id: "sim-infantry" as ScenarioId,
+    name: "Heavy Foot",
+    mapId: SIM_MAP_ID,
+    sides: [
+      {
+        id: 0 as SideId,
+        name: "Blue",
+        colour: "#48f",
+        units: [
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+        ],
+      },
+      {
+        id: 1 as SideId,
+        name: "Red",
+        colour: "#f44",
+        units: [
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+        ],
+      },
+    ],
+  },
+  cavalry: {
+    id: "sim-cavalry" as ScenarioId,
+    name: "Heavy Cavalry",
+    mapId: SIM_MAP_ID,
+    sides: [
+      {
+        id: 0 as SideId,
+        name: "Blue",
+        colour: "#48f",
+        units: [
+          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+        ],
+      },
+      {
+        id: 1 as SideId,
+        name: "Red",
+        colour: "#f44",
+        units: [
+          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+        ],
+      },
+    ],
+  },
+  ranged: {
+    id: "sim-ranged" as ScenarioId,
+    name: "Ranged Heavy",
+    mapId: SIM_MAP_ID,
+    sides: [
+      {
+        id: 0 as SideId,
+        name: "Blue",
+        colour: "#48f",
+        units: [
+          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Scouts" },
+        ],
+      },
+      {
+        id: 1 as SideId,
+        name: "Red",
+        colour: "#f44",
+        units: [
+          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Scouts" },
+        ],
+      },
+    ],
+  },
+  asymmetric: {
+    id: "sim-asymmetric" as ScenarioId,
+    name: "Asymmetric",
+    mapId: SIM_MAP_ID,
+    sides: [
+      {
+        id: 0 as SideId,
+        name: "Raiders",
+        colour: "#48f",
+        units: [
+          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Raiders" },
+          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Raiders" },
+          { definitionId: "sim-medium-horse" as UnitDefinitionId, name: "Heavy Raiders" },
+        ],
+      },
+      {
+        id: 1 as SideId,
+        name: "Shield Wall",
+        colour: "#f44",
+        units: [
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Shield Wall" },
+          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Shield Wall" },
+          { definitionId: "sim-medium-foot" as UnitDefinitionId, name: "Crossbows", missile: true },
+        ],
+      },
+    ],
+  },
+};
 
 // ---------------------------------------------------------------------------
 // runBattle
@@ -55,67 +224,32 @@ export interface BattleResult {
 
 export function runBattle(setup: BattleSetup): BattleResult {
   const {
-    side0Name,
+    scenario,
+    definitions = [],
     side0Personality,
-    side1Name,
     side1Personality,
-    army0,
-    army1,
     mapSeed,
     maxIter = 500,
   } = setup;
 
-  const map = generateGridMap(
-    "sim" as MapId,
-    10 as Feet,
-    20 as Cells,
-    20 as Cells,
-    mapSeed,
-  );
+  const map = generateGridMap(SIM_MAP_ID, 10, 20, 20, mapSeed);
 
-  const sides: SideSetup[] = [
-    {
-      id: 0 as SideId,
-      name: side0Name,
-      colour: "#48f",
-      aiPersonality: side0Personality,
-    },
-    {
-      id: 1 as SideId,
-      name: side1Name,
-      colour: "#f44",
-      aiPersonality: side1Personality,
-    },
-  ];
+  // Patch the scenario: fix mapId and inject personalities for this matchup.
+  const patchedScenario: Scenario = {
+    ...scenario,
+    mapId: map.id,
+    sides: scenario.sides.map((side, i) => ({
+      ...side,
+      aiPersonality: i === 0 ? side0Personality : side1Personality,
+    })),
+  };
 
-  const buildUnits = (
-    templates: UnitTemplate[],
-    sideId: SideId,
-  ): UnitEntity[] =>
-    templates.map((t, i) => ({
-      id: `s${sideId}-${i}` as UnitId,
-      name: t.name,
-      type: t.type,
-      ...(t.missile !== undefined && { missile: t.missile }),
-      side: sideId,
-      x: NaN as Cells,
-      y: NaN as Cells,
-      flankCount: 0,
-      damage: 0,
-      moved: 0 as Feet,
-      status: "Normal" as MoraleStatus,
-      ready: false,
-    }));
-
-  const units: UnitEntity[] = [
-    ...buildUnits(army0, 0 as SideId),
-    ...buildUnits(army1, 1 as SideId),
-  ];
-
+  const allDefs = [...SIM_DEFINITIONS, ...definitions];
   const store = makeStore({
     maps: mapsAdapter.setAll(mapsAdapter.getInitialState(), [map]),
+    roster: rosterAdapter.setAll(rosterAdapter.getInitialState(), allDefs),
   });
-  store.dispatch(setupBattleAction({ map: map.id, sides, units }));
+  store.dispatch(loadScenarioAction(patchedScenario));
 
   for (let i = 0; i < maxIter; i++) {
     if (selectPhase(store.getState()) === Phase.Completed) break;
@@ -154,21 +288,24 @@ export function runBattle(setup: BattleSetup): BattleResult {
     winner = null;
   }
 
+  const side0 = patchedScenario.sides[0]!;
+  const side1 = patchedScenario.sides[1]!;
+
   return {
     outcome,
     winner,
     turns,
     sides: [
       {
-        name: side0Name,
+        name: side0.name,
         personality: side0Personality,
-        initialUnits: army0.length,
+        initialUnits: side0.units.length,
         survivingUnits: survivors0,
       },
       {
-        name: side1Name,
+        name: side1.name,
         personality: side1Personality,
-        initialUnits: army1.length,
+        initialUnits: side1.units.length,
         survivingUnits: survivors1,
       },
     ],
@@ -176,17 +313,36 @@ export function runBattle(setup: BattleSetup): BattleResult {
 }
 
 // ---------------------------------------------------------------------------
-// Standard army compositions
+// JSON file loading
 // ---------------------------------------------------------------------------
 
-const standardArmy: UnitTemplate[] = [
-  { name: "Cavalry", type: lightHorse },
-  { name: "Infantry", type: mediumFoot },
-  { name: "Archers", type: lightFoot, missile: true },
-];
+interface ScenarioFile {
+  scenario: Scenario;
+  definitions?: UnitDefinition[];
+}
+
+function loadScenarioFile(filePath: string): {
+  scenario: Scenario;
+  definitions: UnitDefinition[];
+} {
+  const raw = readFileSync(filePath, "utf-8");
+  const parsed: unknown = JSON.parse(raw);
+
+  if (
+    parsed !== null &&
+    typeof parsed === "object" &&
+    "scenario" in parsed
+  ) {
+    const file = parsed as ScenarioFile;
+    return { scenario: file.scenario, definitions: file.definitions ?? [] };
+  }
+
+  // Plain Scenario object.
+  return { scenario: parsed as Scenario, definitions: [] };
+}
 
 // ---------------------------------------------------------------------------
-// main — aggregate stats across N battles per matchup
+// Output helpers
 // ---------------------------------------------------------------------------
 
 function pct(n: number, total: number) {
@@ -203,7 +359,64 @@ function avg(values: number[]) {
     : values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-function main(n = 50) {
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
+
+function main() {
+  const args = process.argv.slice(2);
+
+  // --battles N  or  -n N
+  let n = 50;
+  const battlesIdx = args.findIndex((a) => a === "--battles" || a === "-n");
+  if (battlesIdx !== -1) {
+    const val = parseInt(args[battlesIdx + 1] ?? "", 10);
+    if (!isNaN(val) && val > 0) n = val;
+    args.splice(battlesIdx, 2);
+  }
+
+  const arg = args[0] ?? "standard";
+
+  if (arg === "list") {
+    console.log("Built-in scenarios:");
+    const descs: Record<string, string> = {
+      standard: "Mixed arms: cavalry, medium foot, archers",
+      infantry: "Heavy foot-only armies",
+      cavalry: "Heavy horse-only armies",
+      ranged: "Two archer units and light horse",
+      asymmetric: "Cavalry raiders vs heavy foot shield wall",
+    };
+    for (const [name, desc] of Object.entries(descs)) {
+      console.log(`  ${name.padEnd(14)} ${desc}`);
+    }
+    console.log(
+      "\nOr pass a path to a scenario JSON file (plain Scenario or { scenario, definitions? }).",
+    );
+    process.exit(0);
+  }
+
+  let scenario: Scenario;
+  let extraDefs: UnitDefinition[] = [];
+
+  if (arg.endsWith(".json") || arg.startsWith("/") || arg.startsWith(".")) {
+    const loaded = loadScenarioFile(arg);
+    scenario = loaded.scenario;
+    extraDefs = loaded.definitions;
+    console.log(`\nScenario file: ${arg} — ${scenario.name}`);
+  } else {
+    const found = SCENARIOS[arg];
+    if (!found) {
+      console.error(
+        `Unknown scenario "${arg}". Run with "list" to see available scenarios.`,
+      );
+      process.exit(1);
+    }
+    scenario = found;
+    console.log(`\nScenario: ${arg} — ${scenario.name}`);
+  }
+
+  console.log(`Battles per matchup: ${n}\n`);
+
   type Personality = AiPersonality;
   const personalities: Personality[] = ["aggressive", "defensive", "berserker"];
 
@@ -219,12 +432,10 @@ function main(n = 50) {
     for (let i = 0; i < n; i++) {
       results.push(
         runBattle({
-          side0Name: p0,
+          scenario,
+          definitions: extraDefs,
           side0Personality: p0,
-          side1Name: p1,
           side1Personality: p1,
-          army0: standardArmy,
-          army1: standardArmy,
           mapSeed: i,
         }),
       );
@@ -245,7 +456,7 @@ function main(n = 50) {
     ).toFixed(1);
 
     const label = p0 === p1 ? `${p0} mirror` : `${p0} vs ${p1}`;
-    console.log(`\n${label} (${n} battles)`);
+    console.log(`${label} (${n} battles)`);
     console.log(
       `  ${p0.padEnd(12)} wins: ${String(wins0).padStart(3)} ${pct(wins0, n)}  avg survivors: ${avgSurv0}`,
     );
@@ -253,15 +464,9 @@ function main(n = 50) {
       `  ${p1.padEnd(12)} wins: ${String(wins1).padStart(3)} ${pct(wins1, n)}  avg survivors: ${avgSurv1}`,
     );
     console.log(
-      `  Avg turns: ${avgTurns}  Routs: ${routs}  Timeouts: ${timeouts}`,
+      `  Avg turns: ${avgTurns}  Routs: ${routs}  Timeouts: ${timeouts}\n`,
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Vitest entry — run via: npm run simulate
-// ---------------------------------------------------------------------------
-
-test("AI battle simulation", () => {
-  main();
-});
+main();
