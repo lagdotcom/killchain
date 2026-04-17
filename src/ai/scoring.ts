@@ -1,4 +1,4 @@
-import { xyId, type XY } from "../killchain/EuclideanEngine.js";
+import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import { getAttackRollTarget } from "../killchain/rules.js";
 import type { DeploymentZone } from "../killchain/types.js";
 import type { KillChainEngine } from "../KillChainEngine.js";
@@ -73,7 +73,8 @@ export function scorePlacementCell(
   const elevationBonus =
     config?.seekHighGround && cellTerrain ? cellTerrain.elevation * 0.5 : 0;
   const terrainPenalty =
-    cellTerrain && (cellTerrain.type === "Woods" || cellTerrain.type === "Marsh")
+    cellTerrain &&
+    (cellTerrain.type === "Woods" || cellTerrain.type === "Marsh")
       ? config?.avoidDifficultTerrain
         ? -3
         : unit.missile && cellTerrain.type === "Woods"

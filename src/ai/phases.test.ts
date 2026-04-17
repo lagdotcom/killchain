@@ -52,7 +52,7 @@ describe("aiPlacement", () => {
     const side = makeSide(0, { unplacedIds: [unit.id] });
     const store = makeAiStore([unit], [side], Phase.Placement, false);
 
-    store.dispatch(aiPlacement(side));
+    store.dispatch(aiPlacement(side, AI_CONFIGS.aggressive));
 
     const placed = selectAllUnits(store.getState()).find(
       (u) => u.id === unit.id,
@@ -67,7 +67,7 @@ describe("aiPlacement", () => {
     const side = makeSide(0, { unplacedIds: [unit.id], deploymentZone: zone });
     const store = makeAiStore([unit], [side], Phase.Placement, false);
 
-    store.dispatch(aiPlacement(side));
+    store.dispatch(aiPlacement(side, AI_CONFIGS.aggressive));
 
     const placed = selectAllUnits(store.getState()).find(
       (u) => u.id === unit.id,
@@ -213,7 +213,7 @@ describe("aiMissile", () => {
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0), AI_CONFIGS.aggressive!));
+    store.dispatch(aiMissile(makeSide(0), AI_CONFIGS.aggressive));
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === archer.id,
@@ -236,7 +236,7 @@ describe("aiMissile", () => {
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0), AI_CONFIGS.aggressive!));
+    store.dispatch(aiMissile(makeSide(0), AI_CONFIGS.aggressive));
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });
@@ -256,7 +256,9 @@ describe("aiMissile", () => {
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0, { allianceId: 1 }), AI_CONFIGS.aggressive!));
+    store.dispatch(
+      aiMissile(makeSide(0, { allianceId: 1 }), AI_CONFIGS.aggressive),
+    );
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });
