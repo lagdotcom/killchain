@@ -37,59 +37,76 @@ type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 
 export const aiPlacement: Thunk =
   (side: SideEntity, _config: AiConfig) => (dispatch, getState) => {
-    const state = getState();
-    const map = selectMap(state);
+    const map = selectMap(getState());
     if (!map) return;
 
-    const sideEntity = selectSideEntities(state)[side.id];
-    if (!sideEntity || sideEntity.unplacedIds.length === 0) {
-      dispatch(pass());
-      return;
-    }
+    // Loop as long as this side is still active. When sideIndex rotates to a
+    // human (or other AI) side we stop — the hook will re-trigger on the next
+    // sideIndex change. When sideIndex stays the same (only one side left in
+    // the rotation) we keep going so all units get placed in one thunk call.
+    while (true) {
+      const currentState = getState();
 
-    const unitId = sideEntity.unplacedIds[0];
-    const allUnits = selectAllUnits(state);
-    const unit = allUnits.find((u) => u.id === unitId);
-    if (!unit) return;
+      // Stop if it's no longer this side's turn.
+      const sideEntities = selectSideEntities(currentState);
+      const sideEntity = sideEntities[side.id];
+      if (!sideEntity) break;
 
-    const zone = sideEntity.deploymentZone;
-    const placedPositions = allUnits
-      .filter((u) => !isNaN(u.x))
-      .map((u) => ({ x: u.x, y: u.y }));
-    const occupiedIds = new Set(
-      placedPositions.map((p) => xyId(p.x as Cells, p.y as Cells)),
-    );
+      const activeSideId =
+        currentState.battle.sideOrder[currentState.battle.sideIndex];
+      if (activeSideId !== side.id) break;
 
-    const candidates: { x: Cells; y: Cells }[] = [];
-    for (const cell of Object.values(map.cells.entities)) {
-      if (!cell) continue;
-      if (occupiedIds.has(cell.id)) continue;
-      if (zone && !isInDeploymentZone(zone, cell.x, cell.y)) continue;
-      if (!zone) {
-        const usesTop = (side.id as number) % 2 === 0;
-        if (usesTop && cell.y >= Math.floor(map.height / 3)) continue;
-        if (!usesTop && cell.y < Math.ceil((2 * map.height) / 3)) continue;
+      if (sideEntity.unplacedIds.length === 0) {
+        if (selectBattle(currentState).canPass) dispatch(pass());
+        break;
       }
-      candidates.push({ x: cell.x, y: cell.y });
-    }
 
-    if (candidates.length === 0) return;
+      const unitId = sideEntity.unplacedIds[0];
+      const allUnits = selectAllUnits(currentState);
+      const unit = allUnits.find((u) => u.id === unitId);
+      if (!unit) break;
 
-    let best: { x: Cells; y: Cells } | undefined;
-    let bestScore = -Infinity;
-    for (const cell of candidates) {
-      const s = scorePlacementCell(cell, zone, unit, placedPositions, map);
-      if (s > bestScore) {
-        bestScore = s;
-        best = cell;
+      const zone = sideEntity.deploymentZone;
+      const placedPositions = allUnits
+        .filter((u) => !isNaN(u.x))
+        .map((u) => ({ x: u.x, y: u.y }));
+      const occupiedIds = new Set(
+        placedPositions.map((p) => xyId(p.x as Cells, p.y as Cells)),
+      );
+
+      const candidates: { x: Cells; y: Cells }[] = [];
+      for (const cell of Object.values(map.cells.entities)) {
+        if (!cell) continue;
+        if (occupiedIds.has(cell.id)) continue;
+        if (zone && !isInDeploymentZone(zone, cell.x, cell.y)) continue;
+        if (!zone) {
+          const usesTop = (side.id as number) % 2 === 0;
+          if (usesTop && cell.y >= Math.floor(map.height / 3)) continue;
+          if (!usesTop && cell.y < Math.ceil((2 * map.height) / 3)) continue;
+        }
+        candidates.push({ x: cell.x, y: cell.y });
+      }
+
+      if (candidates.length === 0) break;
+
+      let best: { x: Cells; y: Cells } | undefined;
+      let bestScore = -Infinity;
+      for (const cell of candidates) {
+        const s = scorePlacementCell(cell, zone, unit, placedPositions, map);
+        if (s > bestScore) {
+          bestScore = s;
+          best = cell;
+        }
+      }
+
+      if (!best) break;
+      dispatch(placeUnitAction({ side: sideEntity, unit, x: best.x, y: best.y }));
+
+      if (selectBattle(getState()).canPass) {
+        dispatch(pass());
+        break;
       }
     }
-
-    if (!best) return;
-    dispatch(placeUnitAction({ side: sideEntity, unit, x: best.x, y: best.y }));
-
-    // If all sides have now placed all units, advance the phase.
-    if (selectBattle(getState()).canPass) dispatch(pass());
   };
 
 // ---------------------------------------------------------------------------
