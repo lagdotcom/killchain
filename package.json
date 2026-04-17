@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "test": "vitest"
+    "test": "vitest",
+    "simulate": "vitest run --config vitest.simulate.config.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
