@@ -8,7 +8,7 @@ import type {
   UnitDefinitionId,
 } from "./flavours.js";
 import { Phase } from "./killchain/rules.js";
-import type { DeploymentZone, UnitDefinition } from "./killchain/types.js";
+import type { DeploymentZone, UnitDefinition, UnitType } from "./killchain/types.js";
 import { heavyFoot, lightFoot } from "./killchain/units.js";
 import { loadScenarioAction } from "./state/actions.js";
 import { rosterAdapter } from "./state/roster.js";
@@ -27,16 +27,8 @@ import { makeStore } from "./state/store.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeDef(
-  id: string,
-  partial: Partial<Omit<UnitDefinition, "id">> = {},
-): UnitDefinition {
-  return {
-    id: id as UnitDefinitionId,
-    name: id,
-    type: heavyFoot,
-    ...partial,
-  };
+function makeDef(id: string, type: UnitType = heavyFoot): UnitDefinition {
+  return { id: id as UnitDefinitionId, type };
 }
 
 function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
@@ -49,13 +41,13 @@ function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
         id: 0 as SideId,
         name: "Side A",
         colour: "#00f",
-        units: [{ definitionId: "def1" as UnitDefinitionId }],
+        units: [{ definitionId: "def1" as UnitDefinitionId, name: "Unit A" }],
       },
       {
         id: 1 as SideId,
         name: "Side B",
         colour: "#f00",
-        units: [{ definitionId: "def2" as UnitDefinitionId }],
+        units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
       },
     ],
     ...overrides,
@@ -111,6 +103,7 @@ describe("loadScenarioAction", () => {
           units: [
             {
               definitionId: "def1" as UnitDefinitionId,
+              name: "Unit A",
               x: 3 as Cells,
               y: 4 as Cells,
             },
@@ -120,7 +113,7 @@ describe("loadScenarioAction", () => {
           id: 1 as SideId,
           name: "Side B",
           colour: "#f00",
-          units: [{ definitionId: "def2" as UnitDefinitionId }],
+          units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
         },
       ],
     });
@@ -146,6 +139,7 @@ describe("loadScenarioAction", () => {
           units: [
             {
               definitionId: "def1" as UnitDefinitionId,
+              name: "Unit A",
               x: 1 as Cells,
               y: 1 as Cells,
             },
@@ -155,7 +149,7 @@ describe("loadScenarioAction", () => {
           id: 1 as SideId,
           name: "Side B",
           colour: "#f00",
-          units: [{ definitionId: "def2" as UnitDefinitionId }],
+          units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
         },
       ],
     });
@@ -177,6 +171,7 @@ describe("loadScenarioAction", () => {
           units: [
             {
               definitionId: "def1" as UnitDefinitionId,
+              name: "Unit A",
               x: 1 as Cells,
               y: 1 as Cells,
             },
@@ -189,6 +184,7 @@ describe("loadScenarioAction", () => {
           units: [
             {
               definitionId: "def2" as UnitDefinitionId,
+              name: "Unit B",
               x: 8 as Cells,
               y: 8 as Cells,
             },
@@ -218,13 +214,13 @@ describe("loadScenarioAction", () => {
           name: "Side A",
           colour: "#00f",
           deploymentZone: zone,
-          units: [{ definitionId: "def1" as UnitDefinitionId }],
+          units: [{ definitionId: "def1" as UnitDefinitionId, name: "Unit A" }],
         },
         {
           id: 1 as SideId,
           name: "Side B",
           colour: "#f00",
-          units: [{ definitionId: "def2" as UnitDefinitionId }],
+          units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
         },
       ],
     });
@@ -237,17 +233,22 @@ describe("loadScenarioAction", () => {
     expect(sideB?.deploymentZone).toBeUndefined();
   });
 
-  test("unit inherits shortName and missile from definition", () => {
-    const store = storeWithDefs(
-      makeDef("def1", { shortName: "HA", missile: true, type: lightFoot }),
-    );
+  test("unit uses shortName and missile from scenario unit setup", () => {
+    const store = storeWithDefs(makeDef("def1", lightFoot));
     const scenario = makeScenario({
       sides: [
         {
           id: 0 as SideId,
           name: "Side A",
           colour: "#00f",
-          units: [{ definitionId: "def1" as UnitDefinitionId }],
+          units: [
+            {
+              definitionId: "def1" as UnitDefinitionId,
+              name: "Archers",
+              shortName: "HA",
+              missile: true,
+            },
+          ],
         },
         { id: 1 as SideId, name: "Side B", colour: "#f00", units: [] },
       ],
