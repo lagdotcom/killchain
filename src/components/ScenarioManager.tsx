@@ -28,6 +28,7 @@ import {
   selectAllScenarios,
   selectBattle,
 } from "../state/selectors.js";
+import type { AiPersonality } from "../state/sides.js";
 import { useAppDispatch } from "../state/store.js";
 import type { ZoneInfo } from "./MapOverlays.js";
 import type { PlacedUnit } from "./ScenarioMapEditor.js";
@@ -39,6 +40,9 @@ import { ScenarioMapEditor } from "./ScenarioMapEditor.js";
 
 interface UnitSetupForm {
   definitionId: UnitDefinitionId;
+  name: string;
+  shortName: string;
+  missile: boolean;
   x?: Cells;
   y?: Cells;
 }
@@ -50,6 +54,8 @@ interface SideForm {
   /** Tracks the dropdown selection for "add unit" — not saved to state. */
   addDefId: string;
   deploymentZone?: DeploymentZone;
+  aiPersonality?: AiPersonality;
+  allianceId?: number;
 }
 
 interface ScenarioForm {
@@ -86,8 +92,15 @@ function scenarioToForm(s: Scenario): ScenarioForm {
       ...(side.deploymentZone !== undefined
         ? { deploymentZone: side.deploymentZone }
         : {}),
+      ...(side.aiPersonality !== undefined
+        ? { aiPersonality: side.aiPersonality }
+        : {}),
+      ...(side.allianceId !== undefined ? { allianceId: side.allianceId } : {}),
       units: side.units.map((u) => ({
         definitionId: u.definitionId,
+        name: u.name,
+        shortName: u.shortName ?? "",
+        missile: u.missile ?? false,
         ...(u.x !== undefined && u.y !== undefined ? { x: u.x, y: u.y } : {}),
       })),
     })),
@@ -106,8 +119,17 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
         ...(side.deploymentZone !== undefined && {
           deploymentZone: side.deploymentZone,
         }),
+        ...(side.aiPersonality !== undefined && {
+          aiPersonality: side.aiPersonality,
+        }),
+        ...(side.allianceId !== undefined && {
+          allianceId: side.allianceId,
+        }),
         units: side.units.map((u) => ({
           definitionId: u.definitionId,
+          name: u.name.trim() || "Unit",
+          ...(u.shortName.trim() && { shortName: u.shortName.trim() }),
+          ...(u.missile && { missile: true }),
           ...(u.x !== undefined && u.y !== undefined ? { x: u.x, y: u.y } : {}),
         })),
       }),
@@ -127,6 +149,24 @@ function updateSide(
   return sides.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
 }
 
+function updateUnit(
+  sides: SideForm[],
+  si: number,
+  ui: number,
+  patch: Partial<UnitSetupForm>,
+): SideForm[] {
+  return sides.map((s, idx) =>
+    idx !== si
+      ? s
+      : {
+          ...s,
+          units: s.units.map((u, uidx) =>
+            uidx !== ui ? u : { ...u, ...patch },
+          ),
+        },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -134,6 +174,16 @@ function updateSide(
 interface Props {
   onClose: () => void;
 }
+
+const aiPersonalityOptions: Array<{
+  value: AiPersonality | "";
+  label: string;
+}> = [
+  { value: "", label: "Human" },
+  { value: "aggressive", label: "AI — Aggressive" },
+  { value: "defensive", label: "AI — Defensive" },
+  { value: "berserker", label: "AI — Berserker" },
+];
 
 export function ScenarioManager({ onClose }: Props) {
   const dispatch = useAppDispatch();
@@ -329,12 +379,21 @@ export function ScenarioManager({ onClose }: Props) {
     if (!form) return;
     const defId = form.sides[si]!.addDefId as UnitDefinitionId;
     if (!defId) return;
+    const def = definitions.find((d) => d.id === defId);
     setForm((f) => {
       if (!f) return f;
       return {
         ...f,
         sides: updateSide(f.sides, si, {
-          units: [...f.sides[si]!.units, { definitionId: defId }],
+          units: [
+            ...f.sides[si]!.units,
+            {
+              definitionId: defId,
+              name: def?.type.name ?? "Unit",
+              shortName: "",
+              missile: false,
+            },
+          ],
           addDefId: "",
         }),
       };
@@ -366,7 +425,14 @@ export function ScenarioManager({ onClose }: Props) {
                 : {
                     ...s,
                     units: s.units.map((u, uidx) =>
-                      uidx !== ui ? u : { definitionId: u.definitionId },
+                      uidx !== ui
+                        ? u
+                        : {
+                            definitionId: u.definitionId,
+                            name: u.name,
+                            shortName: u.shortName,
+                            missile: u.missile,
+                          },
                     ),
                   },
             ),
@@ -388,13 +454,12 @@ export function ScenarioManager({ onClose }: Props) {
                 sideIdx: si,
                 unitIdx: ui,
                 colour: side.colour,
-                label: (
-                  definitions.find((d) => d.id === u.definitionId)?.name ??
-                  String(u.definitionId)
-                )
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join(""),
+                label: u.shortName.trim()
+                  ? u.shortName.trim()
+                  : u.name
+                      .split(" ")
+                      .map((w) => w[0])
+                      .join(""),
                 x: u.x,
                 y: u.y,
               } satisfies PlacedUnit,
@@ -511,6 +576,88 @@ export function ScenarioManager({ onClose }: Props) {
                     )}
                   </div>
 
+                  {/* AI personality row */}
+                  <div className="scenario-zone-row">
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flex: 1,
+                      }}
+                    >
+                      <span className="scenario-zone-label">Player:</span>
+                      <select
+                        value={side.aiPersonality ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value as AiPersonality | "";
+                          setForm((f) => {
+                            if (!f) return f;
+                            return {
+                              ...f,
+                              sides: f.sides.map((s, idx) => {
+                                if (idx !== si) return s;
+                                if (val === "") {
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                  const { aiPersonality: _ap, ...rest } = s;
+                                  return rest;
+                                }
+                                return { ...s, aiPersonality: val };
+                              }),
+                            };
+                          });
+                        }}
+                      >
+                        {aiPersonalityOptions.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {/* Alliance/team row */}
+                  <div className="scenario-zone-row">
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flex: 1,
+                      }}
+                    >
+                      <span className="scenario-zone-label">Team:</span>
+                      <select
+                        value={side.allianceId ?? ""}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setForm((f) => {
+                            if (!f) return f;
+                            return {
+                              ...f,
+                              sides: f.sides.map((s, idx) => {
+                                if (idx !== si) return s;
+                                if (raw === "") {
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                  const { allianceId: _aid, ...rest } = s;
+                                  return rest;
+                                }
+                                return { ...s, allianceId: Number(raw) };
+                              }),
+                            };
+                          });
+                        }}
+                      >
+                        <option value="">None</option>
+                        <option value="1">Team 1</option>
+                        <option value="2">Team 2</option>
+                        <option value="3">Team 3</option>
+                        <option value="4">Team 4</option>
+                      </select>
+                    </label>
+                  </div>
+
                   {/* Deployment zone row */}
                   <div className="scenario-zone-row">
                     <span className="scenario-zone-label">
@@ -582,52 +729,105 @@ export function ScenarioManager({ onClose }: Props) {
                           key={ui}
                           className={`scenario-unit-row${isPlaced ? " placed" : ""}`}
                         >
-                          {!isPlaced ? (
-                            <div
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData(
-                                  "scenarioRef",
-                                  `${si}:${ui}`,
+                          <div
+                            className="scenario-unit-row-top"
+                            draggable={!isPlaced}
+                            onDragStart={
+                              !isPlaced
+                                ? (e) => {
+                                    e.dataTransfer.setData(
+                                      "scenarioRef",
+                                      `${si}:${ui}`,
+                                    );
+                                    e.dataTransfer.effectAllowed = "move";
+                                  }
+                                : undefined
+                            }
+                          >
+                            {!isPlaced && (
+                              <span className="drag-handle">⠿</span>
+                            )}
+                            <input
+                              type="text"
+                              className="scenario-unit-name-input"
+                              value={u.name}
+                              placeholder="Unit name"
+                              onChange={(e) => {
+                                setForm(
+                                  (f) =>
+                                    f && {
+                                      ...f,
+                                      sides: updateUnit(f.sides, si, ui, {
+                                        name: e.target.value,
+                                      }),
+                                    },
                                 );
-                                e.dataTransfer.effectAllowed = "move";
                               }}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 4,
-                                flex: 1,
-                                minWidth: 0,
+                            />
+                            {isPlaced && (
+                              <span className="scenario-unit-pos">
+                                @{u.x},{u.y}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="scenario-remove-btn"
+                              onClick={() => {
+                                if (isPlaced) {
+                                  unplace(si, ui);
+                                } else {
+                                  removeUnit(si, ui);
+                                }
                               }}
                             >
-                              <span className="drag-handle">⠿</span>
-                              <span className="scenario-unit-name">
-                                {def?.name ?? String(u.definitionId)}
-                              </span>
-                            </div>
-                          ) : (
-                            <>
-                              <span className="scenario-unit-name">
-                                {def?.name ?? String(u.definitionId)}
-                              </span>
-                              <span className="scenario-unit-pos">
-                                at {u.x},{u.y}
-                              </span>
-                            </>
-                          )}
-                          <button
-                            type="button"
-                            className="scenario-remove-btn"
-                            onClick={() => {
-                              if (isPlaced) {
-                                unplace(si, ui);
-                              } else {
-                                removeUnit(si, ui);
-                              }
-                            }}
-                          >
-                            ×
-                          </button>
+                              ×
+                            </button>
+                          </div>
+                          <div className="scenario-unit-row-bottom">
+                            <span className="scenario-unit-type">
+                              {def?.type.name ?? String(u.definitionId)}
+                            </span>
+                            <input
+                              type="text"
+                              className="scenario-unit-short-input"
+                              value={u.shortName}
+                              placeholder="Abbr"
+                              title="Short name (1-4 chars, shown on token)"
+                              maxLength={4}
+                              onChange={(e) => {
+                                setForm(
+                                  (f) =>
+                                    f && {
+                                      ...f,
+                                      sides: updateUnit(f.sides, si, ui, {
+                                        shortName: e.target.value,
+                                      }),
+                                    },
+                                );
+                              }}
+                            />
+                            <label
+                              className="scenario-unit-missile-label"
+                              title="Missile weapon"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={u.missile}
+                                onChange={(e) => {
+                                  setForm(
+                                    (f) =>
+                                      f && {
+                                        ...f,
+                                        sides: updateUnit(f.sides, si, ui, {
+                                          missile: e.target.checked,
+                                        }),
+                                      },
+                                  );
+                                }}
+                              />
+                              Missile
+                            </label>
+                          </div>
                         </div>
                       );
                     })}
@@ -652,7 +852,7 @@ export function ScenarioManager({ onClose }: Props) {
                       <option value="">— add unit from roster —</option>
                       {definitions.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.name} ({d.type.name})
+                          {d.type.name}
                         </option>
                       ))}
                     </select>
@@ -796,6 +996,9 @@ export function ScenarioManager({ onClose }: Props) {
                           style={{ background: side.colour }}
                         >
                           {side.name}
+                          {side.aiPersonality && (
+                            <span className="scenario-side-ai-badge"> AI</span>
+                          )}
                         </span>
                       ))}
                     </span>

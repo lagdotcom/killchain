@@ -1,4 +1,5 @@
 import type { Cells, Feet } from "../flavours.js";
+import type { XY } from "../killchain/EuclideanEngine.js";
 import { cellSize } from "../ui.js";
 import { CellHighlight } from "./MapOverlays.js";
 
@@ -37,7 +38,7 @@ function OverlayTint({ x, y, reason }: Tint) {
 
 interface GridOverlayProps {
   tints: Tint[];
-  logHoverCell?: { x: Cells; y: Cells } | undefined;
+  logHoverCell?: XY | undefined;
 }
 
 export function GridOverlay({ tints, logHoverCell }: GridOverlayProps) {

@@ -595,6 +595,24 @@ body,
   }
 }
 
+.map-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.map-preview-svg {
+  display: block;
+  max-width: 100%;
+  border: 1px solid #555;
+  border-radius: 4px;
+}
+
+.map-preview-reroll {
+  align-self: flex-start;
+}
+
 // ---------------------------------------------------------------------------
 // Scenario manager (full-screen)
 // ---------------------------------------------------------------------------
@@ -718,28 +736,61 @@ body,
 
 .scenario-unit-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
   font-size: var(--font-size);
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
-  .scenario-unit-name {
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.scenario-unit-row-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .scenario-unit-name-input {
     flex: 1;
     min-width: 0;
+  }
+
+  .scenario-unit-pos {
+    font-size: 10px;
+    color: #888;
+    white-space: nowrap;
+  }
+}
+
+.scenario-unit-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 2px;
+
+  .scenario-unit-type {
+    flex: 1;
+    min-width: 0;
+    font-size: 10px;
+    color: #888;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .scenario-preplaced-label {
-    white-space: nowrap;
-    color: #aaa;
+  .scenario-unit-short-input {
+    width: 34px;
   }
 
-  &.placed {
-    .scenario-unit-pos {
-      font-size: 10px;
-      color: #888;
-    }
+  .scenario-unit-missile-label {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    white-space: nowrap;
+    font-size: 11px;
+    cursor: pointer;
   }
 }
 

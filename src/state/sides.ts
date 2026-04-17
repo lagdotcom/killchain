@@ -15,6 +15,8 @@ import {
 } from "./actions.js";
 import { eachEntity } from "./tools.js";
 
+export type AiPersonality = "aggressive" | "defensive" | "berserker";
+
 export interface SideEntity {
   id: SideId;
   colour: string;
@@ -24,7 +26,12 @@ export interface SideEntity {
   surprised: boolean;
   casualties: number;
   initiative: number;
+  aiPersonality?: AiPersonality;
+  /** Sides sharing the same defined allianceId are friendly to each other. */
+  allianceId?: number;
 }
+
+export { isAlly, isEnemy } from "./alliance.js";
 
 export const sidesAdapter = createEntityAdapter<SideEntity>();
 const sidesSlice = createSlice({

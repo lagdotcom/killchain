@@ -5,7 +5,7 @@ import { isDefined } from "../tools.js";
 import { mapsAdapter } from "./maps.js";
 import { rosterAdapter } from "./roster.js";
 import { scenariosAdapter } from "./scenarios.js";
-import { sidesAdapter } from "./sides.js";
+import { isEnemy, sidesAdapter } from "./sides.js";
 import type { AppState } from "./store.js";
 import { terrainAdapter } from "./terrain.js";
 import { unitsAdapter } from "./units.js";
@@ -69,8 +69,8 @@ export const selectCanPass = createSelector(
 );
 
 export const selectCanPassNow = createSelector(
-  [selectBattle, selectActiveSide, selectAllUnits],
-  (battle, activeSide, units) => {
+  [selectBattle, selectActiveSide, selectAllUnits, selectSideEntities],
+  (battle, activeSide, units, sideEntities) => {
     if (!battle.canPass) return false;
     if (battle.phase !== Phase.Move || !activeSide) return true;
 
@@ -82,7 +82,7 @@ export const selectCanPassNow = createSelector(
         !isNaN(unit.x) &&
         units.some(
           (e) =>
-            e.side !== unit.side &&
+            isEnemy(unit.side, e.side, sideEntities) &&
             e.status !== "Rout" &&
             !isNaN(e.x) &&
             Math.abs(e.x - unit.x) + Math.abs(e.y - unit.y) === 1,
@@ -109,4 +109,9 @@ export const selectPhase = createSelector(
 export const selectTurn = createSelector(
   [selectBattle],
   (battle) => battle.turn,
+);
+
+export const selectActiveSideIsAI = createSelector(
+  [selectActiveSide],
+  (side) => side?.aiPersonality !== undefined,
 );

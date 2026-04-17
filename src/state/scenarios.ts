@@ -9,6 +9,7 @@ import type {
   UnitDefinitionId,
 } from "../flavours.js";
 import type { DeploymentZone } from "../killchain/types.js";
+import type { AiPersonality } from "./sides.js";
 
 export type { DeploymentZone };
 
@@ -32,6 +33,12 @@ export interface RuleOverrides {}
 
 export interface ScenarioUnitSetup {
   definitionId: UnitDefinitionId;
+  /** Instance name for this unit (e.g. "Heralds of Mikius"). */
+  name: string;
+  /** 1-4 char abbreviation shown on the token; auto-derived if absent. */
+  shortName?: string;
+  /** True if this unit carries a missile weapon. */
+  missile?: boolean;
   /** Present and valid ⇒ unit is pre-placed at this cell.
    *  Absent ⇒ unit is deployable (dragged onto the map during Placement). */
   x?: Cells;
@@ -45,6 +52,9 @@ export interface ScenarioSideSetup {
   units: ScenarioUnitSetup[];
   /** Future: restrict cells this side can deploy to. */
   deploymentZone?: DeploymentZone;
+  aiPersonality?: AiPersonality;
+  /** Sides sharing the same allianceId are friendly to each other. */
+  allianceId?: number;
 }
 
 export interface Scenario {

@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 
 import type { Cells, Feet, SideId, UnitId } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
-import { xyId } from "../killchain/EuclideanEngine.js";
+import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import {
   applyAttackModifiers,
   getAttackModifiers,
@@ -23,7 +23,7 @@ import {
   selectSideEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
-import type { SideEntity } from "../state/sides.js";
+import { isEnemy, type SideEntity } from "../state/sides.js";
 import { useAppDispatch } from "../state/store.js";
 import type { TerrainEntity } from "../state/terrain.js";
 import type { UnitEntity } from "../state/units.js";
@@ -51,6 +51,7 @@ function canAttackTarget(
   target: UnitEntity,
   phase: Phase,
   cellSize: Feet,
+  sideEntities: Partial<Record<SideId, SideEntity>>,
 ) {
   if (!attacker) return false;
   if (phase !== Phase.Missile && phase !== Phase.Melee) return false;
@@ -61,7 +62,7 @@ function canAttackTarget(
 
   return (
     attacker.ready &&
-    attacker.side !== target.side &&
+    isEnemy(attacker.side, target.side, sideEntities) &&
     distance >= minRange &&
     distance <= maxRange
   );
@@ -78,7 +79,7 @@ function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
 interface GameGridProps {
   onRegisterPan?: (fn: (x: Cells, y: Cells) => void) => void;
   onEditCell?: ((x: Cells, y: Cells) => void) | undefined;
-  logHoverCell?: { x: Cells; y: Cells } | undefined;
+  logHoverCell?: XY | undefined;
 }
 
 function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
@@ -125,15 +126,15 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
       return (
         canMove(unit, activeSide, phase) ||
         canAttack(unit, activeSide, phase) ||
-        (map && canAttackTarget(activeUnit, unit, phase, map.cellSize))
+        (map && canAttackTarget(activeUnit, unit, phase, map.cellSize, sides))
       );
     },
-    [activeSide, activeUnit, map, phase],
+    [activeSide, activeUnit, map, phase, sides],
   );
 
   const tints = useMemo(
-    () => (map ? getTints(activeUnit, phase, map, units) : []),
-    [activeUnit, map, phase, units],
+    () => (map ? getTints(activeUnit, phase, map, units, sides) : []),
+    [activeUnit, map, phase, units, sides],
   );
 
   const deploymentZones = useMemo((): ZoneInfo[] => {
@@ -151,7 +152,9 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
     const g = new KillChainEngine(map, units);
     return Object.fromEntries(
       placedUnits
-        .filter((u) => canAttackTarget(activeUnit, u, phase, map.cellSize))
+        .filter((u) =>
+          canAttackTarget(activeUnit, u, phase, map.cellSize, sides),
+        )
         .map((u) => {
           const missile = g.getDistance(activeUnit, u) > map.cellSize;
           return [
@@ -160,7 +163,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
           ];
         }),
     );
-  }, [activeUnit, map, phase, placedUnits, units]);
+  }, [activeUnit, map, phase, placedUnits, sides, units]);
 
   const handleClickTerrain = useCallback(
     (x: Cells, y: Cells) => {
@@ -189,7 +192,10 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
       switch (phase) {
         case Phase.Missile:
         case Phase.Melee:
-          if (map && canAttackTarget(activeUnit, unit, phase, map.cellSize)) {
+          if (
+            map &&
+            canAttackTarget(activeUnit, unit, phase, map.cellSize, sides)
+          ) {
             dispatch(attack(unit));
             return;
           }
@@ -210,7 +216,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
         dispatch(setActiveUnitId(undefined));
       }
     },
-    [activeSide, activeUnit, dispatch, map, phase],
+    [activeSide, activeUnit, dispatch, map, phase, sides],
   );
 
   const terrainCells = useMemo(
