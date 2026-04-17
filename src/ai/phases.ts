@@ -40,7 +40,7 @@ type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 // ---------------------------------------------------------------------------
 
 export const aiPlacement: Thunk =
-  (side: SideEntity, _config: AiConfig) => (dispatch, getState) => {
+  (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
     const map = selectMap(getState());
     if (!map) return;
 
@@ -93,7 +93,7 @@ export const aiPlacement: Thunk =
       let best: XY | undefined;
       let bestScore = -Infinity;
       for (const cell of candidates) {
-        const s = scorePlacementCell(cell, zone, unit, placedPositions, map);
+        const s = scorePlacementCell(cell, zone, unit, placedPositions, map, config);
         if (s > bestScore) {
           bestScore = s;
           best = cell;

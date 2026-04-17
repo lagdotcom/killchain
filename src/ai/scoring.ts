@@ -55,6 +55,7 @@ export function scorePlacementCell(
   unit: UnitEntity,
   existingPlacements: XY[],
   map: MapEntity,
+  config?: AiConfig,
 ): number {
   // Cells closer to the map centre are the "front line".
   // Missile units prefer the rear (far from centre); melee prefer the front.
@@ -66,9 +67,19 @@ export function scorePlacementCell(
   const stackPenalty =
     existingPlacements.filter((p) => p.x === cell.x).length * 3;
 
-  // Missile units suffer a -1 woods penalty in combat; avoid placing them there.
   const cellTerrain = map.cells.entities[xyId(cell.x, cell.y)];
-  const terrainPenalty = unit.missile && cellTerrain?.type === "Woods" ? -3 : 0;
 
-  return rowScore - stackPenalty + terrainPenalty;
+  // Config-driven terrain preferences mirror movement scoring.
+  const elevationBonus =
+    config?.seekHighGround && cellTerrain ? cellTerrain.elevation * 0.5 : 0;
+  const terrainPenalty =
+    cellTerrain && (cellTerrain.type === "Woods" || cellTerrain.type === "Marsh")
+      ? config?.avoidDifficultTerrain
+        ? -3
+        : unit.missile && cellTerrain.type === "Woods"
+          ? -3
+          : 0
+      : 0;
+
+  return rowScore - stackPenalty + elevationBonus + terrainPenalty;
 }
