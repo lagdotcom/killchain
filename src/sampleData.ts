@@ -63,43 +63,12 @@ export const defaultSides: SideSetup[] = [
   { id: 1, name: "Horde of Grund", colour: "#f66", aiPersonality: "aggressive" },
 ];
 
-/** Initial roster pre-populated with the units from the default battle. */
+/** Initial roster pre-populated with the unit types used in the default battle. */
 export const defaultDefinitions: UnitDefinition[] = [
-  {
-    id: "def-heralds-of-mikius" as UnitDefinitionId,
-    name: "Heralds of Mikius",
-    type: heavyHorse,
-    missile: true,
-  },
-  {
-    id: "def-bakhtavornery" as UnitDefinitionId,
-    name: "Bakhtavornery",
-    type: lightFoot,
-    missile: true,
-  },
-  {
-    id: "def-eyin-eweko" as UnitDefinitionId,
-    name: "Eyin Eweko",
-    type: lightFoot,
-    missile: true,
-  },
-  {
-    id: "def-chosen-of-grund" as UnitDefinitionId,
-    name: "Chosen of Grund",
-    type: mediumFoot,
-    missile: true,
-  },
-  {
-    id: "def-beloved-of-grund" as UnitDefinitionId,
-    name: "Beloved of Grund",
-    type: mediumFoot,
-    missile: true,
-  },
-  {
-    id: "def-outriders-of-grund" as UnitDefinitionId,
-    name: "Outriders of Grund",
-    type: lightHorse,
-  },
+  { id: "def-heavy-horse" as UnitDefinitionId, type: heavyHorse },
+  { id: "def-light-foot" as UnitDefinitionId, type: lightFoot },
+  { id: "def-medium-foot" as UnitDefinitionId, type: mediumFoot },
+  { id: "def-light-horse" as UnitDefinitionId, type: lightHorse },
 ];
 
 /** Default scenario matching the hard-coded initial battle. */
@@ -113,19 +82,44 @@ export const defaultScenario: Scenario = {
       name: "Regnum-Fey Alliance",
       colour: "#49e",
       units: [
-        { definitionId: "def-heralds-of-mikius" as UnitDefinitionId },
-        { definitionId: "def-bakhtavornery" as UnitDefinitionId },
-        { definitionId: "def-eyin-eweko" as UnitDefinitionId },
+        {
+          definitionId: "def-heavy-horse" as UnitDefinitionId,
+          name: "Heralds of Mikius",
+          shortName: "HoM",
+          missile: true,
+        },
+        {
+          definitionId: "def-light-foot" as UnitDefinitionId,
+          name: "Bakhtavornery",
+          missile: true,
+        },
+        {
+          definitionId: "def-light-foot" as UnitDefinitionId,
+          name: "Eyin Eweko",
+          missile: true,
+        },
       ],
     },
     {
       id: 1 as SideId,
       name: "Horde of Grund",
       colour: "#f66",
+      aiPersonality: "aggressive",
       units: [
-        { definitionId: "def-chosen-of-grund" as UnitDefinitionId },
-        { definitionId: "def-beloved-of-grund" as UnitDefinitionId },
-        { definitionId: "def-outriders-of-grund" as UnitDefinitionId },
+        {
+          definitionId: "def-medium-foot" as UnitDefinitionId,
+          name: "Chosen of Grund",
+          missile: true,
+        },
+        {
+          definitionId: "def-medium-foot" as UnitDefinitionId,
+          name: "Beloved of Grund",
+          missile: true,
+        },
+        {
+          definitionId: "def-light-horse" as UnitDefinitionId,
+          name: "Outriders of Grund",
+        },
       ],
     },
   ],

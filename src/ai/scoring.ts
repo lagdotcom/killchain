@@ -14,9 +14,7 @@ export function scoreAttackTarget(
   missile: boolean,
 ): number {
   const target = getAttackRollTarget(g, missile, attacker, defender);
-  // Unreachable targets (target > 6) get worst score
   if (target > 6) return -Infinity;
-
   const killBonus = defender.damage + 1 >= defender.type.hits ? 100 : 0;
   const shakenBonus = defender.status === "Shaken" ? 10 : 0;
   return -target + killBonus + shakenBonus;
@@ -29,40 +27,30 @@ export function scoreMoveCell(
   unit: UnitEntity,
 ): number {
   if (enemies.length === 0) return 0;
-
   const nearest = enemies.reduce((a, b) =>
     manhattanDistance(cell, a) < manhattanDistance(cell, b) ? a : b,
   );
   const dist = manhattanDistance(cell, nearest);
-
   if (config.holdBackIfDamaged && unit.damage > 0) return dist;
   return -dist;
 }
 
 export function scorePlacementCell(
   cell: XY,
-  zone: DeploymentZone | undefined,
+  _zone: DeploymentZone | undefined,
   unit: UnitEntity,
   existingPlacements: XY[],
   map: MapEntity,
 ): number {
-  // Determine which row is "front" (closest to map centre)
-  let frontY: number;
-  if (zone) {
-    const zoneMidY = zone.y + zone.height / 2;
-    frontY = zoneMidY < map.height / 2 ? zone.y + zone.height - 1 : zone.y;
-  } else {
-    // No zone: front row is the one closest to vertical centre
-    frontY = cell.y < map.height / 2 ? map.height / 3 : (2 * map.height) / 3;
-  }
+  // Cells closer to the map centre are the "front line".
+  // Missile units prefer the rear (far from centre); melee prefer the front.
+  const mapCenterY = (map.height - 1) / 2;
+  const distToCenter = Math.abs(cell.y - mapCenterY);
+  const rowScore = unit.missile ? distToCenter : -distToCenter;
 
-  const distToFront = Math.abs(cell.y - frontY);
-
-  // Missile units prefer the rear (far from front), melee units prefer the front
-  const rowScore = unit.missile ? distToFront : -distToFront;
-
-  // Spread penalty: discourage stacking same column
-  const stackPenalty = existingPlacements.filter((p) => p.x === cell.x).length * 3;
+  // Spread units across columns to avoid stacking.
+  const stackPenalty =
+    existingPlacements.filter((p) => p.x === cell.x).length * 3;
 
   return rowScore - stackPenalty;
 }

@@ -40,13 +40,10 @@ export interface DeploymentZone {
   height: Cells;
 }
 
-/** A side-agnostic unit template stored in the roster. */
+/** A unit-type template stored in the roster (stats only, no instance name). */
 export interface UnitDefinition {
   id: UnitDefinitionId;
-  name: string;
-  shortName?: string;
   type: UnitType;
-  missile?: boolean;
 }
 
 export interface Terrain {

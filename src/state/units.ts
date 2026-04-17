@@ -34,13 +34,10 @@ const unitsSlice = createSlice({
       .addCase(
         deployUnitAction,
         (state, { payload: { definition, sideId, unitId } }) => {
-          const { shortName, missile, ...rest } = definition;
           unitsAdapter.addOne(state, {
             id: unitId,
-            name: rest.name,
-            ...(shortName !== undefined && { shortName }),
-            type: rest.type,
-            ...(missile !== undefined && { missile }),
+            name: definition.type.name,
+            type: definition.type,
             side: sideId,
             x: NaN,
             y: NaN,

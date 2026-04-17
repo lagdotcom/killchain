@@ -10,11 +10,11 @@ import {
   attack,
   getMoraleStatus,
   moveAction,
+  pass,
   placeUnitAction,
   rollMorale,
 } from "../state/actions.js";
 import { setActiveUnitId } from "../state/battle.js";
-import { pass } from "../state/actions.js";
 import {
   selectAllSides,
   selectAllUnits,
@@ -26,11 +26,7 @@ import {
 import type { SideEntity } from "../state/sides.js";
 import type { AppState } from "../state/store.js";
 import { manhattanDistance } from "../tools.js";
-import {
-  scoreAttackTarget,
-  scoreMoveCell,
-  scorePlacementCell,
-} from "./scoring.js";
+import { scoreAttackTarget, scoreMoveCell, scorePlacementCell } from "./scoring.js";
 import type { AiConfig } from "./types.js";
 
 type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
@@ -40,7 +36,7 @@ type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 // ---------------------------------------------------------------------------
 
 export const aiPlacement: Thunk =
-  (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
+  (side: SideEntity, _config: AiConfig) => (dispatch, getState) => {
     const state = getState();
     const map = selectMap(state);
     if (!map) return;
@@ -57,20 +53,22 @@ export const aiPlacement: Thunk =
     if (!unit) return;
 
     const zone = sideEntity.deploymentZone;
-    const placedPositions = allUnits.filter((u) => !isNaN(u.x)).map((u) => ({ x: u.x, y: u.y }));
-    const occupiedIds = new Set(placedPositions.map((p) => xyId(p.x as Cells, p.y as Cells)));
+    const placedPositions = allUnits
+      .filter((u) => !isNaN(u.x))
+      .map((u) => ({ x: u.x, y: u.y }));
+    const occupiedIds = new Set(
+      placedPositions.map((p) => xyId(p.x as Cells, p.y as Cells)),
+    );
 
-    // Collect candidate cells
     const candidates: { x: Cells; y: Cells }[] = [];
     for (const cell of Object.values(map.cells.entities)) {
       if (!cell) continue;
       if (occupiedIds.has(cell.id)) continue;
       if (zone && !isInDeploymentZone(zone, cell.x, cell.y)) continue;
       if (!zone) {
-        // Fallback: use top third for even side ids, bottom third for odd
         const usesTop = (side.id as number) % 2 === 0;
-        if (usesTop && cell.y >= map.height / 3) continue;
-        if (!usesTop && cell.y < (2 * map.height) / 3) continue;
+        if (usesTop && cell.y >= Math.floor(map.height / 3)) continue;
+        if (!usesTop && cell.y < Math.ceil((2 * map.height) / 3)) continue;
       }
       candidates.push({ x: cell.x, y: cell.y });
     }
@@ -89,6 +87,9 @@ export const aiPlacement: Thunk =
 
     if (!best) return;
     dispatch(placeUnitAction({ side: sideEntity, unit, x: best.x, y: best.y }));
+
+    // If all sides have now placed all units, advance the phase.
+    if (selectBattle(getState()).canPass) dispatch(pass());
   };
 
 // ---------------------------------------------------------------------------
@@ -96,15 +97,12 @@ export const aiPlacement: Thunk =
 // ---------------------------------------------------------------------------
 
 export const aiMissile: Thunk =
-  (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
+  (side: SideEntity, _config: AiConfig) => (dispatch, getState) => {
     const state = getState();
     const map = selectMap(state);
     if (!map) return;
 
-    const allUnits = selectAllUnits(state);
-    const unitEntities = selectUnitEntities(state);
-
-    const myUnits = allUnits.filter(
+    const myUnits = selectAllUnits(state).filter(
       (u) =>
         u.side === side.id &&
         u.missile &&
@@ -113,21 +111,21 @@ export const aiMissile: Thunk =
         !isNaN(u.x),
     );
 
-    const enemies = allUnits.filter(
-      (u) => u.side !== side.id && u.status !== "Rout" && !isNaN(u.x),
-    );
-    if (enemies.length === 0) return;
-
-    const g = new KillChainEngine(map, unitEntities);
-
     for (const unit of myUnits) {
-      const targets = enemies.filter((e) => {
+      // Re-read live state each iteration — previous attacks may have removed enemies.
+      const liveUnits = selectAllUnits(getState());
+      const unitEntities = selectUnitEntities(getState());
+      const g = new KillChainEngine(map, unitEntities);
+
+      const targets = liveUnits.filter((e) => {
+        if (e.side === side.id || e.status === "Rout" || isNaN(e.x)) return false;
+        if (e.damage >= e.type.hits) return false; // already destroyed
         const dist = manhattanDistance(unit, e) * map.cellSize;
         return dist > map.cellSize && dist <= longRangeMax;
       });
       if (targets.length === 0) continue;
 
-      let best = targets[0];
+      let best = targets[0]!;
       let bestScore = -Infinity;
       for (const t of targets) {
         const s = scoreAttackTarget(unit, t, g, true);
@@ -148,14 +146,12 @@ export const aiMissile: Thunk =
 
 export const aiMove: Thunk =
   (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
-    const state = getState();
-    const map = selectMap(state);
+    const map = selectMap(getState());
     if (!map) return;
 
-    const allUnits = selectAllUnits(state);
-    const unitEntities = selectUnitEntities(state);
-
-    const sides = selectAllSides(state);
+    const initialState = getState();
+    const sides = selectAllSides(initialState);
+    const allUnits = selectAllUnits(initialState);
     const totalUnits = allUnits.filter((u) => u.side === side.id).length;
     const sideEntity = sides.find((s) => s.id === side.id);
     const casualties = sideEntity?.casualties ?? 0;
@@ -164,45 +160,60 @@ export const aiMove: Thunk =
         ? casualties / totalUnits >= config.retreatThreshold
         : false;
 
-    const myUnits = allUnits.filter(
-      (u) =>
-        u.side === side.id &&
-        u.status === "Normal" &&
-        !isNaN(u.x) &&
-        u.moved < u.type.move,
-    );
+    const myUnitIds = allUnits
+      .filter(
+        (u) =>
+          u.side === side.id &&
+          u.status === "Normal" &&
+          !isNaN(u.x) &&
+          u.moved < u.type.move,
+      )
+      .map((u) => u.id);
 
-    const enemies = allUnits.filter(
-      (u) => u.side !== side.id && u.status !== "Rout" && !isNaN(u.x),
-    );
+    for (const unitId of myUnitIds) {
+      // Re-read state to get up-to-date positions after previous moves.
+      const unitEntities = selectUnitEntities(getState());
+      const unit = unitEntities[unitId];
+      if (!unit || unit.moved >= unit.type.move) continue;
 
-    for (const unit of myUnits) {
-      const retreating = underPressure || (config.holdBackIfDamaged && unit.damage > 0);
+      const liveEnemies = selectAllUnits(getState()).filter(
+        (u) => u.side !== side.id && u.status !== "Rout" && !isNaN(u.x),
+      );
 
-      // Berserker: always charge even if preferRanged; otherwise skip advance if we'd rather stay ranged
+      const retreating =
+        underPressure || (config.holdBackIfDamaged && unit.damage > 0);
+
       const skipAdvance =
         !config.chargeRecklessly &&
         config.preferRanged &&
         unit.missile &&
         !retreating;
 
-      if (skipAdvance && enemies.every((e) => manhattanDistance(unit, e) > 1)) {
+      if (skipAdvance && liveEnemies.every((e) => manhattanDistance(unit, e) > 1))
         continue;
-      }
+
+      const effectiveConfig = retreating
+        ? { ...config, holdBackIfDamaged: true }
+        : config;
 
       const score = (cell: { x: Cells; y: Cells }) =>
-        scoreMoveCell(cell, enemies, retreating ? { ...config, holdBackIfDamaged: true } : config, unit);
+        scoreMoveCell(cell, liveEnemies, effectiveConfig, unit);
 
       const best = findBestMove(unit, unitEntities, map, score);
       if (!best) continue;
 
-      // Don't charge if score of destination is worse than standing still
-      const currentScore = scoreMoveCell({ x: unit.x, y: unit.y }, enemies, config, unit);
-      if (!retreating && !config.chargeRecklessly && best && score(best) < currentScore) {
-        continue;
+      // Don't advance if standing still scores better (avoids pointless shuffling).
+      if (!retreating && !config.chargeRecklessly) {
+        const currentScore = scoreMoveCell(
+          { x: unit.x, y: unit.y },
+          liveEnemies,
+          config,
+          unit,
+        );
+        if (score(best) < currentScore) continue;
       }
 
-      dispatch(setActiveUnitId(unit.id));
+      dispatch(setActiveUnitId(unitId));
       dispatch(moveAction({ unit, x: best.x, y: best.y, cost: best.cost }));
     }
   };
@@ -213,43 +224,43 @@ export const aiMove: Thunk =
 
 export const aiMelee: Thunk =
   (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
-    const state = getState();
-    const map = selectMap(state);
+    const map = selectMap(getState());
     if (!map) return;
 
-    const allUnits = selectAllUnits(state);
-    const unitEntities = selectUnitEntities(state);
-    const g = new KillChainEngine(map, unitEntities);
+    const myUnitIds = selectAllUnits(getState())
+      .filter((u) => u.side === side.id && u.ready && !isNaN(u.x))
+      .map((u) => u.id);
 
-    const myUnits = allUnits.filter(
-      (u) => u.side === side.id && u.ready && !isNaN(u.x),
-    );
+    for (const unitId of myUnitIds) {
+      const unitEntities = selectUnitEntities(getState());
+      const unit = unitEntities[unitId];
+      if (!unit || !unit.ready) continue;
 
-    const enemies = allUnits.filter(
-      (u) => u.side !== side.id && u.status !== "Rout" && !isNaN(u.x),
-    );
-    if (enemies.length === 0) return;
+      const g = new KillChainEngine(map, unitEntities);
 
-    for (const unit of myUnits) {
-      const adjacent = enemies.filter(
-        (e) => manhattanDistance(unit, e) === 1,
+      const liveEnemies = selectAllUnits(getState()).filter(
+        (u) =>
+          u.side !== side.id &&
+          u.status !== "Rout" &&
+          !isNaN(u.x) &&
+          u.damage < u.type.hits, // skip already-downed units
       );
+
+      const adjacent = liveEnemies.filter((e) => manhattanDistance(unit, e) === 1);
       if (adjacent.length === 0) continue;
 
-      // Choose scoring based on target priority
-      let best = adjacent[0];
+      let best = adjacent[0]!;
       let bestScore = -Infinity;
-
       for (const t of adjacent) {
         let s: number;
         if (config.targetPriority === "strongest") {
-          // Berserker seeks the mightiest foe
           s = t.type.hits - t.damage;
         } else if (config.targetPriority === "weakest") {
           s = scoreAttackTarget(unit, t, g, false);
         } else {
-          // nearest — use attack score as primary, distance as tiebreak
-          s = scoreAttackTarget(unit, t, g, false) - manhattanDistance(unit, t) * 0.01;
+          s =
+            scoreAttackTarget(unit, t, g, false) -
+            manhattanDistance(unit, t) * 0.01;
         }
         if (s > bestScore) {
           bestScore = s;
@@ -257,13 +268,13 @@ export const aiMelee: Thunk =
         }
       }
 
-      dispatch(setActiveUnitId(unit.id));
+      dispatch(setActiveUnitId(unitId));
       dispatch(attack(best));
     }
   };
 
 // ---------------------------------------------------------------------------
-// Morale (no decision needed — just roll for the losing side)
+// Morale
 // ---------------------------------------------------------------------------
 
 export const aiMorale: Thunk = () => (dispatch, getState) => {

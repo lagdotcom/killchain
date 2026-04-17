@@ -33,6 +33,12 @@ export interface RuleOverrides {}
 
 export interface ScenarioUnitSetup {
   definitionId: UnitDefinitionId;
+  /** Instance name for this unit (e.g. "Heralds of Mikius"). */
+  name: string;
+  /** 1-4 char abbreviation shown on the token; auto-derived if absent. */
+  shortName?: string;
+  /** True if this unit carries a missile weapon. */
+  missile?: boolean;
   /** Present and valid ⇒ unit is pre-placed at this cell.
    *  Absent ⇒ unit is deployable (dragged onto the map during Placement). */
   x?: Cells;

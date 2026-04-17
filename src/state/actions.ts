@@ -150,10 +150,10 @@ export const loadScenarioAction =
           }
           return {
             id: `${scenario.id}-s${si}-u${ui}` as UnitId,
-            name: def.name,
-            ...(def.shortName !== undefined && { shortName: def.shortName }),
+            name: setup.name,
+            ...(setup.shortName !== undefined && { shortName: setup.shortName }),
             type: def.type,
-            ...(def.missile !== undefined && { missile: def.missile }),
+            ...(setup.missile !== undefined && { missile: setup.missile }),
             side: side.id,
             x: setup.x ?? NaN,
             y: setup.y ?? NaN,
