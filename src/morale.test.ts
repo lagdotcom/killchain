@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { Cells, SideId } from "./flavours.js";
+import type { SideId } from "./flavours.js";
 import { Phase } from "./killchain/rules.js";
 import { heavyFoot } from "./killchain/units.js";
 import {
@@ -8,7 +8,6 @@ import {
   initiativeAction,
   rollMorale,
 } from "./state/actions.js";
-import type { BattleState } from "./state/battle.js";
 import { type MapEntity, mapsAdapter } from "./state/maps.js";
 import { selectAllUnits, selectCanPassNow } from "./state/selectors.js";
 import type { SideEntity } from "./state/sides.js";
@@ -16,49 +15,13 @@ import { sidesAdapter } from "./state/sides.js";
 import { makeStore } from "./state/store.js";
 import type { UnitEntity } from "./state/units.js";
 import { unitsAdapter } from "./state/units.js";
-import { makeGridMap } from "./testHelpers.js";
+import {
+  defaultBattleState,
+  makeGridMap,
+  makeSide,
+  makeUnit,
+} from "./testHelpers.js";
 import * as tools from "./tools.js";
-
-function makeSide(id: SideId): SideEntity {
-  return {
-    id,
-    colour: "#fff",
-    name: `Side ${id}`,
-    unplacedIds: [],
-    surprised: false,
-    casualties: 0,
-    initiative: 0,
-  };
-}
-
-let _uid = 0;
-function makeUnit(
-  partial: Partial<UnitEntity> & { side: SideId; x: Cells; y: Cells },
-): UnitEntity {
-  return {
-    id: `u${_uid++}`,
-    name: "Unit",
-    type: heavyFoot, // move=60ft, cellSize=10 → 6 cells
-    missile: false,
-    flankCount: 0,
-    damage: 0,
-    moved: 0,
-    status: "Normal",
-    ready: false,
-    ...partial,
-  };
-}
-
-const defaultBattleState: BattleState = {
-  activeUnitId: undefined,
-  canPass: false,
-  mapId: undefined,
-  messages: [],
-  phase: Phase.Placement,
-  sideOrder: [],
-  sideIndex: NaN,
-  turn: 0,
-};
 
 function makeStoreWith(
   units: UnitEntity[],

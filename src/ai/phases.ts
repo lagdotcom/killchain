@@ -1,7 +1,6 @@
 import type { Action, ActionCreator, ThunkAction } from "@reduxjs/toolkit";
 
-import type { Cells } from "../flavours.js";
-import { xyId } from "../killchain/EuclideanEngine.js";
+import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import { longRangeMax } from "../killchain/rules.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { isInDeploymentZone } from "../logic.js";
@@ -77,7 +76,7 @@ export const aiPlacement: Thunk =
         .map((u) => ({ x: u.x, y: u.y }));
       const occupiedIds = new Set(placedPositions.map((p) => xyId(p.x, p.y)));
 
-      const candidates: { x: Cells; y: Cells }[] = [];
+      const candidates: XY[] = [];
       for (const cell of Object.values(map.cells.entities)) {
         if (occupiedIds.has(cell.id)) continue;
         if (zone && !isInDeploymentZone(zone, cell.x, cell.y)) continue;
@@ -91,7 +90,7 @@ export const aiPlacement: Thunk =
 
       if (candidates.length === 0) break;
 
-      let best: { x: Cells; y: Cells } | undefined;
+      let best: XY | undefined;
       let bestScore = -Infinity;
       for (const cell of candidates) {
         const s = scorePlacementCell(cell, zone, unit, placedPositions, map);
@@ -218,17 +217,16 @@ export const aiMove: Thunk =
         const adjacentEnemies = liveEnemies.filter(
           (e) => currentDists.get(e.id) === 1,
         );
-        const noAdvance = (cell: { x: Cells; y: Cells }) =>
+        const noAdvance = (cell: XY) =>
           liveEnemies.every(
             (e) => manhattanDistance(cell, e) >= currentDists.get(e.id)!,
           );
-        const exitMelee = (cell: { x: Cells; y: Cells }) =>
+        const exitMelee = (cell: XY) =>
           adjacentEnemies.every((e) => manhattanDistance(cell, e) > 1);
-        const satisfiesBoth = (cell: { x: Cells; y: Cells }) =>
-          noAdvance(cell) && exitMelee(cell);
+        const satisfiesBoth = (cell: XY) => noAdvance(cell) && exitMelee(cell);
 
         // Score by maximising distance from nearest enemy.
-        const retreatScore = (cell: { x: Cells; y: Cells }) =>
+        const retreatScore = (cell: XY) =>
           liveEnemies.length > 0
             ? Math.min(...liveEnemies.map((e) => manhattanDistance(cell, e)))
             : 0;
@@ -264,7 +262,7 @@ export const aiMove: Thunk =
         ? { ...config, holdBackIfDamaged: true }
         : config;
 
-      const score = (cell: { x: Cells; y: Cells }) =>
+      const score = (cell: XY) =>
         scoreMoveCell(cell, liveEnemies, effectiveConfig, unit);
 
       const best = findBestMove(unit, unitEntities, map, score);

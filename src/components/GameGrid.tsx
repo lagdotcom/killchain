@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 
 import type { Cells, Feet, SideId, UnitId } from "../flavours.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
-import { xyId } from "../killchain/EuclideanEngine.js";
+import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import {
   applyAttackModifiers,
   getAttackModifiers,
@@ -79,7 +79,7 @@ function canMove(unit: UnitEntity, side: SideEntity | undefined, phase: Phase) {
 interface GameGridProps {
   onRegisterPan?: (fn: (x: Cells, y: Cells) => void) => void;
   onEditCell?: ((x: Cells, y: Cells) => void) | undefined;
-  logHoverCell?: { x: Cells; y: Cells } | undefined;
+  logHoverCell?: XY | undefined;
 }
 
 function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {

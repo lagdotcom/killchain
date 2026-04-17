@@ -2,11 +2,14 @@ import { describe, expect, test } from "vitest";
 
 import type { Cells, SideId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
-import { heavyFoot } from "../killchain/units.js";
-import { makeGridMap } from "../testHelpers.js";
+import {
+  defaultBattleState,
+  makeGridMap,
+  makeSide,
+  makeUnit,
+} from "../testHelpers.js";
 import { rollMorale } from "./actions.js";
 import { isAlly, isEnemy } from "./alliance.js";
-import type { BattleState } from "./battle.js";
 import { mapsAdapter } from "./maps.js";
 import { selectPhase } from "./selectors.js";
 import type { SideEntity } from "./sides.js";
@@ -19,53 +22,11 @@ import { unitsAdapter } from "./units.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeSide(id: SideId, allianceId?: number): SideEntity {
-  return {
-    id,
-    colour: "#fff",
-    name: `Side ${id}`,
-    unplacedIds: [],
-    surprised: false,
-    casualties: 0,
-    initiative: 0,
-    ...(allianceId !== undefined && { allianceId }),
-  };
-}
-
 function sideMap(...sides: SideEntity[]): Partial<Record<SideId, SideEntity>> {
   return Object.fromEntries(sides.map((s) => [s.id, s])) as Partial<
     Record<SideId, SideEntity>
   >;
 }
-
-let _uid = 0;
-function makeUnit(
-  partial: Partial<UnitEntity> & { side: SideId; x: Cells; y: Cells },
-): UnitEntity {
-  return {
-    id: `u${_uid++}`,
-    name: "Unit",
-    type: heavyFoot,
-    missile: false,
-    flankCount: 0,
-    damage: 0,
-    moved: 0,
-    status: "Normal",
-    ready: false,
-    ...partial,
-  };
-}
-
-const defaultBattleState: BattleState = {
-  activeUnitId: undefined,
-  canPass: false,
-  mapId: undefined,
-  messages: [],
-  phase: Phase.Placement,
-  sideOrder: [],
-  sideIndex: NaN,
-  turn: 0,
-};
 
 const testMap = makeGridMap(10 as Cells, 10 as Cells);
 
@@ -89,22 +50,35 @@ function makeStoreWith(units: UnitEntity[], sides: SideEntity[]) {
 describe("isAlly", () => {
   test("returns false for the same side", () => {
     expect(
-      isAlly(0 as SideId, 0 as SideId, sideMap(makeSide(0 as SideId, 1))),
+      isAlly(
+        0 as SideId,
+        0 as SideId,
+        sideMap(makeSide(0 as SideId, { allianceId: 1 })),
+      ),
     ).toBe(false);
   });
 
   test("returns true when both sides share the same allianceId", () => {
-    const sides = sideMap(makeSide(0 as SideId, 1), makeSide(1 as SideId, 1));
+    const sides = sideMap(
+      makeSide(0 as SideId, { allianceId: 1 }),
+      makeSide(1 as SideId, { allianceId: 1 }),
+    );
     expect(isAlly(0 as SideId, 1 as SideId, sides)).toBe(true);
   });
 
   test("returns false when allianceIds differ", () => {
-    const sides = sideMap(makeSide(0 as SideId, 1), makeSide(1 as SideId, 2));
+    const sides = sideMap(
+      makeSide(0 as SideId, { allianceId: 1 }),
+      makeSide(1 as SideId, { allianceId: 2 }),
+    );
     expect(isAlly(0 as SideId, 1 as SideId, sides)).toBe(false);
   });
 
   test("returns false when one side has no allianceId", () => {
-    const sides = sideMap(makeSide(0 as SideId, 1), makeSide(1 as SideId));
+    const sides = sideMap(
+      makeSide(0 as SideId, { allianceId: 1 }),
+      makeSide(1 as SideId),
+    );
     expect(isAlly(0 as SideId, 1 as SideId, sides)).toBe(false);
   });
 
@@ -125,7 +99,10 @@ describe("isEnemy", () => {
   });
 
   test("returns false for allied sides", () => {
-    const sides = sideMap(makeSide(0 as SideId, 5), makeSide(1 as SideId, 5));
+    const sides = sideMap(
+      makeSide(0 as SideId, { allianceId: 5 }),
+      makeSide(1 as SideId, { allianceId: 5 }),
+    );
     expect(isEnemy(0 as SideId, 1 as SideId, sides)).toBe(false);
   });
 
@@ -142,8 +119,8 @@ describe("isEnemy", () => {
 
 describe("rollMorale — allied victory", () => {
   test("two surviving allied sides triggers victory (Phase.Completed)", () => {
-    const side0 = makeSide(0 as SideId, 1);
-    const side1 = makeSide(1 as SideId, 1);
+    const side0 = makeSide(0 as SideId, { allianceId: 1 });
+    const side1 = makeSide(1 as SideId, { allianceId: 1 });
     const unitA = makeUnit({ side: 0 as SideId, x: 0 as Cells, y: 0 as Cells });
     const unitB = makeUnit({ side: 1 as SideId, x: 1 as Cells, y: 0 as Cells });
     const store = makeStoreWith([unitA, unitB], [side0, side1]);
@@ -154,9 +131,9 @@ describe("rollMorale — allied victory", () => {
   });
 
   test("three-way: two allied survivors, one routed side → victory", () => {
-    const side0 = makeSide(0 as SideId, 1);
-    const side1 = makeSide(1 as SideId, 1);
-    const side2 = makeSide(2 as SideId, 2);
+    const side0 = makeSide(0 as SideId, { allianceId: 1 });
+    const side1 = makeSide(1 as SideId, { allianceId: 1 });
+    const side2 = makeSide(2 as SideId, { allianceId: 2 });
     const unitA = makeUnit({ side: 0 as SideId, x: 0 as Cells, y: 0 as Cells });
     const unitB = makeUnit({ side: 1 as SideId, x: 1 as Cells, y: 0 as Cells });
     const routed = makeUnit({
@@ -185,8 +162,8 @@ describe("rollMorale — allied victory", () => {
   });
 
   test("two allied plus one independent survivor does not trigger victory", () => {
-    const side0 = makeSide(0 as SideId, 1);
-    const side1 = makeSide(1 as SideId, 1);
+    const side0 = makeSide(0 as SideId, { allianceId: 1 });
+    const side1 = makeSide(1 as SideId, { allianceId: 1 });
     const side2 = makeSide(2 as SideId); // independent, no alliance
     const unitA = makeUnit({ side: 0 as SideId, x: 0 as Cells, y: 0 as Cells });
     const unitB = makeUnit({ side: 1 as SideId, x: 1 as Cells, y: 0 as Cells });

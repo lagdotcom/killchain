@@ -10,7 +10,7 @@ import { Sidebar } from "./components/Sidebar.js";
 import { type EditBrush, TerrainPalette } from "./components/TerrainPalette.js";
 import type { Cells, TerrainId } from "./flavours.js";
 import { useAiPlayer } from "./hooks/useAiPlayer.js";
-import { xyId } from "./killchain/EuclideanEngine.js";
+import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import {
   defaultDefinitions,
   defaultScenario,
@@ -66,9 +66,7 @@ function AppContent() {
     setView("game");
   };
   const [editBrush, setEditBrush] = useState<EditBrush | null>(null);
-  const [logHoverCell, setLogHoverCell] = useState<
-    { x: Cells; y: Cells } | undefined
-  >(undefined);
+  const [logHoverCell, setLogHoverCell] = useState<XY | undefined>(undefined);
 
   const handleEditCell = useCallback(
     (x: Cells, y: Cells) => {

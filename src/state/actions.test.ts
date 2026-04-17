@@ -1,24 +1,14 @@
 import { describe, expect, test } from "vitest";
 
-import type { SideId } from "../flavours.js";
+import { makeSide } from "../testHelpers.js";
 import { getMoraleStatus } from "./actions.js";
-import type { SideEntity } from "./sides.js";
-
-function makeSide(id: SideId, casualties: number): SideEntity {
-  return {
-    id,
-    colour: "red",
-    name: `Side ${id}`,
-    unplacedIds: [],
-    surprised: false,
-    casualties,
-    initiative: 0,
-  };
-}
 
 describe("getMoraleStatus", () => {
   test("returns the side with the most casualties", () => {
-    const sides = [makeSide(0, 3), makeSide(1, 5)];
+    const sides = [
+      makeSide(0, { casualties: 3 }),
+      makeSide(1, { casualties: 5 }),
+    ];
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("loser");
@@ -27,7 +17,10 @@ describe("getMoraleStatus", () => {
   });
 
   test("returns tied when casualties are equal", () => {
-    const sides = [makeSide(0, 3), makeSide(1, 3)];
+    const sides = [
+      makeSide(0, { casualties: 3 }),
+      makeSide(1, { casualties: 3 }),
+    ];
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("tied");
@@ -35,7 +28,7 @@ describe("getMoraleStatus", () => {
   });
 
   test("returns none when no casualties", () => {
-    const sides = [makeSide(0, 0), makeSide(1, 0)];
+    const sides = [makeSide(0), makeSide(1)];
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("none");
@@ -43,7 +36,11 @@ describe("getMoraleStatus", () => {
   });
 
   test("works with more than two sides", () => {
-    const sides = [makeSide(0, 1), makeSide(1, 4), makeSide(2, 2)];
+    const sides = [
+      makeSide(0, { casualties: 1 }),
+      makeSide(1, { casualties: 4 }),
+      makeSide(2, { casualties: 2 }),
+    ];
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("loser");
@@ -51,7 +48,11 @@ describe("getMoraleStatus", () => {
   });
 
   test("returns tied when multiple sides tie for most", () => {
-    const sides = [makeSide(0, 5), makeSide(1, 5), makeSide(2, 1)];
+    const sides = [
+      makeSide(0, { casualties: 5 }),
+      makeSide(1, { casualties: 5 }),
+      makeSide(2, { casualties: 1 }),
+    ];
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("tied");
@@ -59,7 +60,7 @@ describe("getMoraleStatus", () => {
   });
 
   test("single side with casualties", () => {
-    const sides = [makeSide(0, 3), makeSide(1, 0)];
+    const sides = [makeSide(0, { casualties: 3 }), makeSide(1)];
     const result = getMoraleStatus(sides);
 
     expect(result.type).toBe("loser");

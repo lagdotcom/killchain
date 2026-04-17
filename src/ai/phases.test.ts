@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId, UnitId } from "../flavours.js";
+import type { Cells, SideId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import { heavyFoot } from "../killchain/units.js";
-import type { BattleState } from "../state/battle.js";
 import { mapsAdapter } from "../state/maps.js";
 import { selectAllUnits, selectBattle } from "../state/selectors.js";
 import type { SideEntity } from "../state/sides.js";
@@ -11,55 +10,14 @@ import { sidesAdapter } from "../state/sides.js";
 import { makeStore } from "../state/store.js";
 import type { UnitEntity } from "../state/units.js";
 import { unitsAdapter } from "../state/units.js";
-import { makeGridMap } from "../testHelpers.js";
+import {
+  defaultBattleState,
+  makeGridMap,
+  makeSide,
+  makeUnit,
+} from "../testHelpers.js";
 import { aiMelee, aiMissile, aiMove, aiPlacement } from "./phases.js";
 import { AI_CONFIGS } from "./types.js";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function makeSide(id: SideId, extra: Partial<SideEntity> = {}): SideEntity {
-  return {
-    id,
-    colour: "#fff",
-    name: `Side ${id}`,
-    unplacedIds: [],
-    surprised: false,
-    casualties: 0,
-    initiative: 0,
-    ...extra,
-  };
-}
-
-let _uid = 0;
-function makeUnit(
-  partial: Partial<UnitEntity> & { side: SideId; x: Cells; y: Cells },
-): UnitEntity {
-  return {
-    id: `u${_uid++}` as UnitId,
-    name: "Unit",
-    type: heavyFoot,
-    missile: false,
-    flankCount: 0,
-    damage: 0,
-    moved: 0,
-    status: "Normal",
-    ready: false,
-    ...partial,
-  };
-}
-
-const defaultBattleState: BattleState = {
-  activeUnitId: undefined,
-  canPass: false,
-  mapId: undefined,
-  messages: [],
-  phase: Phase.Placement,
-  sideOrder: [],
-  sideIndex: NaN,
-  turn: 0,
-};
 
 const testMap = makeGridMap(20 as Cells, 20 as Cells);
 

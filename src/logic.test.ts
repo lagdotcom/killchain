@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId, TerrainId, UnitId } from "./flavours.js";
+import type { Cells, TerrainId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import type { DeploymentZone } from "./killchain/types.js";
@@ -9,29 +9,7 @@ import { getTints, isInDeploymentZone } from "./logic.js";
 import type { MapEntity } from "./state/maps.js";
 import type { TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
-import { makeGridMap } from "./testHelpers.js";
-
-let _uid = 0;
-function makeUnit(
-  partial: Partial<UnitEntity> & { side: SideId; x: Cells; y: Cells },
-): UnitEntity {
-  return {
-    id: `u${_uid++}`,
-    name: "Unit",
-    type: heavyFoot, // move=6
-    missile: false,
-    flankCount: 0,
-    damage: 0,
-    moved: 0,
-    status: "Normal",
-    ready: true,
-    ...partial,
-  };
-}
-
-function unitMap(...units: UnitEntity[]): Record<UnitId, UnitEntity> {
-  return Object.fromEntries(units.map((u) => [u.id, u]));
-}
+import { makeGridMap, makeUnit, unitMap } from "./testHelpers.js";
 
 function tintCoords(
   activeUnit: UnitEntity,
