@@ -367,7 +367,6 @@ export function RosterManager({ onClose }: Props) {
                   <input
                     type="number"
                     min={0}
-                    step={30}
                     value={form.move}
                     onChange={(e) => {
                       setForm((f) => ({ ...f, move: e.target.value }));
