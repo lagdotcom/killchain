@@ -14,8 +14,8 @@ import {
   searchAbsolute,
   searchByTerrain,
 } from "./pathfinding.js";
-import type { MapEntity } from "./state/maps.js";
 import { isEnemy } from "./state/alliance.js";
+import type { MapEntity } from "./state/maps.js";
 import type { SideEntity } from "./state/sides.js";
 import type { UnitEntity } from "./state/units.js";
 import { manhattanDistance } from "./tools.js";

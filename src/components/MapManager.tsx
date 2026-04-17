@@ -41,8 +41,7 @@ function parseForm(form: NewMapForm) {
     width: Math.max(4, Math.min(60, parseInt(form.width, 10) || 20)) as Cells,
     height: Math.max(4, Math.min(60, parseInt(form.height, 10) || 20)) as Cells,
     cellSize: (parseInt(form.cellSize, 10) || 10) as Feet,
-    seed:
-      form.useSeed && form.seed ? parseInt(form.seed, 10) : undefined,
+    seed: form.useSeed && form.seed ? parseInt(form.seed, 10) : undefined,
     name: form.name || "New Map",
   };
 }
@@ -73,7 +72,15 @@ export function MapManager({ onClose }: Props) {
     );
     // randomNonce forces a re-roll for unseeded maps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreate, form.width, form.height, form.cellSize, form.useSeed, form.seed, randomNonce]);
+  }, [
+    showCreate,
+    form.width,
+    form.height,
+    form.cellSize,
+    form.useSeed,
+    form.seed,
+    randomNonce,
+  ]);
 
   function handleActivate(mapId: MapId) {
     dispatch(setMap(mapId));

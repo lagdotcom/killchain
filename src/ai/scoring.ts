@@ -32,7 +32,7 @@ export function scoreMoveCell(
   );
   const dist = manhattanDistance(cell, nearest);
   if (config.holdBackIfDamaged && unit.damage > 0) return dist;
-  return -dist;
+  return 0 - dist;
 }
 
 export function scorePlacementCell(

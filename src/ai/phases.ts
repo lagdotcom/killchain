@@ -23,11 +23,15 @@ import {
   selectSideEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
-import { isEnemy } from "../state/sides.js";
 import type { SideEntity } from "../state/sides.js";
+import { isEnemy } from "../state/sides.js";
 import type { AppState } from "../state/store.js";
 import { manhattanDistance } from "../tools.js";
-import { scoreAttackTarget, scoreMoveCell, scorePlacementCell } from "./scoring.js";
+import {
+  scoreAttackTarget,
+  scoreMoveCell,
+  scorePlacementCell,
+} from "./scoring.js";
 import type { AiConfig } from "./types.js";
 
 type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
@@ -37,7 +41,7 @@ type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 // ---------------------------------------------------------------------------
 
 export const aiPlacement: Thunk =
-  (side: SideEntity, _config: AiConfig) => (dispatch, getState) => {
+  (side: SideEntity) => (dispatch, getState) => {
     const map = selectMap(getState());
     if (!map) return;
 
@@ -45,7 +49,7 @@ export const aiPlacement: Thunk =
     // human (or other AI) side we stop — the hook will re-trigger on the next
     // sideIndex change. When sideIndex stays the same (only one side left in
     // the rotation) we keep going so all units get placed in one thunk call.
-    while (true) {
+    for (;;) {
       const currentState = getState();
 
       // Stop if it's no longer this side's turn.
@@ -71,13 +75,10 @@ export const aiPlacement: Thunk =
       const placedPositions = allUnits
         .filter((u) => !isNaN(u.x))
         .map((u) => ({ x: u.x, y: u.y }));
-      const occupiedIds = new Set(
-        placedPositions.map((p) => xyId(p.x as Cells, p.y as Cells)),
-      );
+      const occupiedIds = new Set(placedPositions.map((p) => xyId(p.x, p.y)));
 
       const candidates: { x: Cells; y: Cells }[] = [];
       for (const cell of Object.values(map.cells.entities)) {
-        if (!cell) continue;
         if (occupiedIds.has(cell.id)) continue;
         if (zone && !isInDeploymentZone(zone, cell.x, cell.y)) continue;
         if (!zone) {
@@ -101,7 +102,9 @@ export const aiPlacement: Thunk =
       }
 
       if (!best) break;
-      dispatch(placeUnitAction({ side: sideEntity, unit, x: best.x, y: best.y }));
+      dispatch(
+        placeUnitAction({ side: sideEntity, unit, x: best.x, y: best.y }),
+      );
 
       if (selectBattle(getState()).canPass) {
         dispatch(pass());
@@ -114,50 +117,54 @@ export const aiPlacement: Thunk =
 // Missile
 // ---------------------------------------------------------------------------
 
-export const aiMissile: Thunk =
-  (side: SideEntity, _config: AiConfig) => (dispatch, getState) => {
-    const state = getState();
-    const map = selectMap(state);
-    if (!map) return;
+export const aiMissile: Thunk = (side: SideEntity) => (dispatch, getState) => {
+  const state = getState();
+  const map = selectMap(state);
+  if (!map) return;
 
-    const myUnits = selectAllUnits(state).filter(
-      (u) =>
-        u.side === side.id &&
-        u.missile &&
-        u.ready &&
-        u.status !== "Rout" &&
-        !isNaN(u.x),
-    );
+  const myUnits = selectAllUnits(state).filter(
+    (u) =>
+      u.side === side.id &&
+      u.missile &&
+      u.ready &&
+      u.status !== "Rout" &&
+      !isNaN(u.x),
+  );
 
-    for (const unit of myUnits) {
-      // Re-read live state each iteration — previous attacks may have removed enemies.
-      const liveUnits = selectAllUnits(getState());
-      const unitEntities = selectUnitEntities(getState());
-      const sideEntities = selectSideEntities(getState());
-      const g = new KillChainEngine(map, unitEntities);
+  for (const unit of myUnits) {
+    // Re-read live state each iteration — previous attacks may have removed enemies.
+    const liveUnits = selectAllUnits(getState());
+    const unitEntities = selectUnitEntities(getState());
+    const sideEntities = selectSideEntities(getState());
+    const g = new KillChainEngine(map, unitEntities);
 
-      const targets = liveUnits.filter((e) => {
-        if (!isEnemy(side.id, e.side, sideEntities) || e.status === "Rout" || isNaN(e.x)) return false;
-        if (e.damage >= e.type.hits) return false; // already destroyed
-        const dist = manhattanDistance(unit, e) * map.cellSize;
-        return dist > map.cellSize && dist <= longRangeMax;
-      });
-      if (targets.length === 0) continue;
+    const targets = liveUnits.filter((e) => {
+      if (
+        !isEnemy(side.id, e.side, sideEntities) ||
+        e.status === "Rout" ||
+        isNaN(e.x)
+      )
+        return false;
+      if (e.damage >= e.type.hits) return false; // already destroyed
+      const dist = manhattanDistance(unit, e) * map.cellSize;
+      return dist > map.cellSize && dist <= longRangeMax;
+    });
+    if (targets.length === 0) continue;
 
-      let best = targets[0]!;
-      let bestScore = -Infinity;
-      for (const t of targets) {
-        const s = scoreAttackTarget(unit, t, g, true);
-        if (s > bestScore) {
-          bestScore = s;
-          best = t;
-        }
+    let best = targets[0]!;
+    let bestScore = -Infinity;
+    for (const t of targets) {
+      const s = scoreAttackTarget(unit, t, g, true);
+      if (s > bestScore) {
+        bestScore = s;
+        best = t;
       }
-
-      dispatch(setActiveUnitId(unit.id));
-      dispatch(attack(best));
     }
-  };
+
+    dispatch(setActiveUnitId(unit.id));
+    dispatch(attack(best));
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Move
@@ -197,7 +204,10 @@ export const aiMove: Thunk =
 
       const currentSideEntities = selectSideEntities(getState());
       const liveEnemies = selectAllUnits(getState()).filter(
-        (u) => isEnemy(side.id, u.side, currentSideEntities) && u.status !== "Rout" && !isNaN(u.x),
+        (u) =>
+          isEnemy(side.id, u.side, currentSideEntities) &&
+          u.status !== "Rout" &&
+          !isNaN(u.x),
       );
 
       // Shaken units must retreat and may not advance toward any enemy.
@@ -244,7 +254,10 @@ export const aiMove: Thunk =
         unit.missile &&
         !retreating;
 
-      if (skipAdvance && liveEnemies.every((e) => manhattanDistance(unit, e) > 1))
+      if (
+        skipAdvance &&
+        liveEnemies.every((e) => manhattanDistance(unit, e) > 1)
+      )
         continue;
 
       const effectiveConfig = retreating
@@ -302,7 +315,9 @@ export const aiMelee: Thunk =
           u.damage < u.type.hits, // skip already-downed units
       );
 
-      const adjacent = liveEnemies.filter((e) => manhattanDistance(unit, e) === 1);
+      const adjacent = liveEnemies.filter(
+        (e) => manhattanDistance(unit, e) === 1,
+      );
       if (adjacent.length === 0) continue;
 
       let best = adjacent[0]!;

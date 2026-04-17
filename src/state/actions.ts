@@ -31,7 +31,7 @@ import {
   selectSideEntities,
   selectUnitEntities,
 } from "./selectors.js";
-import { isAlly, isEnemy, type SideEntity } from "./sides.js";
+import { isEnemy, type SideEntity } from "./sides.js";
 import type { AppState } from "./store.js";
 import type { UnitEntity } from "./units.js";
 
@@ -152,7 +152,9 @@ export const loadScenarioAction =
           return {
             id: `${scenario.id}-s${si}-u${ui}` as UnitId,
             name: setup.name,
-            ...(setup.shortName !== undefined && { shortName: setup.shortName }),
+            ...(setup.shortName !== undefined && {
+              shortName: setup.shortName,
+            }),
             type: def.type,
             ...(setup.missile !== undefined && { missile: setup.missile }),
             side: side.id,
@@ -172,7 +174,14 @@ export const loadScenarioAction =
       setupBattleAction({
         map: scenario.mapId,
         sides: scenario.sides.map(
-          ({ id, name, colour, deploymentZone, aiPersonality, allianceId }) => ({
+          ({
+            id,
+            name,
+            colour,
+            deploymentZone,
+            aiPersonality,
+            allianceId,
+          }) => ({
             id,
             name,
             colour,
@@ -342,7 +351,10 @@ export const executeRoutMovement: Thunk = () => (dispatch, getState) => {
     }
 
     const enemies = units.filter(
-      (u) => isEnemy(unit.side, u.side, sideEntities) && u.status !== "Rout" && !isNaN(u.x),
+      (u) =>
+        isEnemy(unit.side, u.side, sideEntities) &&
+        u.status !== "Rout" &&
+        !isNaN(u.x),
     );
 
     const nearestEnemy =

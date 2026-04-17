@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { useAiPlayer } from "./hooks/useAiPlayer.js";
 import { Provider, useSelector } from "react-redux";
 
 import GameGrid from "./components/GameGrid.js";
@@ -10,6 +9,7 @@ import { ScenarioManager } from "./components/ScenarioManager.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { type EditBrush, TerrainPalette } from "./components/TerrainPalette.js";
 import type { Cells, TerrainId } from "./flavours.js";
+import { useAiPlayer } from "./hooks/useAiPlayer.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import {
   defaultDefinitions,

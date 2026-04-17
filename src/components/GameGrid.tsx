@@ -152,7 +152,9 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
     const g = new KillChainEngine(map, units);
     return Object.fromEntries(
       placedUnits
-        .filter((u) => canAttackTarget(activeUnit, u, phase, map.cellSize, sides))
+        .filter((u) =>
+          canAttackTarget(activeUnit, u, phase, map.cellSize, sides),
+        )
         .map((u) => {
           const missile = g.getDistance(activeUnit, u) > map.cellSize;
           return [
@@ -161,7 +163,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
           ];
         }),
     );
-  }, [activeUnit, map, phase, placedUnits, units]);
+  }, [activeUnit, map, phase, placedUnits, sides, units]);
 
   const handleClickTerrain = useCallback(
     (x: Cells, y: Cells) => {
@@ -190,7 +192,10 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
       switch (phase) {
         case Phase.Missile:
         case Phase.Melee:
-          if (map && canAttackTarget(activeUnit, unit, phase, map.cellSize, sides)) {
+          if (
+            map &&
+            canAttackTarget(activeUnit, unit, phase, map.cellSize, sides)
+          ) {
             dispatch(attack(unit));
             return;
           }
@@ -211,7 +216,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
         dispatch(setActiveUnitId(undefined));
       }
     },
-    [activeSide, activeUnit, dispatch, map, phase],
+    [activeSide, activeUnit, dispatch, map, phase, sides],
   );
 
   const terrainCells = useMemo(

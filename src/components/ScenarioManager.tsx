@@ -22,13 +22,13 @@ import {
   updateScenario,
   upsertScenario,
 } from "../state/scenarios.js";
-import type { AiPersonality } from "../state/sides.js";
 import {
   selectAllDefinitions,
   selectAllMaps,
   selectAllScenarios,
   selectBattle,
 } from "../state/selectors.js";
+import type { AiPersonality } from "../state/sides.js";
 import { useAppDispatch } from "../state/store.js";
 import type { ZoneInfo } from "./MapOverlays.js";
 import type { PlacedUnit } from "./ScenarioMapEditor.js";
@@ -95,9 +95,7 @@ function scenarioToForm(s: Scenario): ScenarioForm {
       ...(side.aiPersonality !== undefined
         ? { aiPersonality: side.aiPersonality }
         : {}),
-      ...(side.allianceId !== undefined
-        ? { allianceId: side.allianceId }
-        : {}),
+      ...(side.allianceId !== undefined ? { allianceId: side.allianceId } : {}),
       units: side.units.map((u) => ({
         definitionId: u.definitionId,
         name: u.name,
@@ -177,13 +175,15 @@ interface Props {
   onClose: () => void;
 }
 
-const aiPersonalityOptions: Array<{ value: AiPersonality | ""; label: string }> =
-  [
-    { value: "", label: "Human" },
-    { value: "aggressive", label: "AI — Aggressive" },
-    { value: "defensive", label: "AI — Defensive" },
-    { value: "berserker", label: "AI — Berserker" },
-  ];
+const aiPersonalityOptions: Array<{
+  value: AiPersonality | "";
+  label: string;
+}> = [
+  { value: "", label: "Human" },
+  { value: "aggressive", label: "AI — Aggressive" },
+  { value: "defensive", label: "AI — Defensive" },
+  { value: "berserker", label: "AI — Berserker" },
+];
 
 export function ScenarioManager({ onClose }: Props) {
   const dispatch = useAppDispatch();
@@ -578,7 +578,14 @@ export function ScenarioManager({ onClose }: Props) {
 
                   {/* AI personality row */}
                   <div className="scenario-zone-row">
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flex: 1,
+                      }}
+                    >
                       <span className="scenario-zone-label">Player:</span>
                       <select
                         value={side.aiPersonality ?? ""}
@@ -612,7 +619,14 @@ export function ScenarioManager({ onClose }: Props) {
 
                   {/* Alliance/team row */}
                   <div className="scenario-zone-row">
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flex: 1,
+                      }}
+                    >
                       <span className="scenario-zone-label">Team:</span>
                       <select
                         value={side.allianceId ?? ""}
@@ -983,9 +997,7 @@ export function ScenarioManager({ onClose }: Props) {
                         >
                           {side.name}
                           {side.aiPersonality && (
-                            <span className="scenario-side-ai-badge">
-                              {" "}AI
-                            </span>
+                            <span className="scenario-side-ai-badge"> AI</span>
                           )}
                         </span>
                       ))}

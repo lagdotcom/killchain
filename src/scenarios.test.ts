@@ -8,7 +8,11 @@ import type {
   UnitDefinitionId,
 } from "./flavours.js";
 import { Phase } from "./killchain/rules.js";
-import type { DeploymentZone, UnitDefinition, UnitType } from "./killchain/types.js";
+import type {
+  DeploymentZone,
+  UnitDefinition,
+  UnitType,
+} from "./killchain/types.js";
 import { heavyFoot, lightFoot } from "./killchain/units.js";
 import { loadScenarioAction } from "./state/actions.js";
 import { rosterAdapter } from "./state/roster.js";

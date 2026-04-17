@@ -2,7 +2,11 @@ import { useEffect } from "react";
 import { useSelector } from "react-redux";
 
 import { runAiTurn } from "../ai/index.js";
-import { selectBattle, selectActiveSideIsAI, selectPhase } from "../state/selectors.js";
+import {
+  selectActiveSideIsAI,
+  selectBattle,
+  selectPhase,
+} from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
 
 export function useAiPlayer() {
@@ -16,6 +20,8 @@ export function useAiPlayer() {
     const id = setTimeout(() => {
       dispatch(runAiTurn());
     }, 0);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+    };
   }, [phase, sideIndex, isAiTurn, dispatch]);
 }
