@@ -164,7 +164,7 @@ export const aiMove: Thunk =
       .filter(
         (u) =>
           u.side === side.id &&
-          u.status === "Normal" &&
+          (u.status === "Normal" || u.status === "Shaken") &&
           !isNaN(u.x) &&
           u.moved < u.type.move,
       )
@@ -179,6 +179,41 @@ export const aiMove: Thunk =
       const liveEnemies = selectAllUnits(getState()).filter(
         (u) => u.side !== side.id && u.status !== "Rout" && !isNaN(u.x),
       );
+
+      // Shaken units must retreat and may not advance toward any enemy.
+      if (unit.status === "Shaken") {
+        const currentDists = new Map(
+          liveEnemies.map((e) => [e.id, manhattanDistance(unit, e)]),
+        );
+        const adjacentEnemies = liveEnemies.filter(
+          (e) => currentDists.get(e.id) === 1,
+        );
+        const noAdvance = (cell: { x: Cells; y: Cells }) =>
+          liveEnemies.every(
+            (e) => manhattanDistance(cell, e) >= currentDists.get(e.id)!,
+          );
+        const exitMelee = (cell: { x: Cells; y: Cells }) =>
+          adjacentEnemies.every((e) => manhattanDistance(cell, e) > 1);
+        const satisfiesBoth = (cell: { x: Cells; y: Cells }) =>
+          noAdvance(cell) && exitMelee(cell);
+
+        // Score by maximising distance from nearest enemy.
+        const retreatScore = (cell: { x: Cells; y: Cells }) =>
+          liveEnemies.length > 0
+            ? Math.min(...liveEnemies.map((e) => manhattanDistance(cell, e)))
+            : 0;
+
+        const best =
+          findBestMove(unit, unitEntities, map, retreatScore, satisfiesBoth) ??
+          (adjacentEnemies.length > 0
+            ? findBestMove(unit, unitEntities, map, retreatScore, exitMelee)
+            : undefined);
+
+        if (!best) continue;
+        dispatch(setActiveUnitId(unitId));
+        dispatch(moveAction({ unit, x: best.x, y: best.y, cost: best.cost }));
+        continue;
+      }
 
       const retreating =
         underPressure || (config.holdBackIfDamaged && unit.damage > 0);

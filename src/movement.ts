@@ -69,6 +69,7 @@ export function findBestMove(
   unitEntities: Record<UnitId, UnitEntity>,
   map: MapEntity,
   score: (candidate: XY) => number,
+  filter?: (candidate: XY) => boolean,
 ): MoveCandidate | undefined {
   const g = new KillChainEngine(map, unitEntities);
   const flying = !!unit.type.flying;
@@ -89,6 +90,7 @@ export function findBestMove(
 
   for (const node of reachable.values()) {
     if (node.cost === 0) continue; // skip starting position
+    if (filter && !filter(node)) continue;
     const s = score(node);
     if (s > bestScore) {
       bestScore = s;
