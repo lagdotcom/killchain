@@ -29,13 +29,7 @@ const invalidTerrain = new Set<TerrainType>();
 const nodeToTint = (
   { id, x, y, cost }: PathNode,
   reason: TintReason,
-): Tint => ({
-  id,
-  x,
-  y,
-  cost,
-  reason,
-});
+): Tint => ({ id, x, y, cost, reason });
 
 export function isInDeploymentZone(
   zone: DeploymentZone,

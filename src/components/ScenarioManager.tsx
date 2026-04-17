@@ -5,7 +5,6 @@ import type {
   Cells,
   MapId,
   ScenarioId,
-  SideId,
   UnitDefinitionId,
 } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
@@ -112,9 +111,9 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
     name: form.name.trim() || "Unnamed Scenario",
     mapId: form.mapId as MapId,
     sides: form.sides.map(
-      (side, i): ScenarioSideSetup => ({
-        id: i as SideId,
-        name: side.name.trim() || `Side ${i + 1}`,
+      (side, id): ScenarioSideSetup => ({
+        id,
+        name: side.name.trim() || `Side ${id + 1}`,
         colour: side.colour,
         ...(side.deploymentZone !== undefined && {
           deploymentZone: side.deploymentZone,
@@ -122,9 +121,7 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
         ...(side.aiPersonality !== undefined && {
           aiPersonality: side.aiPersonality,
         }),
-        ...(side.allianceId !== undefined && {
-          allianceId: side.allianceId,
-        }),
+        ...(side.allianceId !== undefined && { allianceId: side.allianceId }),
         units: side.units.map((u) => ({
           definitionId: u.definitionId,
           name: u.name.trim() || "Unit",

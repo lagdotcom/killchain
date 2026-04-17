@@ -23,7 +23,7 @@ export function getAttackModifiers<P>(
   attacker: Unit,
   defender: Unit,
 ) {
-  const distance = missile ? g.getDistance(attacker, defender) : (0 as Feet);
+  const distance: Feet = missile ? g.getDistance(attacker, defender) : 0;
 
   const mine = g.getTerrain(attacker);
   const theirs = g.getTerrain(defender);

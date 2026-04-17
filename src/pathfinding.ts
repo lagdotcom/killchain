@@ -130,13 +130,7 @@ function runSearch(
   return shortestPath(
     (id) => edges[id] ?? [],
     (id) =>
-      nodes[id] ?? {
-        id,
-        x: NaN,
-        y: NaN,
-        cost: Infinity,
-        parent: undefined,
-      },
+      nodes[id] ?? { id, x: NaN, y: NaN, cost: Infinity, parent: undefined },
     start,
     maxCost,
   );

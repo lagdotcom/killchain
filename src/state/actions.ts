@@ -121,17 +121,13 @@ export const setupBattleAction = createAction<{
 export const deployUnitAction = createAction(
   "battle/deployUnit",
   (definition: UnitDefinition, sideId: SideId) => ({
-    payload: {
-      definition,
-      sideId,
-      unitId: nanoid() as UnitId,
-    },
+    payload: { definition, sideId, unitId: nanoid() as UnitId },
   }),
 );
 
-export const surpriseAction = createAction<{
-  results: SurpriseRollResult[];
-}>("battle/surprise");
+export const surpriseAction = createAction<{ results: SurpriseRollResult[] }>(
+  "battle/surprise",
+);
 
 /** Instantiate and load a scenario, replacing the current battle. */
 export const loadScenarioAction =
@@ -150,7 +146,7 @@ export const loadScenarioAction =
             return null;
           }
           return {
-            id: `${scenario.id}-s${si}-u${ui}` as UnitId,
+            id: `${scenario.id}-s${si}-u${ui}`,
             name: setup.name,
             ...(setup.shortName !== undefined && {
               shortName: setup.shortName,
@@ -163,7 +159,7 @@ export const loadScenarioAction =
             flankCount: 0,
             damage: 0,
             moved: 0,
-            status: "Normal" as MoraleStatus,
+            status: "Normal",
             ready: false,
           };
         })
@@ -304,15 +300,7 @@ export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
   const hit = roll >= target;
 
   dispatch(
-    attackAction({
-      attacker,
-      defender,
-      missile,
-      mods,
-      target,
-      roll,
-      hit,
-    }),
+    attackAction({ attacker, defender, missile, mods, target, roll, hit }),
   );
 };
 

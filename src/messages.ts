@@ -75,9 +75,7 @@ export const sideSurpriseResult = (
 export const sideInitiativeResult = (
   side: SideEntity,
   roll: number,
-): LogMessage => ({
-  text: `${side.name} rolled ${roll} for initiative.`,
-});
+): LogMessage => ({ text: `${side.name} rolled ${roll} for initiative.` });
 
 export const unitRouting = (unit: UnitEntity): LogMessage => ({
   text: `${unit.name} are routing away from battle.`,

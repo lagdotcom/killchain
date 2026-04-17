@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import type { Cells, SideId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import { heavyFoot } from "../killchain/units.js";
 import { mapsAdapter } from "../state/maps.js";
@@ -19,7 +18,7 @@ import {
 import { aiMelee, aiMissile, aiMove, aiPlacement } from "./phases.js";
 import { AI_CONFIGS } from "./types.js";
 
-const testMap = makeGridMap(20 as Cells, 20 as Cells);
+const testMap = makeGridMap(20, 20);
 
 function makeAiStore(
   units: UnitEntity[],
@@ -49,12 +48,8 @@ function makeAiStore(
 
 describe("aiPlacement", () => {
   test("places an unplaced unit on the board", () => {
-    const unit = makeUnit({
-      side: 0 as SideId,
-      x: NaN as Cells,
-      y: NaN as Cells,
-    });
-    const side = makeSide(0 as SideId, { unplacedIds: [unit.id] });
+    const unit = makeUnit({ side: 0, x: NaN, y: NaN });
+    const side = makeSide(0, { unplacedIds: [unit.id] });
     const store = makeAiStore([unit], [side], Phase.Placement, false);
 
     store.dispatch(aiPlacement(side));
@@ -67,21 +62,9 @@ describe("aiPlacement", () => {
   });
 
   test("places unit within deployment zone when one is defined", () => {
-    const unit = makeUnit({
-      side: 0 as SideId,
-      x: NaN as Cells,
-      y: NaN as Cells,
-    });
-    const zone = {
-      x: 0 as Cells,
-      y: 0 as Cells,
-      width: 5 as Cells,
-      height: 5 as Cells,
-    };
-    const side = makeSide(0 as SideId, {
-      unplacedIds: [unit.id],
-      deploymentZone: zone,
-    });
+    const unit = makeUnit({ side: 0, x: NaN, y: NaN });
+    const zone = { x: 0, y: 0, width: 5, height: 5 };
+    const side = makeSide(0, { unplacedIds: [unit.id], deploymentZone: zone });
     const store = makeAiStore([unit], [side], Phase.Placement, false);
 
     store.dispatch(aiPlacement(side));
@@ -102,24 +85,16 @@ describe("aiPlacement", () => {
 
 describe("aiMove", () => {
   test("Normal unit advances toward enemy", () => {
-    const friendly = makeUnit({
-      side: 0 as SideId,
-      x: 0 as Cells,
-      y: 0 as Cells,
-    });
-    const enemy = makeUnit({
-      side: 1 as SideId,
-      x: 10 as Cells,
-      y: 0 as Cells,
-    });
+    const friendly = makeUnit({ side: 0, x: 0, y: 0 });
+    const enemy = makeUnit({ side: 1, x: 10, y: 0 });
     const store = makeAiStore(
       [friendly, enemy],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Move,
     );
 
     const distBefore = 10; // abs(0-10) + abs(0-0)
-    store.dispatch(aiMove(makeSide(0 as SideId), AI_CONFIGS.aggressive));
+    store.dispatch(aiMove(makeSide(0), AI_CONFIGS.aggressive));
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === friendly.id,
@@ -129,24 +104,15 @@ describe("aiMove", () => {
   });
 
   test("fully-moved unit is not moved again", () => {
-    const friendly = makeUnit({
-      side: 0 as SideId,
-      x: 0 as Cells,
-      y: 0 as Cells,
-      moved: heavyFoot.move,
-    });
-    const enemy = makeUnit({
-      side: 1 as SideId,
-      x: 10 as Cells,
-      y: 0 as Cells,
-    });
+    const friendly = makeUnit({ side: 0, x: 0, y: 0, moved: heavyFoot.move });
+    const enemy = makeUnit({ side: 1, x: 10, y: 0 });
     const store = makeAiStore(
       [friendly, enemy],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Move,
     );
 
-    store.dispatch(aiMove(makeSide(0 as SideId), AI_CONFIGS.aggressive));
+    store.dispatch(aiMove(makeSide(0), AI_CONFIGS.aggressive));
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === friendly.id,
@@ -156,20 +122,15 @@ describe("aiMove", () => {
   });
 
   test("Shaken unit adjacent to enemy retreats to a non-adjacent cell", () => {
-    const shaken = makeUnit({
-      side: 0 as SideId,
-      x: 5 as Cells,
-      y: 5 as Cells,
-      status: "Shaken",
-    });
-    const enemy = makeUnit({ side: 1 as SideId, x: 6 as Cells, y: 5 as Cells }); // dist=1
+    const shaken = makeUnit({ side: 0, x: 5, y: 5, status: "Shaken" });
+    const enemy = makeUnit({ side: 1, x: 6, y: 5 }); // dist=1
     const store = makeAiStore(
       [shaken, enemy],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Move,
     );
 
-    store.dispatch(aiMove(makeSide(0 as SideId), AI_CONFIGS.aggressive));
+    store.dispatch(aiMove(makeSide(0), AI_CONFIGS.aggressive));
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === shaken.id,
@@ -185,24 +146,15 @@ describe("aiMove", () => {
 
 describe("aiMelee", () => {
   test("ready unit attacks an adjacent enemy (unit becomes not-ready)", () => {
-    const attacker = makeUnit({
-      side: 0 as SideId,
-      x: 2 as Cells,
-      y: 2 as Cells,
-      ready: true,
-    });
-    const defender = makeUnit({
-      side: 1 as SideId,
-      x: 2 as Cells,
-      y: 3 as Cells,
-    });
+    const attacker = makeUnit({ side: 0, x: 2, y: 2, ready: true });
+    const defender = makeUnit({ side: 1, x: 2, y: 3 });
     const store = makeAiStore(
       [attacker, defender],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Melee,
     );
 
-    store.dispatch(aiMelee(makeSide(0 as SideId), AI_CONFIGS.aggressive));
+    store.dispatch(aiMelee(makeSide(0), AI_CONFIGS.aggressive));
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === attacker.id,
@@ -212,43 +164,29 @@ describe("aiMelee", () => {
   });
 
   test("unit with ready=false does not attack", () => {
-    const attacker = makeUnit({
-      side: 0 as SideId,
-      x: 2 as Cells,
-      y: 2 as Cells,
-      ready: false,
-    });
-    const defender = makeUnit({
-      side: 1 as SideId,
-      x: 2 as Cells,
-      y: 3 as Cells,
-    });
+    const attacker = makeUnit({ side: 0, x: 2, y: 2, ready: false });
+    const defender = makeUnit({ side: 1, x: 2, y: 3 });
     const store = makeAiStore(
       [attacker, defender],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Melee,
     );
 
-    store.dispatch(aiMelee(makeSide(0 as SideId), AI_CONFIGS.aggressive));
+    store.dispatch(aiMelee(makeSide(0), AI_CONFIGS.aggressive));
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });
 
   test("non-adjacent enemy is not attacked", () => {
-    const attacker = makeUnit({
-      side: 0 as SideId,
-      x: 0 as Cells,
-      y: 0 as Cells,
-      ready: true,
-    });
-    const far = makeUnit({ side: 1 as SideId, x: 5 as Cells, y: 5 as Cells });
+    const attacker = makeUnit({ side: 0, x: 0, y: 0, ready: true });
+    const far = makeUnit({ side: 1, x: 5, y: 5 });
     const store = makeAiStore(
       [attacker, far],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Melee,
     );
 
-    store.dispatch(aiMelee(makeSide(0 as SideId), AI_CONFIGS.aggressive));
+    store.dispatch(aiMelee(makeSide(0), AI_CONFIGS.aggressive));
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });
@@ -262,24 +200,20 @@ describe("aiMissile", () => {
   test("missile unit attacks an in-range enemy (unit becomes not-ready)", () => {
     // dist = 5 cells × 10 ft = 50 ft; longRangeMax=120ft, cellSize=10ft → valid range
     const archer = makeUnit({
-      side: 0 as SideId,
-      x: 0 as Cells,
-      y: 0 as Cells,
+      side: 0,
+      x: 0,
+      y: 0,
       missile: true,
       ready: true,
     });
-    const target = makeUnit({
-      side: 1 as SideId,
-      x: 5 as Cells,
-      y: 0 as Cells,
-    });
+    const target = makeUnit({ side: 1, x: 5, y: 0 });
     const store = makeAiStore(
       [archer, target],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0 as SideId)));
+    store.dispatch(aiMissile(makeSide(0)));
 
     const updated = selectAllUnits(store.getState()).find(
       (u) => u.id === archer.id,
@@ -289,47 +223,40 @@ describe("aiMissile", () => {
 
   test("non-missile unit does not fire in missile phase", () => {
     const infantry = makeUnit({
-      side: 0 as SideId,
-      x: 0 as Cells,
-      y: 0 as Cells,
+      side: 0,
+      x: 0,
+      y: 0,
       missile: false,
       ready: true,
     });
-    const target = makeUnit({
-      side: 1 as SideId,
-      x: 5 as Cells,
-      y: 0 as Cells,
-    });
+    const target = makeUnit({ side: 1, x: 5, y: 0 });
     const store = makeAiStore(
       [infantry, target],
-      [makeSide(0 as SideId), makeSide(1 as SideId)],
+      [makeSide(0), makeSide(1)],
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0 as SideId)));
+    store.dispatch(aiMissile(makeSide(0)));
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });
 
   test("allied unit is not targeted by missile fire", () => {
     const archer = makeUnit({
-      side: 0 as SideId,
-      x: 0 as Cells,
-      y: 0 as Cells,
+      side: 0,
+      x: 0,
+      y: 0,
       missile: true,
       ready: true,
     });
-    const ally = makeUnit({ side: 1 as SideId, x: 5 as Cells, y: 0 as Cells });
+    const ally = makeUnit({ side: 1, x: 5, y: 0 });
     const store = makeAiStore(
       [archer, ally],
-      [
-        makeSide(0 as SideId, { allianceId: 1 }),
-        makeSide(1 as SideId, { allianceId: 1 }),
-      ],
+      [makeSide(0, { allianceId: 1 }), makeSide(1, { allianceId: 1 })],
       Phase.Missile,
     );
 
-    store.dispatch(aiMissile(makeSide(0 as SideId, { allianceId: 1 })));
+    store.dispatch(aiMissile(makeSide(0, { allianceId: 1 })));
 
     expect(selectBattle(store.getState()).messages).toHaveLength(0);
   });

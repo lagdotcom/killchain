@@ -1,11 +1,6 @@
 import { readFileSync } from "fs";
 
-import type {
-  MapId,
-  ScenarioId,
-  SideId,
-  UnitDefinitionId,
-} from "../flavours.js";
+import type { MapId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import type { UnitDefinition } from "../killchain/types.js";
 import {
@@ -60,158 +55,158 @@ export interface BattleResult {
 // ---------------------------------------------------------------------------
 
 export const SIM_DEFINITIONS: UnitDefinition[] = [
-  { id: "sim-unarmoured" as UnitDefinitionId, type: unarmouredTroops },
-  { id: "sim-light-foot" as UnitDefinitionId, type: lightFoot },
-  { id: "sim-medium-foot" as UnitDefinitionId, type: mediumFoot },
-  { id: "sim-heavy-foot" as UnitDefinitionId, type: heavyFoot },
-  { id: "sim-light-horse" as UnitDefinitionId, type: lightHorse },
-  { id: "sim-medium-horse" as UnitDefinitionId, type: mediumHorse },
-  { id: "sim-heavy-horse" as UnitDefinitionId, type: heavyHorse },
+  { id: "sim-unarmoured", type: unarmouredTroops },
+  { id: "sim-light-foot", type: lightFoot },
+  { id: "sim-medium-foot", type: mediumFoot },
+  { id: "sim-heavy-foot", type: heavyFoot },
+  { id: "sim-light-horse", type: lightHorse },
+  { id: "sim-medium-horse", type: mediumHorse },
+  { id: "sim-heavy-horse", type: heavyHorse },
   // aliases matching the game's default roster IDs
-  { id: "def-light-foot" as UnitDefinitionId, type: lightFoot },
-  { id: "def-medium-foot" as UnitDefinitionId, type: mediumFoot },
-  { id: "def-light-horse" as UnitDefinitionId, type: lightHorse },
-  { id: "def-heavy-horse" as UnitDefinitionId, type: heavyHorse },
+  { id: "def-light-foot", type: lightFoot },
+  { id: "def-medium-foot", type: mediumFoot },
+  { id: "def-light-horse", type: lightHorse },
+  { id: "def-heavy-horse", type: heavyHorse },
 ];
 
 // ---------------------------------------------------------------------------
 // Built-in named scenarios (Scenario format)
 // ---------------------------------------------------------------------------
 
-const SIM_MAP_ID = "sim" as MapId;
+const SIM_MAP_ID: MapId = "sim";
 
 export const SCENARIOS: Record<string, Scenario> = {
   standard: {
-    id: "sim-standard" as ScenarioId,
+    id: "sim-standard",
     name: "Standard",
     mapId: SIM_MAP_ID,
     sides: [
       {
-        id: 0 as SideId,
+        id: 0,
         name: "Blue",
         colour: "#48f",
         units: [
-          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Cavalry" },
-          { definitionId: "sim-medium-foot" as UnitDefinitionId, name: "Infantry" },
-          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+          { definitionId: "sim-light-horse", name: "Cavalry" },
+          { definitionId: "sim-medium-foot", name: "Infantry" },
+          { definitionId: "sim-light-foot", name: "Archers", missile: true },
         ],
       },
       {
-        id: 1 as SideId,
+        id: 1,
         name: "Red",
         colour: "#f44",
         units: [
-          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Cavalry" },
-          { definitionId: "sim-medium-foot" as UnitDefinitionId, name: "Infantry" },
-          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
+          { definitionId: "sim-light-horse", name: "Cavalry" },
+          { definitionId: "sim-medium-foot", name: "Infantry" },
+          { definitionId: "sim-light-foot", name: "Archers", missile: true },
         ],
       },
     ],
   },
   infantry: {
-    id: "sim-infantry" as ScenarioId,
+    id: "sim-infantry",
     name: "Heavy Foot",
     mapId: SIM_MAP_ID,
     sides: [
       {
-        id: 0 as SideId,
+        id: 0,
         name: "Blue",
         colour: "#48f",
         units: [
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+          { definitionId: "sim-heavy-foot", name: "Spears" },
+          { definitionId: "sim-heavy-foot", name: "Spears" },
+          { definitionId: "sim-heavy-foot", name: "Spears" },
         ],
       },
       {
-        id: 1 as SideId,
+        id: 1,
         name: "Red",
         colour: "#f44",
         units: [
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Spears" },
+          { definitionId: "sim-heavy-foot", name: "Spears" },
+          { definitionId: "sim-heavy-foot", name: "Spears" },
+          { definitionId: "sim-heavy-foot", name: "Spears" },
         ],
       },
     ],
   },
   cavalry: {
-    id: "sim-cavalry" as ScenarioId,
+    id: "sim-cavalry",
     name: "Heavy Cavalry",
     mapId: SIM_MAP_ID,
     sides: [
       {
-        id: 0 as SideId,
+        id: 0,
         name: "Blue",
         colour: "#48f",
         units: [
-          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
-          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
-          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+          { definitionId: "sim-heavy-horse", name: "Knights" },
+          { definitionId: "sim-heavy-horse", name: "Knights" },
+          { definitionId: "sim-heavy-horse", name: "Knights" },
         ],
       },
       {
-        id: 1 as SideId,
+        id: 1,
         name: "Red",
         colour: "#f44",
         units: [
-          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
-          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
-          { definitionId: "sim-heavy-horse" as UnitDefinitionId, name: "Knights" },
+          { definitionId: "sim-heavy-horse", name: "Knights" },
+          { definitionId: "sim-heavy-horse", name: "Knights" },
+          { definitionId: "sim-heavy-horse", name: "Knights" },
         ],
       },
     ],
   },
   ranged: {
-    id: "sim-ranged" as ScenarioId,
+    id: "sim-ranged",
     name: "Ranged Heavy",
     mapId: SIM_MAP_ID,
     sides: [
       {
-        id: 0 as SideId,
+        id: 0,
         name: "Blue",
         colour: "#48f",
         units: [
-          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
-          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
-          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Scouts" },
+          { definitionId: "sim-light-foot", name: "Archers", missile: true },
+          { definitionId: "sim-light-foot", name: "Archers", missile: true },
+          { definitionId: "sim-light-horse", name: "Scouts" },
         ],
       },
       {
-        id: 1 as SideId,
+        id: 1,
         name: "Red",
         colour: "#f44",
         units: [
-          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
-          { definitionId: "sim-light-foot" as UnitDefinitionId, name: "Archers", missile: true },
-          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Scouts" },
+          { definitionId: "sim-light-foot", name: "Archers", missile: true },
+          { definitionId: "sim-light-foot", name: "Archers", missile: true },
+          { definitionId: "sim-light-horse", name: "Scouts" },
         ],
       },
     ],
   },
   asymmetric: {
-    id: "sim-asymmetric" as ScenarioId,
+    id: "sim-asymmetric",
     name: "Asymmetric",
     mapId: SIM_MAP_ID,
     sides: [
       {
-        id: 0 as SideId,
+        id: 0,
         name: "Raiders",
         colour: "#48f",
         units: [
-          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Raiders" },
-          { definitionId: "sim-light-horse" as UnitDefinitionId, name: "Raiders" },
-          { definitionId: "sim-medium-horse" as UnitDefinitionId, name: "Heavy Raiders" },
+          { definitionId: "sim-light-horse", name: "Raiders" },
+          { definitionId: "sim-light-horse", name: "Raiders" },
+          { definitionId: "sim-medium-horse", name: "Heavy Raiders" },
         ],
       },
       {
-        id: 1 as SideId,
+        id: 1,
         name: "Shield Wall",
         colour: "#f44",
         units: [
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Shield Wall" },
-          { definitionId: "sim-heavy-foot" as UnitDefinitionId, name: "Shield Wall" },
-          { definitionId: "sim-medium-foot" as UnitDefinitionId, name: "Crossbows", missile: true },
+          { definitionId: "sim-heavy-foot", name: "Shield Wall" },
+          { definitionId: "sim-heavy-foot", name: "Shield Wall" },
+          { definitionId: "sim-medium-foot", name: "Crossbows", missile: true },
         ],
       },
     ],
@@ -262,10 +257,10 @@ export function runBattle(setup: BattleSetup): BattleResult {
   const allUnits = selectAllUnits(finalState);
 
   const survivors0 = allUnits.filter(
-    (u) => u.side === (0 as SideId) && u.status !== "Rout",
+    (u) => u.side === 0 && u.status !== "Rout",
   ).length;
   const survivors1 = allUnits.filter(
-    (u) => u.side === (1 as SideId) && u.status !== "Rout",
+    (u) => u.side === 1 && u.status !== "Rout",
   ).length;
 
   let outcome: BattleResult["outcome"];
@@ -328,11 +323,7 @@ function loadScenarioFile(filePath: string): {
   const raw = readFileSync(filePath, "utf-8");
   const parsed: unknown = JSON.parse(raw);
 
-  if (
-    parsed !== null &&
-    typeof parsed === "object" &&
-    "scenario" in parsed
-  ) {
+  if (parsed !== null && typeof parsed === "object" && "scenario" in parsed) {
     const file = parsed as ScenarioFile;
     return { scenario: file.scenario, definitions: file.definitions ?? [] };
   }
