@@ -88,8 +88,8 @@ function formToDefinition(form: DefForm): Omit<UnitDefinition, "id"> {
       name: form.typeName.trim() || "Custom",
       hits: Math.max(1, parseInt(form.hits, 10) || 1),
       armour: form.armour,
-      move: Math.max(1, parseInt(form.move, 10) || 60),
-      morale: Math.max(1, Math.min(11, parseInt(form.morale, 10) || 7)),
+      move: Math.max(0, parseInt(form.move, 10) || 60),
+      morale: Math.max(1, parseInt(form.morale, 10) || 7),
       ...(form.mounted && { mounted: true }),
       ...(form.flying && { flying: true }),
       ...(form.steadfast && { steadfast: true }),
@@ -356,7 +356,6 @@ export function RosterManager({ onClose }: Props) {
                   <input
                     type="number"
                     min={1}
-                    max={10}
                     value={form.hits}
                     onChange={(e) => {
                       setForm((f) => ({ ...f, hits: e.target.value }));
@@ -367,7 +366,7 @@ export function RosterManager({ onClose }: Props) {
                   Move (ft)
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     step={30}
                     value={form.move}
                     onChange={(e) => {
@@ -380,7 +379,6 @@ export function RosterManager({ onClose }: Props) {
                   <input
                     type="number"
                     min={1}
-                    max={11}
                     value={form.morale}
                     onChange={(e) => {
                       setForm((f) => ({ ...f, morale: e.target.value }));
