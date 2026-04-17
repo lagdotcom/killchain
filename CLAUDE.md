@@ -107,3 +107,7 @@ Placement → Surprise → Initiative → Missile → Move → Melee → Morale 
 ## Testing
 
 Tests live alongside source (`*.test.ts`). Run with `yarn test`. When calling `getTints()` in tests, pass an empty `{}` as the fifth `sideEntities` argument — sides with different IDs are treated as enemies by default.
+
+### Shared test helpers (`src/testHelpers.ts`)
+
+Prefer `makeUnit`, `makeSide`, `makeGridMap`, `unitMap`, and `defaultBattleState` from `testHelpers.ts` over defining local copies. When you find yourself writing the same helper in a second test file, extract it there immediately. The same applies to source code: if a utility function would be useful beyond its current file, move it to a shared module rather than duplicating it.
