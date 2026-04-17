@@ -32,14 +32,11 @@ Should be front-end options for optional rules (could be folded into Scenario st
 
 ## Scenarios
 
-- Sides can be allies to each other
 - **Victory conditions**: occupy cells, rout/disperse specific unit, escape area intact, etc.
 
 ## AI
 
-- **Personality**: aggressive/defensive, risk-taker/timid
-- Selectable skill level
-- Zero to all sides could be set to AI play
+- Selectable skill level (distinct from personality)
 - Takes victory conditions into account
 
 ## Campaign play
