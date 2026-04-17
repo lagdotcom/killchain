@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 import type { Cells, Feet, MapId } from "../flavours.js";
@@ -8,6 +8,7 @@ import { setMap } from "../state/battle.js";
 import { addMap, deleteMap, type MapEntity } from "../state/maps.js";
 import { selectAllMaps, selectBattle, selectMap } from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
+import { terrainColours } from "../ui.js";
 
 interface Props {
   onClose: () => void;
@@ -35,6 +36,17 @@ function mapDisplayName(map: MapEntity) {
   return map.name ?? map.id;
 }
 
+function parseForm(form: NewMapForm) {
+  return {
+    width: Math.max(4, Math.min(60, parseInt(form.width, 10) || 20)) as Cells,
+    height: Math.max(4, Math.min(60, parseInt(form.height, 10) || 20)) as Cells,
+    cellSize: (parseInt(form.cellSize, 10) || 10) as Feet,
+    seed:
+      form.useSeed && form.seed ? parseInt(form.seed, 10) : undefined,
+    name: form.name || "New Map",
+  };
+}
+
 export function MapManager({ onClose }: Props) {
   const dispatch = useAppDispatch();
   const maps = useSelector(selectAllMaps);
@@ -42,10 +54,26 @@ export function MapManager({ onClose }: Props) {
   const battle = useSelector(selectBattle);
   const [form, setForm] = useState(defaultForm);
   const [showCreate, setShowCreate] = useState(false);
+  const [randomNonce, setRandomNonce] = useState(0);
   const importRef = useRef<HTMLInputElement>(null);
   const formId = useId();
 
   const canActivate = battle.phase === Phase.Placement;
+
+  const preview = useMemo(() => {
+    if (!showCreate) return null;
+    const { width, height, cellSize, seed, name } = parseForm(form);
+    return generateGridMap(
+      "preview" as MapId,
+      cellSize,
+      width,
+      height,
+      seed,
+      name,
+    );
+    // randomNonce forces a re-roll for unseeded maps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreate, form.width, form.height, form.cellSize, form.useSeed, form.seed, randomNonce]);
 
   function handleActivate(mapId: MapId) {
     dispatch(setMap(mapId));
@@ -53,7 +81,7 @@ export function MapManager({ onClose }: Props) {
   }
 
   function handleDelete(mapId: MapId) {
-    if (mapId === activeMap?.id) return; // don't delete active map
+    if (mapId === activeMap?.id) return;
     dispatch(deleteMap(mapId));
   }
 
@@ -82,26 +110,18 @@ export function MapManager({ onClose }: Props) {
       }
     };
     reader.readAsText(file);
-    // Reset so the same file can be re-imported
     e.target.value = "";
   }
 
   function handleCreate(e: React.SyntheticEvent) {
     e.preventDefault();
-    const width = Math.max(4, Math.min(60, parseInt(form.width, 10) || 20));
-    const height = Math.max(4, Math.min(60, parseInt(form.height, 10) || 20));
-    const cellSize = (parseInt(form.cellSize, 10) || 10) as Feet;
-    const seed =
-      form.useSeed && form.seed ? parseInt(form.seed, 10) : undefined;
+    const { width, height, cellSize, seed, name } = parseForm(form);
     const id = String(Date.now()) as MapId;
-    const map = generateGridMap(
-      id,
-      cellSize,
-      width as Cells,
-      height as Cells,
-      seed,
-      form.name || "New Map",
-    );
+    // Reuse the already-rendered preview data (same seed → same map)
+    const map =
+      preview && preview.seed === seed
+        ? { ...preview, id, name }
+        : generateGridMap(id, cellSize, width, height, seed, name);
     dispatch(addMap(map));
     setForm(defaultForm);
     setShowCreate(false);
@@ -259,6 +279,41 @@ export function MapManager({ onClose }: Props) {
                   placeholder="random"
                 />
               </label>
+
+              {preview && (
+                <div className="map-preview">
+                  <svg
+                    viewBox={`0 0 ${preview.width} ${preview.height}`}
+                    width={preview.width * 8}
+                    height={preview.height * 8}
+                    className="map-preview-svg"
+                    style={{ imageRendering: "pixelated" }}
+                  >
+                    {Object.values(preview.cells.entities).map((cell) => (
+                      <rect
+                        key={cell.id}
+                        x={cell.x}
+                        y={cell.y}
+                        width={1}
+                        height={1}
+                        fill={terrainColours[cell.type]}
+                      />
+                    ))}
+                  </svg>
+                  {!form.useSeed && (
+                    <button
+                      type="button"
+                      className="map-preview-reroll"
+                      onClick={() => {
+                        setRandomNonce((n) => n + 1);
+                      }}
+                    >
+                      Reroll
+                    </button>
+                  )}
+                </div>
+              )}
+
               <button type="submit">Create</button>
             </form>
           )}
