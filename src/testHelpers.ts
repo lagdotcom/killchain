@@ -34,13 +34,20 @@ export function makeGridMap(
 
 export const defaultBattleState: BattleState = {
   activeUnitId: undefined,
+  allianceMap: {},
+  accumulatedZoneVP: {},
+  battleLog: [],
   canPass: false,
+  exitedUnitIds: [],
+  finalVP: undefined,
   mapId: undefined,
   messages: [],
   phase: Phase.Placement,
   sideOrder: [],
   sideIndex: NaN,
   turn: 0,
+  turnLimit: undefined,
+  victoryConditions: [],
 };
 
 let _uid = 0;

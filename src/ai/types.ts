@@ -1,4 +1,15 @@
+import type { SideId } from "../flavours.js";
+import type { VictoryCondition } from "../state/scenarios.js";
+
 export type { AiPersonality } from "../state/sides.js";
+
+export interface VpContext {
+  conditions: VictoryCondition[];
+  sideId: SideId;
+  turn: number;
+  turnLimit?: number;
+  allianceMap: Partial<Record<SideId, number>>;
+}
 
 export interface AiConfig {
   personality: string;

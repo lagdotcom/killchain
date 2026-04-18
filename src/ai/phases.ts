@@ -31,7 +31,7 @@ import {
   scoreMoveCell,
   scorePlacementCell,
 } from "./scoring.js";
-import type { AiConfig } from "./types.js";
+import type { AiConfig, VpContext } from "./types.js";
 
 type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 
@@ -129,6 +129,15 @@ export const aiMissile: Thunk =
     const map = selectMap(state);
     if (!map) return;
 
+    const battle = selectBattle(state);
+    const vpContext: VpContext = {
+      conditions: battle.victoryConditions,
+      sideId: side.id,
+      turn: battle.turn,
+      ...(battle.turnLimit !== undefined && { turnLimit: battle.turnLimit }),
+      allianceMap: battle.allianceMap,
+    };
+
     const myUnits = selectAllUnits(state).filter(
       (u) =>
         u.side === side.id &&
@@ -165,10 +174,10 @@ export const aiMissile: Thunk =
         if (config.missilePriority === "strongest") {
           s = t.type.hits - t.damage;
         } else if (config.missilePriority === "weakest") {
-          s = scoreAttackTarget(unit, t, g, true, config.focusFire);
+          s = scoreAttackTarget(unit, t, g, true, config.focusFire, vpContext);
         } else {
           s =
-            scoreAttackTarget(unit, t, g, true, config.focusFire) -
+            scoreAttackTarget(unit, t, g, true, config.focusFire, vpContext) -
             manhattanDistance(unit, t) * 0.01;
         }
         if (s > bestScore) {
@@ -192,6 +201,15 @@ export const aiMove: Thunk =
     if (!map) return;
 
     const initialState = getState();
+    const battle = selectBattle(initialState);
+    const vpContext: VpContext = {
+      conditions: battle.victoryConditions,
+      sideId: side.id,
+      turn: battle.turn,
+      ...(battle.turnLimit !== undefined && { turnLimit: battle.turnLimit }),
+      allianceMap: battle.allianceMap,
+    };
+
     const sides = selectAllSides(initialState);
     const allUnits = selectAllUnits(initialState);
     const totalUnits = allUnits.filter((u) => u.side === side.id).length;
@@ -285,7 +303,7 @@ export const aiMove: Thunk =
         : config;
 
       const score = (cell: XY) =>
-        scoreMoveCell(cell, liveEnemies, effectiveConfig, unit, map);
+        scoreMoveCell(cell, liveEnemies, effectiveConfig, unit, map, vpContext);
 
       const best = findBestMove(unit, unitEntities, map, score);
       if (!best) continue;
@@ -298,6 +316,7 @@ export const aiMove: Thunk =
           config,
           unit,
           map,
+          vpContext,
         );
         if (score(best) < currentScore) continue;
       }
@@ -315,6 +334,17 @@ export const aiMelee: Thunk =
   (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
     const map = selectMap(getState());
     if (!map) return;
+
+    const meleeBattle = selectBattle(getState());
+    const meleeVpContext: VpContext = {
+      conditions: meleeBattle.victoryConditions,
+      sideId: side.id,
+      turn: meleeBattle.turn,
+      ...(meleeBattle.turnLimit !== undefined && {
+        turnLimit: meleeBattle.turnLimit,
+      }),
+      allianceMap: meleeBattle.allianceMap,
+    };
 
     const myUnitIds = selectAllUnits(getState())
       .filter((u) => u.side === side.id && u.ready && !isNaN(u.x))
@@ -348,10 +378,24 @@ export const aiMelee: Thunk =
         if (config.targetPriority === "strongest") {
           s = t.type.hits - t.damage;
         } else if (config.targetPriority === "weakest") {
-          s = scoreAttackTarget(unit, t, g, false, config.focusFire);
+          s = scoreAttackTarget(
+            unit,
+            t,
+            g,
+            false,
+            config.focusFire,
+            meleeVpContext,
+          );
         } else {
           s =
-            scoreAttackTarget(unit, t, g, false, config.focusFire) -
+            scoreAttackTarget(
+              unit,
+              t,
+              g,
+              false,
+              config.focusFire,
+              meleeVpContext,
+            ) -
             manhattanDistance(unit, t) * 0.01;
         }
         if (s > bestScore) {

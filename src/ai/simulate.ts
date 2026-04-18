@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 
-import type { MapId } from "../flavours.js";
+import type { MapId, SideId, VictoryPoints } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import type { UnitDefinition } from "../killchain/types.js";
 import {
@@ -17,7 +17,13 @@ import { loadScenarioAction } from "../state/actions.js";
 import { mapsAdapter } from "../state/maps.js";
 import { rosterAdapter } from "../state/roster.js";
 import type { Scenario } from "../state/scenarios.js";
-import { selectAllUnits, selectPhase, selectTurn } from "../state/selectors.js";
+import {
+  selectAllUnits,
+  selectBattle,
+  selectFinalVP,
+  selectPhase,
+  selectTurn,
+} from "../state/selectors.js";
 import { makeStore } from "../state/store.js";
 import { runAiTurn } from "./index.js";
 import type { AiPersonality } from "./types.js";
@@ -48,6 +54,7 @@ export interface BattleResult {
   winner: 0 | 1 | null; // side index, or null on rout/draw/timeout
   turns: number;
   sides: [SideResult, SideResult];
+  vp?: Partial<Record<SideId, VictoryPoints>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +262,8 @@ export function runBattle(setup: BattleSetup): BattleResult {
   const phase = selectPhase(finalState);
   const turns = selectTurn(finalState);
   const allUnits = selectAllUnits(finalState);
+  const finalVP = selectFinalVP(finalState);
+  const finalBattle = selectBattle(finalState);
 
   const survivors0 = allUnits.filter(
     (u) => u.side === 0 && u.status !== "Rout",
@@ -263,12 +272,26 @@ export function runBattle(setup: BattleSetup): BattleResult {
     (u) => u.side === 1 && u.status !== "Rout",
   ).length;
 
+  const side0 = patchedScenario.sides[0]!;
+  const side1 = patchedScenario.sides[1]!;
+
   let outcome: BattleResult["outcome"];
   let winner: 0 | 1 | null;
+
+  const turnLimitReached =
+    finalBattle.turnLimit !== undefined &&
+    finalBattle.turn >= finalBattle.turnLimit &&
+    survivors0 > 0 &&
+    survivors1 > 0;
 
   if (phase !== Phase.Completed) {
     outcome = "timeout";
     winner = null;
+  } else if (turnLimitReached) {
+    outcome = "timeout";
+    const vpSide0 = finalVP?.[side0.id] ?? 0;
+    const vpSide1 = finalVP?.[side1.id] ?? 0;
+    winner = vpSide0 > vpSide1 ? 0 : vpSide1 > vpSide0 ? 1 : null;
   } else if (survivors0 === 0 && survivors1 === 0) {
     outcome = "rout";
     winner = null;
@@ -282,9 +305,6 @@ export function runBattle(setup: BattleSetup): BattleResult {
     outcome = "victory";
     winner = null;
   }
-
-  const side0 = patchedScenario.sides[0]!;
-  const side1 = patchedScenario.sides[1]!;
 
   return {
     outcome,
@@ -304,6 +324,7 @@ export function runBattle(setup: BattleSetup): BattleResult {
         survivingUnits: survivors1,
       },
     ],
+    ...(finalVP !== undefined && { vp: finalVP }),
   };
 }
 

@@ -95,6 +95,13 @@ export const battleVictoryResult = (side: SideEntity): LogMessage => ({
   text: `Only ${side.name} remains; victory!`,
 });
 
+export const battleTimeoutResult = (winnerName: string | null): LogMessage => ({
+  text:
+    winnerName !== null
+      ? `Turn limit reached — ${winnerName} wins on victory points!`
+      : "Turn limit reached — a draw!",
+});
+
 export function moraleStatusMessage(result: MoraleStatusResult): string {
   switch (result.type) {
     case "loser":
