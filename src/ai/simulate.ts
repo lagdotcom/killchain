@@ -16,7 +16,7 @@ import { generateGridMap } from "../sampleData.js";
 import { loadScenarioAction } from "../state/actions.js";
 import { mapsAdapter } from "../state/maps.js";
 import { rosterAdapter } from "../state/roster.js";
-import type { Scenario } from "../state/scenarios.js";
+import type { Scenario, VictoryZone } from "../state/scenarios.js";
 import {
   selectAllUnits,
   selectBattle,
@@ -81,6 +81,8 @@ export const SIM_DEFINITIONS: UnitDefinition[] = [
 // ---------------------------------------------------------------------------
 
 const SIM_MAP_ID: MapId = "sim";
+
+const VILLAGE_ZONE: VictoryZone = { x: 7, y: 7, width: 6, height: 6 };
 
 export const SCENARIOS: Record<string, Scenario> = {
   standard: {
@@ -216,6 +218,45 @@ export const SCENARIOS: Record<string, Scenario> = {
           { definitionId: "sim-medium-foot", name: "Crossbows", missile: true },
         ],
       },
+    ],
+  },
+  "raiders-vs-village": {
+    id: "sim-raiders-vs-village",
+    name: "Raiders vs Village",
+    mapId: SIM_MAP_ID,
+    sides: [
+      {
+        id: 0,
+        name: "Raiders",
+        colour: "#f80",
+        deploymentZone: { x: 0, y: 0, width: 20, height: 5 },
+        units: [
+          { definitionId: "sim-light-horse", name: "Riders" },
+          { definitionId: "sim-light-horse", name: "Outriders" },
+          { definitionId: "sim-medium-horse", name: "Horsemen" },
+          { definitionId: "sim-light-horse", name: "Flankers" },
+        ],
+      },
+      {
+        id: 1,
+        name: "Villagers",
+        colour: "#48f",
+        deploymentZone: { x: 7, y: 7, width: 6, height: 6 },
+        units: [
+          { definitionId: "sim-heavy-foot", name: "Militia" },
+          { definitionId: "sim-heavy-foot", name: "Militia" },
+          { definitionId: "sim-light-foot", name: "Archers", missile: true },
+        ],
+      },
+    ],
+    rules: { turnLimit: 8 },
+    victoryConditions: [
+      { type: "zone_held_turns", zone: VILLAGE_ZONE, sideId: 0, points: 3 },
+      { type: "control_zone", zone: VILLAGE_ZONE, sideId: 0, points: 5 },
+      { type: "units_destroyed", sideId: 0, points: 2 },
+      { type: "zone_held_turns", zone: VILLAGE_ZONE, sideId: 1, points: 3 },
+      { type: "turns_survived", sideId: 1, points: 8 },
+      { type: "units_destroyed", sideId: 1, points: 1 },
     ],
   },
 };
@@ -397,6 +438,7 @@ function main() {
       cavalry: "Heavy horse-only armies",
       ranged: "Two archer units and light horse",
       asymmetric: "Cavalry raiders vs heavy foot shield wall",
+      "raiders-vs-village": "4 horse raiders vs 3 village defenders; VP + turn limit",
     };
     for (const [name, desc] of Object.entries(descs)) {
       console.log(`  ${name.padEnd(14)} ${desc}`);
