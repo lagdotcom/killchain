@@ -49,6 +49,17 @@ export const runAiTurn: Thunk = () => (dispatch, getState) => {
   }
 
   const activeSide = selectActiveSide(state);
+
+  // All sides surprised → sideOrder is empty for combat phases. Auto-advance.
+  if (
+    !activeSide &&
+    selectAllSides(state).some((s) => s.aiPersonality) &&
+    (phase === Phase.Missile || phase === Phase.Move || phase === Phase.Melee)
+  ) {
+    dispatch(pass());
+    return;
+  }
+
   if (!activeSide?.aiPersonality) return;
 
   const config = AI_CONFIGS[activeSide.aiPersonality] ?? AI_CONFIGS.aggressive;

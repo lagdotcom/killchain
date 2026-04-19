@@ -414,12 +414,8 @@ export const aiMelee: Thunk =
 // ---------------------------------------------------------------------------
 
 export const aiMorale: Thunk = () => (dispatch, getState) => {
-  const state = getState();
-  const battle = selectBattle(state);
-  if (!battle.canPass) {
-    const sides = selectAllSides(state);
-    const result = getMoraleStatus(sides);
-    dispatch(rollMorale(result.type === "loser" ? result.side : undefined));
-  }
+  const sides = selectAllSides(getState());
+  const result = getMoraleStatus(sides);
+  dispatch(rollMorale(result.type === "loser" ? result.side : undefined));
   dispatch(pass());
 };
