@@ -8,4 +8,5 @@ declare const process: {
 
 declare module "fs" {
   export function readFileSync(path: string, encoding: "utf-8"): string;
+  export function writeFileSync(path: string, data: string): void;
 }

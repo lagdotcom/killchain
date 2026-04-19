@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 import type { MapId, SideId, VictoryPoints } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
@@ -55,6 +55,14 @@ export interface BattleResult {
   turns: number;
   sides: [SideResult, SideResult];
   vp?: Partial<Record<SideId, VictoryPoints>>;
+}
+
+export interface LogEntry {
+  scenario: string;
+  seed: number;
+  side0Personality: AiPersonality;
+  side1Personality: AiPersonality;
+  result: BattleResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -428,6 +436,14 @@ function main() {
     args.splice(battlesIdx, 2);
   }
 
+  // --log <file>  or  -l <file>
+  let logFile: string | undefined;
+  const logIdx = args.findIndex((a) => a === "--log" || a === "-l");
+  if (logIdx !== -1) {
+    logFile = args[logIdx + 1];
+    args.splice(logIdx, 2);
+  }
+
   const arg = args[0] ?? "standard";
 
   if (arg === "list") {
@@ -438,7 +454,8 @@ function main() {
       cavalry: "Heavy horse-only armies",
       ranged: "Two archer units and light horse",
       asymmetric: "Cavalry raiders vs heavy foot shield wall",
-      "raiders-vs-village": "4 horse raiders vs 3 village defenders; VP + turn limit",
+      "raiders-vs-village":
+        "4 horse raiders vs 3 village defenders; VP + turn limit",
     };
     for (const [name, desc] of Object.entries(descs)) {
       console.log(`  ${name.padEnd(14)} ${desc}`);
@@ -471,6 +488,12 @@ function main() {
 
   console.log(`Battles per matchup: ${n}\n`);
 
+  const sideId0 = scenario.sides[0]!.id;
+  const sideId1 = scenario.sides[1]!.id;
+  const sideName0 = scenario.sides[0]!.name;
+  const sideName1 = scenario.sides[1]!.name;
+  const allEntries: LogEntry[] = [];
+
   type Personality = AiPersonality;
   const personalities: Personality[] = [
     "aggressive",
@@ -490,15 +513,21 @@ function main() {
   for (const [p0, p1] of matchups) {
     const results: BattleResult[] = [];
     for (let i = 0; i < n; i++) {
-      results.push(
-        runBattle({
-          scenario,
-          definitions: extraDefs,
-          side0Personality: p0,
-          side1Personality: p1,
-          mapSeed: i,
-        }),
-      );
+      const result = runBattle({
+        scenario,
+        definitions: extraDefs,
+        side0Personality: p0,
+        side1Personality: p1,
+        mapSeed: i,
+      });
+      results.push(result);
+      allEntries.push({
+        scenario: arg,
+        seed: i,
+        side0Personality: p0,
+        side1Personality: p1,
+        result,
+      });
     }
 
     const wins0 = results.filter((r) => r.winner === 0).length;
@@ -515,6 +544,10 @@ function main() {
       victories.map((r) => r.sides[1].survivingUnits),
     ).toFixed(1);
 
+    const vpResults = results.filter((r) => r.vp !== undefined);
+    const avgVP0 = avg(vpResults.map((r) => r.vp![sideId0] ?? 0));
+    const avgVP1 = avg(vpResults.map((r) => r.vp![sideId1] ?? 0));
+
     const label = p0 === p1 ? `${p0} mirror` : `${p0} vs ${p1}`;
     console.log(`${label} (${n} battles)`);
     console.log(
@@ -524,8 +557,25 @@ function main() {
       `  ${p1.padEnd(12)} wins: ${String(wins1).padStart(3)} ${pct(wins1, n)}  avg survivors: ${avgSurv1}`,
     );
     console.log(
-      `  Avg turns: ${avgTurns}  Routs: ${routs}  Timeouts: ${timeouts}\n`,
+      `  Avg turns: ${avgTurns}  Routs: ${routs}  Timeouts: ${timeouts}`,
     );
+    if (vpResults.length > 0)
+      console.log(
+        `  Avg VP: ${sideName0.padEnd(12)} ${avgVP0.toFixed(1).padStart(5)}  ${sideName1.padEnd(12)} ${avgVP1.toFixed(1).padStart(5)}  (${vpResults.length}/${n} with VP)`,
+      );
+    console.log();
+  }
+
+  if (logFile !== undefined) {
+    const log = {
+      scenario: arg,
+      scenarioName: scenario.name,
+      battles: n,
+      timestamp: new Date().toISOString(),
+      entries: allEntries,
+    };
+    writeFileSync(logFile, JSON.stringify(log, null, 2));
+    console.log(`Results saved to ${logFile}`);
   }
 }
 
