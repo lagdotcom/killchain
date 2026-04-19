@@ -1,7 +1,9 @@
 import type { Action, ActionCreator, ThunkAction } from "@reduxjs/toolkit";
 
+import type { UnitId } from "../flavours.js";
 import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import { longRangeMax } from "../killchain/rules.js";
+import { inZone, isAllyByMap } from "../killchain/victory.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { isInDeploymentZone } from "../logic.js";
 import { findBestMove } from "../movement.js";
@@ -173,6 +175,15 @@ export const aiMissile: Thunk =
         let s: number;
         if (config.missilePriority === "strongest") {
           s = t.type.hits - t.damage;
+          if (
+            vpContext.conditions.some(
+              (c) =>
+                c.type === "unit_eliminated" &&
+                c.unitId === t.id &&
+                isAllyByMap(c.sideId, vpContext.sideId, vpContext.allianceMap),
+            )
+          )
+            s += 1000;
         } else if (config.missilePriority === "weakest") {
           s = scoreAttackTarget(unit, t, g, true, config.focusFire, vpContext);
         } else {
@@ -230,6 +241,47 @@ export const aiMove: Thunk =
       )
       .map((u) => u.id);
 
+    // Zone-holder pre-pass: for each undefended VP zone, assign the nearest
+    // eligible unit so it skips the "don't advance unless score improves" guard.
+    const zoneHolderIds = new Set<UnitId>();
+    const assignedZoneKeys = new Set<string>();
+    for (const cond of vpContext.conditions) {
+      if (
+        (cond.type !== "control_zone" && cond.type !== "zone_held_turns") ||
+        !isAllyByMap(cond.sideId, side.id, vpContext.allianceMap)
+      )
+        continue;
+      const zoneKey = `${cond.zone.x},${cond.zone.y},${cond.zone.width},${cond.zone.height}`;
+      if (assignedZoneKeys.has(zoneKey)) continue;
+      const defended = allUnits.some(
+        (u) =>
+          u.side === side.id &&
+          u.status !== "Rout" &&
+          !isNaN(u.x) &&
+          inZone(cond.zone, u.x, u.y),
+      );
+      if (defended) continue;
+      assignedZoneKeys.add(zoneKey);
+      const zoneCenterX = Math.round(cond.zone.x + cond.zone.width / 2);
+      const zoneCenterY = Math.round(cond.zone.y + cond.zone.height / 2);
+      let bestDist = Infinity;
+      let bestId: UnitId | undefined;
+      for (const uid of myUnitIds) {
+        if (zoneHolderIds.has(uid)) continue;
+        const candidate = allUnits.find((u) => u.id === uid);
+        if (!candidate) continue;
+        const d = manhattanDistance(candidate, {
+          x: zoneCenterX,
+          y: zoneCenterY,
+        });
+        if (d < bestDist) {
+          bestDist = d;
+          bestId = uid;
+        }
+      }
+      if (bestId !== undefined) zoneHolderIds.add(bestId);
+    }
+
     for (const unitId of myUnitIds) {
       // Re-read state to get up-to-date positions after previous moves.
       const unitEntities = selectUnitEntities(getState());
@@ -278,11 +330,13 @@ export const aiMove: Thunk =
         continue;
       }
 
+      const isZoneHolder = zoneHolderIds.has(unitId);
       const retreating =
         underPressure || (config.holdBackIfDamaged && unit.damage > 0);
 
       const skipAdvance =
         !config.chargeRecklessly &&
+        !isZoneHolder &&
         config.preferRanged &&
         unit.missile &&
         !retreating;
@@ -309,7 +363,12 @@ export const aiMove: Thunk =
       if (!best) continue;
 
       // Don't advance if standing still scores better (avoids pointless shuffling).
-      if (!retreating && !config.chargeRecklessly && !seekMelee) {
+      if (
+        !retreating &&
+        !config.chargeRecklessly &&
+        !seekMelee &&
+        !isZoneHolder
+      ) {
         const currentScore = scoreMoveCell(
           { x: unit.x, y: unit.y },
           liveEnemies,
@@ -377,6 +436,19 @@ export const aiMelee: Thunk =
         let s: number;
         if (config.targetPriority === "strongest") {
           s = t.type.hits - t.damage;
+          if (
+            meleeVpContext.conditions.some(
+              (c) =>
+                c.type === "unit_eliminated" &&
+                c.unitId === t.id &&
+                isAllyByMap(
+                  c.sideId,
+                  meleeVpContext.sideId,
+                  meleeVpContext.allianceMap,
+                ),
+            )
+          )
+            s += 1000;
         } else if (config.targetPriority === "weakest") {
           s = scoreAttackTarget(
             unit,

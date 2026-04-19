@@ -33,7 +33,23 @@ export function scoreAttackTarget(
     )
       ? 50
       : 0;
-  return -target + killBonus + shakenBonus + focusBonus + eliminateBonus;
+  const unitsDestroyedBonus = vpContext
+    ? vpContext.conditions
+        .filter(
+          (c) =>
+            c.type === "units_destroyed" &&
+            isAllyByMap(c.sideId, vpContext.sideId, vpContext.allianceMap),
+        )
+        .reduce((sum, c) => sum + c.points, 0)
+    : 0;
+  return (
+    -target +
+    killBonus +
+    shakenBonus +
+    focusBonus +
+    eliminateBonus +
+    unitsDestroyedBonus
+  );
 }
 
 export function scoreMoveCell(
@@ -48,13 +64,20 @@ export function scoreMoveCell(
     return 0;
 
   let score = 0;
+  const urgency = vpContext?.turnLimit
+    ? Math.min(vpContext.turn / vpContext.turnLimit, 1)
+    : 0;
 
+  let nearestDist = 0;
   if (enemies.length > 0) {
     const nearest = enemies.reduce((a, b) =>
       manhattanDistance(cell, a) < manhattanDistance(cell, b) ? a : b,
     );
-    const dist = manhattanDistance(cell, nearest);
-    score = config.holdBackIfDamaged && unit.damage > 0 ? dist : 0 - dist;
+    nearestDist = manhattanDistance(cell, nearest);
+    score =
+      config.holdBackIfDamaged && unit.damage > 0
+        ? nearestDist
+        : 0 - nearestDist;
   }
 
   if (map) {
@@ -66,12 +89,27 @@ export function scoreMoveCell(
   }
 
   if (vpContext) {
+    // turns_survived: as the turn limit nears, prefer staying distant from enemies.
+    const hasTurnsSurvived = vpContext.conditions.some(
+      (c) =>
+        c.type === "turns_survived" &&
+        isAllyByMap(c.sideId, vpContext.sideId, vpContext.allianceMap),
+    );
+    if (hasTurnsSurvived && enemies.length > 0 && urgency > 0) {
+      score += nearestDist * urgency * 2;
+    }
+
     for (const cond of vpContext.conditions) {
+      if (!isAllyByMap(cond.sideId, vpContext.sideId, vpContext.allianceMap))
+        continue;
       if (
         (cond.type === "control_zone" || cond.type === "zone_held_turns") &&
-        isAllyByMap(cond.sideId, vpContext.sideId, vpContext.allianceMap) &&
         inZone(cond.zone, cell.x, cell.y)
       ) {
+        // Zone bonus scales with urgency: more critical as the turn limit nears.
+        score += 3 * (1 + urgency * 2);
+      }
+      if (cond.type === "zone_violated" && inZone(cond.zone, cell.x, cell.y)) {
         score += 3;
       }
     }
