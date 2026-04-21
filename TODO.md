@@ -32,12 +32,9 @@ Should be front-end options for optional rules (could be folded into Scenario st
 
 ## Scenarios
 
-- **Victory conditions**: occupy cells, rout/disperse specific unit, escape area intact, etc.
-
 ## AI
 
 - Selectable skill level (distinct from personality)
-- Takes victory conditions into account
 
 ## Campaign play
 

@@ -86,9 +86,7 @@ describe("searchByTerrain", () => {
   }
 
   test("woods cells cost 2 to enter", () => {
-    const map = makeGridMap(3, 1, 1, {
-      "1,0": { type: "Woods" },
-    });
+    const map = makeGridMap(3, 1, 1, { "1,0": { type: "Woods" } });
     const g = makeEngine(map);
     const result = searchByTerrain(g, map, new Set(), xyId(0, 0));
     const costs = nodeCosts(result);
@@ -99,9 +97,7 @@ describe("searchByTerrain", () => {
   });
 
   test("uphill cells cost 2 to enter", () => {
-    const map = makeGridMap(3, 1, 1, {
-      "1,0": { elevation: 1 },
-    });
+    const map = makeGridMap(3, 1, 1, { "1,0": { elevation: 1 } });
     const g = makeEngine(map);
     const result = searchByTerrain(g, map, new Set(), xyId(0, 0));
     const costs = nodeCosts(result);
@@ -122,9 +118,7 @@ describe("searchByTerrain", () => {
   });
 
   test("invalid terrain for mounted units is unreachable", () => {
-    const map = makeGridMap(3, 1, 1, {
-      "1,0": { type: "Marsh" },
-    });
+    const map = makeGridMap(3, 1, 1, { "1,0": { type: "Marsh" } });
     const g = makeEngine(map);
     const result = searchByTerrain(g, map, new Set(["Marsh"]), xyId(0, 0), 10);
     const costs = nodeCosts(result);
@@ -135,9 +129,7 @@ describe("searchByTerrain", () => {
   });
 
   test("maxCost limits reachable cells with terrain costs", () => {
-    const map = makeGridMap(4, 1, 1, {
-      "1,0": { type: "Woods" },
-    });
+    const map = makeGridMap(4, 1, 1, { "1,0": { type: "Woods" } });
     const g = makeEngine(map);
     const result = searchByTerrain(g, map, new Set(), xyId(0, 0), 3);
     const costs = nodeCosts(result);

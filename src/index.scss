@@ -323,12 +323,14 @@ body,
     padding: 4px 12px;
     cursor: pointer;
     font-size: var(--font-size);
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
     border: 1px solid #555;
     color: white;
     border-radius: var(--border-radius);
 
-    &:hover { background: rgba(255,255,255,0.14); }
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
   }
 
   .manager-header-actions {
@@ -336,12 +338,16 @@ body,
     gap: 6px;
     align-items: center;
 
-    button, .import-btn {
+    button,
+    .import-btn {
       font-size: var(--font-size);
       padding: 4px 10px;
       cursor: pointer;
 
-      &:disabled { opacity: 0.4; cursor: not-allowed; }
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
     }
   }
 }
@@ -439,7 +445,6 @@ body,
       }
     }
   }
-
 }
 
 .map-create-form {
@@ -586,7 +591,6 @@ body,
     padding-top: 6px;
     margin-top: 2px;
   }
-
 }
 
 .map-create-form.roster-form {
@@ -866,7 +870,9 @@ body,
     font-size: var(--font-size);
   }
 
-  .scenario-label-wide { flex: 1; }
+  .scenario-label-wide {
+    flex: 1;
+  }
 }
 
 .scenario-editor-main {

@@ -1,12 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type {
-  Cells,
-  MapId,
-  ScenarioId,
-  SideId,
-  UnitDefinitionId,
-} from "./flavours.js";
+import type { UnitDefinitionId } from "./flavours.js";
 import { Phase } from "./killchain/rules.js";
 import type {
   DeploymentZone,
@@ -31,27 +25,28 @@ import { makeStore } from "./state/store.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeDef(id: string, type: UnitType = heavyFoot): UnitDefinition {
-  return { id: id as UnitDefinitionId, type };
-}
+const makeDef = (
+  id: UnitDefinitionId,
+  type: UnitType = heavyFoot,
+): UnitDefinition => ({ id, type });
 
 function makeScenario(overrides: Partial<Scenario> = {}): Scenario {
   return {
-    id: "s1" as ScenarioId,
+    id: "s1",
     name: "Test Scenario",
-    mapId: "map1" as MapId,
+    mapId: "map1",
     sides: [
       {
-        id: 0 as SideId,
+        id: 0,
         name: "Side A",
         colour: "#00f",
-        units: [{ definitionId: "def1" as UnitDefinitionId, name: "Unit A" }],
+        units: [{ definitionId: "def1", name: "Unit A" }],
       },
       {
-        id: 1 as SideId,
+        id: 1,
         name: "Side B",
         colour: "#f00",
-        units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
+        units: [{ definitionId: "def2", name: "Unit B" }],
       },
     ],
     ...overrides,
@@ -101,23 +96,16 @@ describe("loadScenarioAction", () => {
     const scenario = makeScenario({
       sides: [
         {
-          id: 0 as SideId,
+          id: 0,
           name: "Side A",
           colour: "#00f",
-          units: [
-            {
-              definitionId: "def1" as UnitDefinitionId,
-              name: "Unit A",
-              x: 3 as Cells,
-              y: 4 as Cells,
-            },
-          ],
+          units: [{ definitionId: "def1", name: "Unit A", x: 3, y: 4 }],
         },
         {
-          id: 1 as SideId,
+          id: 1,
           name: "Side B",
           colour: "#f00",
-          units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
+          units: [{ definitionId: "def2", name: "Unit B" }],
         },
       ],
     });
@@ -137,23 +125,16 @@ describe("loadScenarioAction", () => {
     const scenario = makeScenario({
       sides: [
         {
-          id: 0 as SideId,
+          id: 0,
           name: "Side A",
           colour: "#00f",
-          units: [
-            {
-              definitionId: "def1" as UnitDefinitionId,
-              name: "Unit A",
-              x: 1 as Cells,
-              y: 1 as Cells,
-            },
-          ],
+          units: [{ definitionId: "def1", name: "Unit A", x: 1, y: 1 }],
         },
         {
-          id: 1 as SideId,
+          id: 1,
           name: "Side B",
           colour: "#f00",
-          units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
+          units: [{ definitionId: "def2", name: "Unit B" }],
         },
       ],
     });
@@ -169,30 +150,16 @@ describe("loadScenarioAction", () => {
     const scenario = makeScenario({
       sides: [
         {
-          id: 0 as SideId,
+          id: 0,
           name: "Side A",
           colour: "#00f",
-          units: [
-            {
-              definitionId: "def1" as UnitDefinitionId,
-              name: "Unit A",
-              x: 1 as Cells,
-              y: 1 as Cells,
-            },
-          ],
+          units: [{ definitionId: "def1", name: "Unit A", x: 1, y: 1 }],
         },
         {
-          id: 1 as SideId,
+          id: 1,
           name: "Side B",
           colour: "#f00",
-          units: [
-            {
-              definitionId: "def2" as UnitDefinitionId,
-              name: "Unit B",
-              x: 8 as Cells,
-              y: 8 as Cells,
-            },
-          ],
+          units: [{ definitionId: "def2", name: "Unit B", x: 8, y: 8 }],
         },
       ],
     });
@@ -205,26 +172,21 @@ describe("loadScenarioAction", () => {
 
   test("deployment zones are propagated to side entities", () => {
     const store = storeWithDefs(makeDef("def1"), makeDef("def2"));
-    const zone: DeploymentZone = {
-      x: 0 as Cells,
-      y: 0 as Cells,
-      width: 4 as Cells,
-      height: 3 as Cells,
-    };
+    const zone: DeploymentZone = { x: 0, y: 0, width: 4, height: 3 };
     const scenario = makeScenario({
       sides: [
         {
-          id: 0 as SideId,
+          id: 0,
           name: "Side A",
           colour: "#00f",
           deploymentZone: zone,
-          units: [{ definitionId: "def1" as UnitDefinitionId, name: "Unit A" }],
+          units: [{ definitionId: "def1", name: "Unit A" }],
         },
         {
-          id: 1 as SideId,
+          id: 1,
           name: "Side B",
           colour: "#f00",
-          units: [{ definitionId: "def2" as UnitDefinitionId, name: "Unit B" }],
+          units: [{ definitionId: "def2", name: "Unit B" }],
         },
       ],
     });
@@ -242,19 +204,19 @@ describe("loadScenarioAction", () => {
     const scenario = makeScenario({
       sides: [
         {
-          id: 0 as SideId,
+          id: 0,
           name: "Side A",
           colour: "#00f",
           units: [
             {
-              definitionId: "def1" as UnitDefinitionId,
+              definitionId: "def1",
               name: "Archers",
               shortName: "HA",
               missile: true,
             },
           ],
         },
-        { id: 1 as SideId, name: "Side B", colour: "#f00", units: [] },
+        { id: 1, name: "Side B", colour: "#f00", units: [] },
       ],
     });
     store.dispatch(loadScenarioAction(scenario));

@@ -62,14 +62,7 @@ export function MapManager({ onClose }: Props) {
   const preview = useMemo(() => {
     if (!showCreate) return null;
     const { width, height, cellSize, seed, name } = parseForm(form);
-    return generateGridMap(
-      "preview" as MapId,
-      cellSize,
-      width,
-      height,
-      seed,
-      name,
-    );
+    return generateGridMap("preview", cellSize, width, height, seed, name);
     // randomNonce forces a re-roll for unseeded maps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -110,7 +103,7 @@ export function MapManager({ onClose }: Props) {
     reader.onload = (ev) => {
       try {
         const raw = JSON.parse(ev.target?.result as string) as MapEntity;
-        const newId = String(Date.now()) as MapId;
+        const newId: MapId = String(Date.now());
         dispatch(addMap({ ...raw, id: newId }));
       } catch {
         alert("Invalid map JSON.");
@@ -123,7 +116,7 @@ export function MapManager({ onClose }: Props) {
   function handleCreate(e: React.SyntheticEvent) {
     e.preventDefault();
     const { width, height, cellSize, seed, name } = parseForm(form);
-    const id = String(Date.now()) as MapId;
+    const id: MapId = String(Date.now());
     // Reuse the already-rendered preview data (same seed → same map)
     const map =
       preview && preview.seed === seed
