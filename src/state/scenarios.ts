@@ -10,7 +10,7 @@ import type {
   UnitId,
   VictoryPoints,
 } from "../flavours.js";
-import type { DeploymentZone } from "../killchain/types.js";
+import type { DeploymentZone, OptionalRules } from "../killchain/types.js";
 import type { AiPersonality } from "./sides.js";
 
 export type { DeploymentZone };
@@ -69,7 +69,7 @@ export type VictoryCondition =
   | { type: "turns_survived"; sideId: SideId; points: VictoryPoints };
 
 /** Per-scenario overrides for optional rules. */
-export interface RuleOverrides {
+export interface RuleOverrides extends OptionalRules {
   turnLimit?: number;
 }
 

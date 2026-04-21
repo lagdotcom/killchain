@@ -125,3 +125,8 @@ export const selectTurnLimit = createSelector(
   [selectBattle],
   (battle) => battle.turnLimit,
 );
+
+export const selectRules = createSelector(
+  [selectBattle],
+  (battle) => battle.rules,
+);

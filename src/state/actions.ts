@@ -22,7 +22,11 @@ import {
   Phase,
   phaseChanges,
 } from "../killchain/rules.js";
-import type { MoraleStatus, UnitDefinition } from "../killchain/types.js";
+import type {
+  MoraleStatus,
+  OptionalRules,
+  UnitDefinition,
+} from "../killchain/types.js";
 import {
   computeVP,
   findVPWinner,
@@ -145,6 +149,7 @@ export const setupBattleAction = createAction<{
   units: UnitEntity[];
   victoryConditions?: VictoryCondition[];
   turnLimit?: number;
+  rules?: OptionalRules;
 }>("battle/setup");
 
 /** Deploy a roster unit definition to a side's unplaced pool. */
@@ -223,6 +228,7 @@ export const loadScenarioAction =
         ...(scenario.rules?.turnLimit !== undefined && {
           turnLimit: scenario.rules.turnLimit,
         }),
+        ...(scenario.rules !== undefined && { rules: scenario.rules }),
       }),
     );
   };
@@ -327,10 +333,11 @@ export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
   const units = selectUnitEntities(state);
 
   const g = new KillChainEngine(map, units);
+  const { rules } = selectBattle(state);
 
   const missile = g.getDistance(attacker, defender) > map.cellSize;
 
-  const mods = getAttackModifiers(g, missile, attacker, defender);
+  const mods = getAttackModifiers(g, missile, attacker, defender, rules);
   const target = applyAttackModifiers(mods);
   const roll = rollDice(6);
   const hit = roll >= target;

@@ -9,6 +9,7 @@ import type {
   VictoryPoints,
 } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
+import type { OptionalRules } from "../killchain/types.js";
 import {
   battleRoutResult,
   battleTimeoutResult,
@@ -81,6 +82,7 @@ export interface BattleState {
   mapId: MapId | undefined;
   messages: LogMessage[];
   phase: Phase;
+  rules: OptionalRules;
   sideOrder: SideId[];
   sideIndex: number;
   turn: number;
@@ -99,6 +101,7 @@ const initialState: BattleState = {
   mapId: undefined,
   messages: [],
   phase: Phase.Placement,
+  rules: {},
   sideOrder: [],
   sideIndex: NaN,
   turn: 0,
@@ -167,7 +170,9 @@ export const battleSlice = createSlice({
         setupBattleAction,
         (
           state,
-          { payload: { map, sides, units, victoryConditions, turnLimit } },
+          {
+            payload: { map, sides, units, victoryConditions, turnLimit, rules },
+          },
         ) => {
           const deployable = sides
             .filter((s) => units.some((u) => u.side === s.id && isNaN(u.x)))
@@ -190,6 +195,7 @@ export const battleSlice = createSlice({
           state.phase = Phase.Placement;
           state.sideIndex = deployable.length > 0 ? 0 : NaN;
           state.sideOrder = shuffle(deployable);
+          state.rules = rules ?? {};
           state.turn = 0;
           state.turnLimit = turnLimit;
           state.victoryConditions = victoryConditions ?? [];

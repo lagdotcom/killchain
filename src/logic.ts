@@ -7,7 +7,11 @@ import {
   Phase,
   shortRangeMax,
 } from "./killchain/rules.js";
-import type { DeploymentZone, TerrainType } from "./killchain/types.js";
+import type {
+  DeploymentZone,
+  OptionalRules,
+  TerrainType,
+} from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
 import {
   type PathNode,
@@ -50,6 +54,7 @@ export function getTints(
   map: MapEntity,
   unitEntities: Record<UnitId, UnitEntity>,
   sideEntities: Partial<Record<SideId, SideEntity>>,
+  rules?: OptionalRules,
 ): Tint[] {
   if (!activeUnit) return [];
 
@@ -89,9 +94,11 @@ export function getTints(
         (e) => manhattanDistance(activeUnit, e) === 1,
       );
 
-      // Cavalry charge: unit cannot move at all.
-      if (adjacentEnemies.some((e) => e.type.mounted && e.moved > 0)) {
-        return [];
+      if (rules?.meleeEngagement) {
+        // Cavalry charge: unit cannot move at all.
+        if (adjacentEnemies.some((e) => e.type.mounted && e.moved > 0)) {
+          return [];
+        }
       }
 
       if (activeUnit.status === "Shaken" && enemies.length > 0) {
@@ -118,7 +125,7 @@ export function getTints(
       }
 
       // Normal unit in melee: costly withdrawal — one cell only, full move consumed.
-      if (adjacentEnemies.length > 0) {
+      if (rules?.meleeEngagement && adjacentEnemies.length > 0) {
         const remaining = activeUnit.type.move - activeUnit.moved;
         return reachable
           .filter((node) => manhattanDistance(node, activeUnit) === 1)

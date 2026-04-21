@@ -53,6 +53,17 @@ export interface Terrain {
 
 export type TerrainType = "Open" | "Woods" | "Marsh";
 
+export interface OptionalRules {
+  /** Mounted units get +1 attack when they moved this turn. Default: true. */
+  cavalryCharge?: boolean;
+  /** Missile-armed units get -1 attack when fighting in melee. Default: true. */
+  archerMeleePenalty?: boolean;
+  /** Units get +1 attack against flanked enemies. Default: true. */
+  flanking?: boolean;
+  /** Units cannot freely disengage from melee. Default: false. */
+  meleeEngagement?: boolean;
+}
+
 export interface KillChain<P> {
   cellSize: Feet;
   getDistance(a: Unit, b: Unit): Feet;

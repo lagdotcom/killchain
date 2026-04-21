@@ -4,7 +4,7 @@ import type { Cells, TerrainId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import type { DeploymentZone } from "./killchain/types.js";
-import { heavyFoot, heavyHorse } from "./killchain/units.js";
+import { heavyFoot, heavyHorse, lightHorse } from "./killchain/units.js";
 import { getTints, isInDeploymentZone } from "./logic.js";
 import type { MapEntity } from "./state/maps.js";
 import type { TerrainEntity } from "./state/terrain.js";
@@ -227,6 +227,115 @@ describe("getTints — flying unit", () => {
 
     expect(flyingCoords).toContain("6,5");
     expect(groundCoords).not.toContain("6,5");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Optional rule: meleeEngagement
+// ---------------------------------------------------------------------------
+
+describe("getTints — meleeEngagement rule", () => {
+  test("disabled (default): Normal unit adjacent to infantry can move freely", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const enemy = makeUnit({ side: 1, x: 5, y: 6 }); // adjacent infantry
+
+    const coords = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, enemy),
+      {},
+    ).map(({ x, y }) => `${x},${y}`);
+
+    // Without meleeEngagement, unit can move to far cells
+    expect(coords).toContain("5,3");
+    expect(coords).toContain("3,5");
+  });
+
+  test("enabled + cavalry charge: unit is completely locked in place", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const cavalry = makeUnit({
+      side: 1,
+      x: 5,
+      y: 6,
+      type: lightHorse,
+      moved: 10,
+    });
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, cavalry),
+      {},
+      { meleeEngagement: true },
+    );
+    expect(tints).toHaveLength(0);
+  });
+
+  test("enabled + unmoved cavalry: not a charge, unit may withdraw", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const cavalry = makeUnit({
+      side: 1,
+      x: 5,
+      y: 6,
+      type: lightHorse,
+      moved: 0,
+    }); // hasn't moved → not a charge
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, cavalry),
+      {},
+      { meleeEngagement: true },
+    );
+    expect(tints.length).toBeGreaterThan(0);
+  });
+
+  test("enabled + infantry contact: only 1-cell moves available", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const enemy = makeUnit({ side: 1, x: 5, y: 6 });
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, enemy),
+      {},
+      { meleeEngagement: true },
+    );
+    const coords = tints.map(({ x, y }) => `${x},${y}`);
+
+    expect(coords).toContain("5,4");
+    expect(coords).toContain("4,5");
+    expect(coords).toContain("6,5");
+    expect(coords).not.toContain("5,3");
+    expect(coords).not.toContain("3,5");
+  });
+
+  test("enabled + infantry contact: withdrawal cost equals full remaining move", () => {
+    const terrain = makeGridMap(10, 10);
+    // heavyFoot move=60, already moved 10 → remaining = 50
+    const unit = makeUnit({ side: 0, x: 5, y: 5, type: heavyFoot, moved: 10 });
+    const enemy = makeUnit({ side: 1, x: 5, y: 6 });
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, enemy),
+      {},
+      { meleeEngagement: true },
+    );
+
+    expect(tints.length).toBeGreaterThan(0);
+    expect(tints.every((t) => t.cost === 50)).toBe(true);
   });
 });
 

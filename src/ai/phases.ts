@@ -300,8 +300,12 @@ export const aiMove: Thunk =
         (e) => manhattanDistance(unit, e) === 1,
       );
 
-      // Cavalry charge: locked in place.
-      if (adjacentEnemies.some((e) => e.type.mounted && e.moved > 0)) continue;
+      // Cavalry charge: locked in place (only when meleeEngagement rule is on).
+      if (
+        battle.rules.meleeEngagement &&
+        adjacentEnemies.some((e) => e.type.mounted && e.moved > 0)
+      )
+        continue;
 
       // Shaken units must retreat and may not advance toward any enemy.
       if (unit.status === "Shaken") {
@@ -366,7 +370,8 @@ export const aiMove: Thunk =
       const score = (cell: XY) =>
         scoreMoveCell(cell, liveEnemies, effectiveConfig, unit, map, vpContext);
 
-      const inMelee = adjacentEnemies.length > 0;
+      const inMelee =
+        battle.rules.meleeEngagement && adjacentEnemies.length > 0;
       const best = findBestMove(
         unit,
         unitEntities,

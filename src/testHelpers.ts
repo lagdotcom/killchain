@@ -43,6 +43,7 @@ export const defaultBattleState: BattleState = {
   mapId: undefined,
   messages: [],
   phase: Phase.Placement,
+  rules: {},
   sideOrder: [],
   sideIndex: NaN,
   turn: 0,

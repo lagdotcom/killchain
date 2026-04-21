@@ -1,5 +1,5 @@
 import type { Feet } from "../flavours.js";
-import type { Armour, KillChain, Unit } from "./types.js";
+import type { Armour, KillChain, OptionalRules, Unit } from "./types.js";
 
 const targetByArmourType: Record<Armour, number> = {
   Unarmoured: 3,
@@ -22,6 +22,7 @@ export function getAttackModifiers<P>(
   missile: boolean,
   attacker: Unit,
   defender: Unit,
+  rules?: OptionalRules,
 ) {
   const distance: Feet = missile ? g.getDistance(attacker, defender) : 0;
 
@@ -42,9 +43,19 @@ export function getAttackModifiers<P>(
     woodsPenalty:
       missile && (mine.type === "Woods" || theirs.type === "Woods") ? 1 : 0,
 
-    archerPenalty: !missile && !!attacker.missile ? 1 : 0,
-    chargeBonus: attacker.type.mounted && attacker.moved && !missile ? 1 : 0,
-    flankingBonus: !missile && defender.flankCount > 0 ? 1 : 0,
+    archerPenalty:
+      !missile && !!attacker.missile && (rules?.archerMeleePenalty ?? true)
+        ? 1
+        : 0,
+    chargeBonus:
+      !!attacker.type.mounted &&
+      !!attacker.moved &&
+      !missile &&
+      (rules?.cavalryCharge ?? true)
+        ? 1
+        : 0,
+    flankingBonus:
+      !missile && defender.flankCount > 0 && (rules?.flanking ?? true) ? 1 : 0,
   };
 }
 

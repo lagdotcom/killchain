@@ -1,7 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { EuclideanEngine } from "./EuclideanEngine.js";
-import { getAttackRollTarget, getMovementCost } from "./rules.js";
+import {
+  getAttackModifiers,
+  getAttackRollTarget,
+  getMovementCost,
+} from "./rules.js";
 import {
   heavyFoot,
   heavyHorse,
@@ -215,6 +219,88 @@ test("multiple bonuses and penalties combine", () => {
 
   // Heavy base 6 - 1 hill - 1 charge - 1 flank = 3
   expect(getAttackRollTarget(g, false, attacker, defender)).toBe(3);
+});
+
+describe("optional rule — cavalryCharge", () => {
+  test("disabled: mounted unit that moved gets no charge bonus", () => {
+    const g = new EuclideanEngine();
+    const attacker = g.addUnit({ side: 0, type: lightHorse, moved: 3 }, 0, 0);
+    const defender = g.addUnit({ side: 1, type: unarmouredTroops }, 1, 0);
+
+    const mods = getAttackModifiers(g, false, attacker, defender, {
+      cavalryCharge: false,
+    });
+    expect(mods.chargeBonus).toBe(0);
+  });
+
+  test("enabled (default): mounted unit that moved gets charge bonus", () => {
+    const g = new EuclideanEngine();
+    const attacker = g.addUnit({ side: 0, type: lightHorse, moved: 3 }, 0, 0);
+    const defender = g.addUnit({ side: 1, type: unarmouredTroops }, 1, 0);
+
+    const mods = getAttackModifiers(g, false, attacker, defender);
+    expect(mods.chargeBonus).toBe(1);
+  });
+});
+
+describe("optional rule — archerMeleePenalty", () => {
+  test("disabled: missile unit in melee gets no penalty", () => {
+    const g = new EuclideanEngine();
+    const attacker = g.addUnit(
+      { side: 0, type: unarmouredTroops, missile: true },
+      0,
+      0,
+    );
+    const defender = g.addUnit({ side: 1, type: unarmouredTroops }, 1, 0);
+
+    const mods = getAttackModifiers(g, false, attacker, defender, {
+      archerMeleePenalty: false,
+    });
+    expect(mods.archerPenalty).toBe(0);
+  });
+
+  test("enabled (default): missile unit in melee gets penalty", () => {
+    const g = new EuclideanEngine();
+    const attacker = g.addUnit(
+      { side: 0, type: unarmouredTroops, missile: true },
+      0,
+      0,
+    );
+    const defender = g.addUnit({ side: 1, type: unarmouredTroops }, 1, 0);
+
+    const mods = getAttackModifiers(g, false, attacker, defender);
+    expect(mods.archerPenalty).toBe(1);
+  });
+});
+
+describe("optional rule — flanking", () => {
+  test("disabled: no flanking bonus even when flankCount > 0", () => {
+    const g = new EuclideanEngine();
+    const attacker = g.addUnit({ side: 0, type: unarmouredTroops }, 0, 0);
+    const defender = g.addUnit(
+      { side: 1, type: unarmouredTroops, flankCount: 1 },
+      1,
+      0,
+    );
+
+    const mods = getAttackModifiers(g, false, attacker, defender, {
+      flanking: false,
+    });
+    expect(mods.flankingBonus).toBe(0);
+  });
+
+  test("enabled (default): flanking bonus applies when flankCount > 0", () => {
+    const g = new EuclideanEngine();
+    const attacker = g.addUnit({ side: 0, type: unarmouredTroops }, 0, 0);
+    const defender = g.addUnit(
+      { side: 1, type: unarmouredTroops, flankCount: 1 },
+      1,
+      0,
+    );
+
+    const mods = getAttackModifiers(g, false, attacker, defender);
+    expect(mods.flankingBonus).toBe(1);
+  });
 });
 
 describe("getMovementCost", () => {
