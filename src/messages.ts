@@ -75,9 +75,7 @@ export const sideSurpriseResult = (
 export const sideInitiativeResult = (
   side: SideEntity,
   roll: number,
-): LogMessage => ({
-  text: `${side.name} rolled ${roll} for initiative.`,
-});
+): LogMessage => ({ text: `${side.name} rolled ${roll} for initiative.` });
 
 export const unitRouting = (unit: UnitEntity): LogMessage => ({
   text: `${unit.name} are routing away from battle.`,
@@ -95,6 +93,13 @@ export const battleRoutResult = (): LogMessage => ({
 
 export const battleVictoryResult = (side: SideEntity): LogMessage => ({
   text: `Only ${side.name} remains; victory!`,
+});
+
+export const battleTimeoutResult = (winnerName: string | null): LogMessage => ({
+  text:
+    winnerName !== null
+      ? `Turn limit reached — ${winnerName} wins on victory points!`
+      : "Turn limit reached — a draw!",
 });
 
 export function moraleStatusMessage(result: MoraleStatusResult): string {

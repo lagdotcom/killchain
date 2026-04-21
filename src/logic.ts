@@ -7,7 +7,11 @@ import {
   Phase,
   shortRangeMax,
 } from "./killchain/rules.js";
-import type { DeploymentZone, TerrainType } from "./killchain/types.js";
+import type {
+  DeploymentZone,
+  OptionalRules,
+  TerrainType,
+} from "./killchain/types.js";
 import { KillChainEngine } from "./KillChainEngine.js";
 import {
   type PathNode,
@@ -29,13 +33,7 @@ const invalidTerrain = new Set<TerrainType>();
 const nodeToTint = (
   { id, x, y, cost }: PathNode,
   reason: TintReason,
-): Tint => ({
-  id,
-  x,
-  y,
-  cost,
-  reason,
-});
+): Tint => ({ id, x, y, cost, reason });
 
 export function isInDeploymentZone(
   zone: DeploymentZone,
@@ -56,6 +54,7 @@ export function getTints(
   map: MapEntity,
   unitEntities: Record<UnitId, UnitEntity>,
   sideEntities: Partial<Record<SideId, SideEntity>>,
+  rules?: OptionalRules,
 ): Tint[] {
   if (!activeUnit) return [];
 
@@ -85,40 +84,52 @@ export function getTints(
         ).values(),
       );
 
-      if (activeUnit.status === "Shaken") {
-        const enemies = Object.values(unitEntities).filter(
-          (u) =>
-            isEnemy(activeUnit.side, u.side, sideEntities) &&
-            u.status !== "Rout" &&
-            !isNaN(u.x),
+      const enemies = Object.values(unitEntities).filter(
+        (u) =>
+          isEnemy(activeUnit.side, u.side, sideEntities) &&
+          u.status !== "Rout" &&
+          !isNaN(u.x),
+      );
+      const adjacentEnemies = enemies.filter(
+        (e) => manhattanDistance(activeUnit, e) === 1,
+      );
+
+      if (rules?.meleeEngagement) {
+        // Cavalry charge: unit cannot move at all.
+        if (adjacentEnemies.some((e) => e.type.mounted && e.moved > 0)) {
+          return [];
+        }
+      }
+
+      if (activeUnit.status === "Shaken" && enemies.length > 0) {
+        const currentDistances = new Map(
+          enemies.map((e) => [e.id, manhattanDistance(activeUnit, e)]),
         );
 
-        if (enemies.length > 0) {
-          const currentDistances = new Map(
-            enemies.map((e) => [e.id, manhattanDistance(activeUnit, e)]),
-          );
-          const adjacentEnemies = enemies.filter(
-            (e) => currentDistances.get(e.id) === 1,
-          );
+        const satisfiesBoth = (node: XY) =>
+          enemies.every(
+            (e) => manhattanDistance(node, e) >= currentDistances.get(e.id)!,
+          ) && adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
 
-          const satisfiesBoth = (node: XY) =>
-            enemies.every(
-              (e) => manhattanDistance(node, e) >= currentDistances.get(e.id)!,
-            ) && adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
+        const satisfiesExitMelee = (node: XY) =>
+          adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
 
-          const satisfiesExitMelee = (node: XY) =>
-            adjacentEnemies.every((e) => manhattanDistance(node, e) > 1);
+        const filtered = reachable.filter(satisfiesBoth);
+        const fallback =
+          adjacentEnemies.length > 0
+            ? reachable.filter(satisfiesExitMelee)
+            : reachable;
 
-          const filtered = reachable.filter(satisfiesBoth);
-          const fallback =
-            adjacentEnemies.length > 0
-              ? reachable.filter(satisfiesExitMelee)
-              : reachable;
+        const validNodes = filtered.length > 0 ? filtered : fallback;
+        return validNodes.map((node) => nodeToTint(node, "reachable"));
+      }
 
-          const validNodes = filtered.length > 0 ? filtered : fallback;
-
-          return validNodes.map((node) => nodeToTint(node, "reachable"));
-        }
+      // Normal unit in melee: costly withdrawal — one cell only, full move consumed.
+      if (rules?.meleeEngagement && adjacentEnemies.length > 0) {
+        const remaining = activeUnit.type.move - activeUnit.moved;
+        return reachable
+          .filter((node) => manhattanDistance(node, activeUnit) === 1)
+          .map((node) => nodeToTint({ ...node, cost: remaining }, "reachable"));
       }
 
       return reachable.map((node) => nodeToTint(node, "reachable"));

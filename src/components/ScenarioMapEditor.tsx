@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import type { Cells } from "../flavours.js";
-import { xyId } from "../killchain/EuclideanEngine.js";
+import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import type { DeploymentZone } from "../killchain/types.js";
 import type { MapEntity } from "../state/maps.js";
 import type { TerrainEntity } from "../state/terrain.js";
@@ -32,17 +32,17 @@ interface ScenarioMapEditorProps {
 }
 
 interface DraftZone {
-  ax: number;
-  ay: number;
-  bx: number;
-  by: number;
+  ax: Cells;
+  ay: Cells;
+  bx: Cells;
+  by: Cells;
 }
 
 function computeZone(draft: DraftZone): DeploymentZone {
-  const x = Math.min(draft.ax, draft.bx) as Cells;
-  const y = Math.min(draft.ay, draft.by) as Cells;
-  const width = (Math.abs(draft.bx - draft.ax) + 1) as Cells;
-  const height = (Math.abs(draft.by - draft.ay) + 1) as Cells;
+  const x = Math.min(draft.ax, draft.bx);
+  const y = Math.min(draft.ay, draft.by);
+  const width = Math.abs(draft.bx - draft.ax) + 1;
+  const height = Math.abs(draft.by - draft.ay) + 1;
   return { x, y, width, height };
 }
 
@@ -80,10 +80,7 @@ export function ScenarioMapEditor({
     );
   }
 
-  function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): {
-    x: number;
-    y: number;
-  } {
+  function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): XY {
     const rect = e.currentTarget.getBoundingClientRect();
     return {
       x: Math.floor((e.clientX - rect.left) / cellSize),
@@ -114,7 +111,7 @@ export function ScenarioMapEditor({
     const unitIdx = parseInt(parts[1]!, 10);
     if (isNaN(sideIdx) || isNaN(unitIdx)) return;
     const { x, y } = getCellFromEvent(e);
-    onPlace(x as Cells, y as Cells, sideIdx, unitIdx);
+    onPlace(x, y, sideIdx, unitIdx);
   }
 
   // ---- Zone drawing ---------------------------------------------------------

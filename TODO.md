@@ -3,12 +3,9 @@
 ## Rule correctness
 
 - **Delay**: No support for 'delaying action until after a lower initiative roller'.
-- **Melee**: "Any units in adjacent squares are considered engaged in melee, and may take their melee attacks." It seems odd that units can just move out of melee, especially if they were charged. How to fix this? Should it be fixed?
-
 Should be front-end options for optional rules (could be folded into Scenario stuff below?):
 
 - **Spearmen**: "Spearmen automatically go first regardless of initiative and get +1 to their first attack rolls if they have used one action to "set" and have not moved in the same turn. This number increases to +2 vs. cavalry."
-- Cavalry charge, archers being able to melee at -1 and flanking are all optional rules.
 
 ## Flashiness
 
@@ -32,12 +29,9 @@ Should be front-end options for optional rules (could be folded into Scenario st
 
 ## Scenarios
 
-- **Victory conditions**: occupy cells, rout/disperse specific unit, escape area intact, etc.
-
 ## AI
 
 - Selectable skill level (distinct from personality)
-- Takes victory conditions into account
 
 ## Campaign play
 

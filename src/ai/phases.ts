@@ -1,7 +1,9 @@
 import type { Action, ActionCreator, ThunkAction } from "@reduxjs/toolkit";
 
+import type { UnitId } from "../flavours.js";
 import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import { longRangeMax } from "../killchain/rules.js";
+import { inZone, isAllyByMap } from "../killchain/victory.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { isInDeploymentZone } from "../logic.js";
 import { findBestMove } from "../movement.js";
@@ -31,7 +33,7 @@ import {
   scoreMoveCell,
   scorePlacementCell,
 } from "./scoring.js";
-import type { AiConfig } from "./types.js";
+import type { AiConfig, VpContext } from "./types.js";
 
 type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 
@@ -40,7 +42,7 @@ type Thunk<T = void> = ActionCreator<ThunkAction<T, AppState, void, Action>>;
 // ---------------------------------------------------------------------------
 
 export const aiPlacement: Thunk =
-  (side: SideEntity) => (dispatch, getState) => {
+  (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
     const map = selectMap(getState());
     if (!map) return;
 
@@ -93,7 +95,14 @@ export const aiPlacement: Thunk =
       let best: XY | undefined;
       let bestScore = -Infinity;
       for (const cell of candidates) {
-        const s = scorePlacementCell(cell, zone, unit, placedPositions, map);
+        const s = scorePlacementCell(
+          cell,
+          zone,
+          unit,
+          placedPositions,
+          map,
+          config,
+        );
         if (s > bestScore) {
           bestScore = s;
           best = cell;
@@ -116,54 +125,82 @@ export const aiPlacement: Thunk =
 // Missile
 // ---------------------------------------------------------------------------
 
-export const aiMissile: Thunk = (side: SideEntity) => (dispatch, getState) => {
-  const state = getState();
-  const map = selectMap(state);
-  if (!map) return;
+export const aiMissile: Thunk =
+  (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
+    const state = getState();
+    const map = selectMap(state);
+    if (!map) return;
 
-  const myUnits = selectAllUnits(state).filter(
-    (u) =>
-      u.side === side.id &&
-      u.missile &&
-      u.ready &&
-      u.status !== "Rout" &&
-      !isNaN(u.x),
-  );
+    const battle = selectBattle(state);
+    const vpContext: VpContext = {
+      conditions: battle.victoryConditions,
+      sideId: side.id,
+      turn: battle.turn,
+      ...(battle.turnLimit !== undefined && { turnLimit: battle.turnLimit }),
+      allianceMap: battle.allianceMap,
+    };
 
-  for (const unit of myUnits) {
-    // Re-read live state each iteration — previous attacks may have removed enemies.
-    const liveUnits = selectAllUnits(getState());
-    const unitEntities = selectUnitEntities(getState());
-    const sideEntities = selectSideEntities(getState());
-    const g = new KillChainEngine(map, unitEntities);
+    const myUnits = selectAllUnits(state).filter(
+      (u) =>
+        u.side === side.id &&
+        u.missile &&
+        u.ready &&
+        u.status !== "Rout" &&
+        !isNaN(u.x),
+    );
 
-    const targets = liveUnits.filter((e) => {
-      if (
-        !isEnemy(side.id, e.side, sideEntities) ||
-        e.status === "Rout" ||
-        isNaN(e.x)
-      )
-        return false;
-      if (e.damage >= e.type.hits) return false; // already destroyed
-      const dist = manhattanDistance(unit, e) * map.cellSize;
-      return dist > map.cellSize && dist <= longRangeMax;
-    });
-    if (targets.length === 0) continue;
+    for (const unit of myUnits) {
+      // Re-read live state each iteration — previous attacks may have removed enemies.
+      const liveUnits = selectAllUnits(getState());
+      const unitEntities = selectUnitEntities(getState());
+      const sideEntities = selectSideEntities(getState());
+      const g = new KillChainEngine(map, unitEntities);
 
-    let best = targets[0]!;
-    let bestScore = -Infinity;
-    for (const t of targets) {
-      const s = scoreAttackTarget(unit, t, g, true);
-      if (s > bestScore) {
-        bestScore = s;
-        best = t;
+      const targets = liveUnits.filter((e) => {
+        if (
+          !isEnemy(side.id, e.side, sideEntities) ||
+          e.status === "Rout" ||
+          isNaN(e.x)
+        )
+          return false;
+        if (e.damage >= e.type.hits) return false; // already destroyed
+        const dist = manhattanDistance(unit, e) * map.cellSize;
+        return dist > map.cellSize && dist <= longRangeMax;
+      });
+      if (targets.length === 0) continue;
+
+      let best = targets[0]!;
+      let bestScore = -Infinity;
+      for (const t of targets) {
+        let s: number;
+        if (config.missilePriority === "strongest") {
+          s = t.type.hits - t.damage;
+          if (
+            vpContext.conditions.some(
+              (c) =>
+                c.type === "unit_eliminated" &&
+                c.unitId === t.id &&
+                isAllyByMap(c.sideId, vpContext.sideId, vpContext.allianceMap),
+            )
+          )
+            s += 1000;
+        } else if (config.missilePriority === "weakest") {
+          s = scoreAttackTarget(unit, t, g, true, config.focusFire, vpContext);
+        } else {
+          s =
+            scoreAttackTarget(unit, t, g, true, config.focusFire, vpContext) -
+            manhattanDistance(unit, t) * 0.01;
+        }
+        if (s > bestScore) {
+          bestScore = s;
+          best = t;
+        }
       }
-    }
 
-    dispatch(setActiveUnitId(unit.id));
-    dispatch(attack(best));
-  }
-};
+      dispatch(setActiveUnitId(unit.id));
+      dispatch(attack(best));
+    }
+  };
 
 // ---------------------------------------------------------------------------
 // Move
@@ -175,6 +212,15 @@ export const aiMove: Thunk =
     if (!map) return;
 
     const initialState = getState();
+    const battle = selectBattle(initialState);
+    const vpContext: VpContext = {
+      conditions: battle.victoryConditions,
+      sideId: side.id,
+      turn: battle.turn,
+      ...(battle.turnLimit !== undefined && { turnLimit: battle.turnLimit }),
+      allianceMap: battle.allianceMap,
+    };
+
     const sides = selectAllSides(initialState);
     const allUnits = selectAllUnits(initialState);
     const totalUnits = allUnits.filter((u) => u.side === side.id).length;
@@ -195,6 +241,47 @@ export const aiMove: Thunk =
       )
       .map((u) => u.id);
 
+    // Zone-holder pre-pass: for each undefended VP zone, assign the nearest
+    // eligible unit so it skips the "don't advance unless score improves" guard.
+    const zoneHolderIds = new Set<UnitId>();
+    const assignedZoneKeys = new Set<string>();
+    for (const cond of vpContext.conditions) {
+      if (
+        (cond.type !== "control_zone" && cond.type !== "zone_held_turns") ||
+        !isAllyByMap(cond.sideId, side.id, vpContext.allianceMap)
+      )
+        continue;
+      const zoneKey = `${cond.zone.x},${cond.zone.y},${cond.zone.width},${cond.zone.height}`;
+      if (assignedZoneKeys.has(zoneKey)) continue;
+      const defended = allUnits.some(
+        (u) =>
+          u.side === side.id &&
+          u.status !== "Rout" &&
+          !isNaN(u.x) &&
+          inZone(cond.zone, u.x, u.y),
+      );
+      if (defended) continue;
+      assignedZoneKeys.add(zoneKey);
+      const zoneCenterX = Math.round(cond.zone.x + cond.zone.width / 2);
+      const zoneCenterY = Math.round(cond.zone.y + cond.zone.height / 2);
+      let bestDist = Infinity;
+      let bestId: UnitId | undefined;
+      for (const uid of myUnitIds) {
+        if (zoneHolderIds.has(uid)) continue;
+        const candidate = allUnits.find((u) => u.id === uid);
+        if (!candidate) continue;
+        const d = manhattanDistance(candidate, {
+          x: zoneCenterX,
+          y: zoneCenterY,
+        });
+        if (d < bestDist) {
+          bestDist = d;
+          bestId = uid;
+        }
+      }
+      if (bestId !== undefined) zoneHolderIds.add(bestId);
+    }
+
     for (const unitId of myUnitIds) {
       // Re-read state to get up-to-date positions after previous moves.
       const unitEntities = selectUnitEntities(getState());
@@ -208,6 +295,17 @@ export const aiMove: Thunk =
           u.status !== "Rout" &&
           !isNaN(u.x),
       );
+
+      const adjacentEnemies = liveEnemies.filter(
+        (e) => manhattanDistance(unit, e) === 1,
+      );
+
+      // Cavalry charge: locked in place (only when meleeEngagement rule is on).
+      if (
+        battle.rules.meleeEngagement &&
+        adjacentEnemies.some((e) => e.type.mounted && e.moved > 0)
+      )
+        continue;
 
       // Shaken units must retreat and may not advance toward any enemy.
       if (unit.status === "Shaken") {
@@ -243,11 +341,13 @@ export const aiMove: Thunk =
         continue;
       }
 
+      const isZoneHolder = zoneHolderIds.has(unitId);
       const retreating =
         underPressure || (config.holdBackIfDamaged && unit.damage > 0);
 
       const skipAdvance =
         !config.chargeRecklessly &&
+        !isZoneHolder &&
         config.preferRanged &&
         unit.missile &&
         !retreating;
@@ -258,29 +358,56 @@ export const aiMove: Thunk =
       )
         continue;
 
+      // neverPassMelee: always close to contact when any enemy is within 2 cells.
+      const seekMelee =
+        config.neverPassMelee &&
+        liveEnemies.some((e) => manhattanDistance(unit, e) <= 2);
+
       const effectiveConfig = retreating
         ? { ...config, holdBackIfDamaged: true }
         : config;
 
       const score = (cell: XY) =>
-        scoreMoveCell(cell, liveEnemies, effectiveConfig, unit);
+        scoreMoveCell(cell, liveEnemies, effectiveConfig, unit, map, vpContext);
 
-      const best = findBestMove(unit, unitEntities, map, score);
+      const inMelee =
+        battle.rules.meleeEngagement && adjacentEnemies.length > 0;
+      const best = findBestMove(
+        unit,
+        unitEntities,
+        map,
+        score,
+        inMelee ? (cell) => manhattanDistance(cell, unit) === 1 : undefined,
+      );
       if (!best) continue;
 
       // Don't advance if standing still scores better (avoids pointless shuffling).
-      if (!retreating && !config.chargeRecklessly) {
+      if (
+        !retreating &&
+        !config.chargeRecklessly &&
+        !seekMelee &&
+        !isZoneHolder
+      ) {
         const currentScore = scoreMoveCell(
           { x: unit.x, y: unit.y },
           liveEnemies,
           config,
           unit,
+          map,
+          vpContext,
         );
         if (score(best) < currentScore) continue;
       }
 
       dispatch(setActiveUnitId(unitId));
-      dispatch(moveAction({ unit, x: best.x, y: best.y, cost: best.cost }));
+      dispatch(
+        moveAction({
+          unit,
+          x: best.x,
+          y: best.y,
+          cost: inMelee ? unit.type.move - unit.moved : best.cost,
+        }),
+      );
     }
   };
 
@@ -292,6 +419,17 @@ export const aiMelee: Thunk =
   (side: SideEntity, config: AiConfig) => (dispatch, getState) => {
     const map = selectMap(getState());
     if (!map) return;
+
+    const meleeBattle = selectBattle(getState());
+    const meleeVpContext: VpContext = {
+      conditions: meleeBattle.victoryConditions,
+      sideId: side.id,
+      turn: meleeBattle.turn,
+      ...(meleeBattle.turnLimit !== undefined && {
+        turnLimit: meleeBattle.turnLimit,
+      }),
+      allianceMap: meleeBattle.allianceMap,
+    };
 
     const myUnitIds = selectAllUnits(getState())
       .filter((u) => u.side === side.id && u.ready && !isNaN(u.x))
@@ -324,11 +462,38 @@ export const aiMelee: Thunk =
         let s: number;
         if (config.targetPriority === "strongest") {
           s = t.type.hits - t.damage;
+          if (
+            meleeVpContext.conditions.some(
+              (c) =>
+                c.type === "unit_eliminated" &&
+                c.unitId === t.id &&
+                isAllyByMap(
+                  c.sideId,
+                  meleeVpContext.sideId,
+                  meleeVpContext.allianceMap,
+                ),
+            )
+          )
+            s += 1000;
         } else if (config.targetPriority === "weakest") {
-          s = scoreAttackTarget(unit, t, g, false);
+          s = scoreAttackTarget(
+            unit,
+            t,
+            g,
+            false,
+            config.focusFire,
+            meleeVpContext,
+          );
         } else {
           s =
-            scoreAttackTarget(unit, t, g, false) -
+            scoreAttackTarget(
+              unit,
+              t,
+              g,
+              false,
+              config.focusFire,
+              meleeVpContext,
+            ) -
             manhattanDistance(unit, t) * 0.01;
         }
         if (s > bestScore) {
@@ -347,12 +512,8 @@ export const aiMelee: Thunk =
 // ---------------------------------------------------------------------------
 
 export const aiMorale: Thunk = () => (dispatch, getState) => {
-  const state = getState();
-  const battle = selectBattle(state);
-  if (!battle.canPass) {
-    const sides = selectAllSides(state);
-    const result = getMoraleStatus(sides);
-    dispatch(rollMorale(result.type === "loser" ? result.side : undefined));
-  }
+  const sides = selectAllSides(getState());
+  const result = getMoraleStatus(sides);
+  dispatch(rollMorale(result.type === "loser" ? result.side : undefined));
   dispatch(pass());
 };

@@ -6,7 +6,14 @@ import {
   type ThunkAction,
 } from "@reduxjs/toolkit";
 
-import type { Cells, Feet, MapId, SideId, UnitId } from "../flavours.js";
+import type {
+  Cells,
+  Feet,
+  MapId,
+  SideId,
+  UnitId,
+  VictoryPoints,
+} from "../flavours.js";
 import type { XY } from "../killchain/EuclideanEngine.js";
 import {
   applyAttackModifiers,
@@ -15,12 +22,27 @@ import {
   Phase,
   phaseChanges,
 } from "../killchain/rules.js";
-import type { MoraleStatus, UnitDefinition } from "../killchain/types.js";
+import type {
+  MoraleStatus,
+  OptionalRules,
+  UnitDefinition,
+} from "../killchain/types.js";
+import {
+  computeVP,
+  findVPWinner,
+  inZone,
+  isEnemyByMap,
+} from "../killchain/victory.js";
 import { KillChainEngine } from "../KillChainEngine.js";
 import { canFleeBoard, findBestMove } from "../movement.js";
 import { manhattanDistance, rollDice } from "../tools.js";
-import { allowPass, type BattleState, nextSide } from "./battle.js";
-import type { Scenario } from "./scenarios.js";
+import {
+  accumulateZoneVP,
+  allowPass,
+  type BattleState,
+  nextSide,
+} from "./battle.js";
+import type { Scenario, VictoryCondition } from "./scenarios.js";
 import {
   selectActiveUnit,
   selectAllSides,
@@ -36,8 +58,18 @@ import type { AppState } from "./store.js";
 import type { UnitEntity } from "./units.js";
 
 export type BattleOutcome =
-  | { type: "victory"; who: SideEntity }
-  | { type: "rout" };
+  | {
+      type: "victory";
+      who: SideEntity;
+      vp?: Partial<Record<SideId, VictoryPoints>>;
+    }
+  | { type: "rout"; vp?: Partial<Record<SideId, VictoryPoints>> }
+  | {
+      type: "timeout";
+      winner: SideId | null;
+      winnerName: string | null;
+      vp: Partial<Record<SideId, VictoryPoints>>;
+    };
 
 export type SideSetup = Omit<
   SideEntity,
@@ -115,23 +147,22 @@ export const setupBattleAction = createAction<{
   map: MapId;
   sides: SideSetup[];
   units: UnitEntity[];
+  victoryConditions?: VictoryCondition[];
+  turnLimit?: number;
+  rules?: OptionalRules;
 }>("battle/setup");
 
 /** Deploy a roster unit definition to a side's unplaced pool. */
 export const deployUnitAction = createAction(
   "battle/deployUnit",
   (definition: UnitDefinition, sideId: SideId) => ({
-    payload: {
-      definition,
-      sideId,
-      unitId: nanoid() as UnitId,
-    },
+    payload: { definition, sideId, unitId: nanoid() as UnitId },
   }),
 );
 
-export const surpriseAction = createAction<{
-  results: SurpriseRollResult[];
-}>("battle/surprise");
+export const surpriseAction = createAction<{ results: SurpriseRollResult[] }>(
+  "battle/surprise",
+);
 
 /** Instantiate and load a scenario, replacing the current battle. */
 export const loadScenarioAction =
@@ -150,7 +181,7 @@ export const loadScenarioAction =
             return null;
           }
           return {
-            id: `${scenario.id}-s${si}-u${ui}` as UnitId,
+            id: `${scenario.id}-s${si}-u${ui}`,
             name: setup.name,
             ...(setup.shortName !== undefined && {
               shortName: setup.shortName,
@@ -163,7 +194,7 @@ export const loadScenarioAction =
             flankCount: 0,
             damage: 0,
             moved: 0,
-            status: "Normal" as MoraleStatus,
+            status: "Normal",
             ready: false,
           };
         })
@@ -191,6 +222,13 @@ export const loadScenarioAction =
           }),
         ),
         units,
+        ...(scenario.victoryConditions !== undefined && {
+          victoryConditions: scenario.victoryConditions,
+        }),
+        ...(scenario.rules?.turnLimit !== undefined && {
+          turnLimit: scenario.rules.turnLimit,
+        }),
+        ...(scenario.rules !== undefined && { rules: scenario.rules }),
       }),
     );
   };
@@ -295,24 +333,17 @@ export const attack: Thunk = (defender: UnitEntity) => (dispatch, getState) => {
   const units = selectUnitEntities(state);
 
   const g = new KillChainEngine(map, units);
+  const { rules } = selectBattle(state);
 
   const missile = g.getDistance(attacker, defender) > map.cellSize;
 
-  const mods = getAttackModifiers(g, missile, attacker, defender);
+  const mods = getAttackModifiers(g, missile, attacker, defender, rules);
   const target = applyAttackModifiers(mods);
   const roll = rollDice(6);
   const hit = roll >= target;
 
   dispatch(
-    attackAction({
-      attacker,
-      defender,
-      missile,
-      mods,
-      target,
-      roll,
-      hit,
-    }),
+    attackAction({ attacker, defender, missile, mods, target, roll, hit }),
   );
 };
 
@@ -397,6 +428,25 @@ export const rollMorale: Thunk =
     const state = getState();
     const sides = selectAllSides(state);
     const units = selectAllUnits(state);
+    const battle = selectBattle(state);
+
+    // Accumulate zone_held_turns VP for each controlled zone before rolls.
+    const liveUnits = units.filter((u) => !isNaN(u.x) && u.status !== "Rout");
+    for (const cond of battle.victoryConditions) {
+      if (cond.type !== "zone_held_turns") continue;
+      const ownInZone = liveUnits.some(
+        (u) => u.side === cond.sideId && inZone(cond.zone, u.x, u.y),
+      );
+      const enemyInZone = liveUnits.some(
+        (u) =>
+          isEnemyByMap(u.side, cond.sideId, battle.allianceMap) &&
+          inZone(cond.zone, u.x, u.y),
+      );
+      if (ownInZone && !enemyInZone)
+        dispatch(
+          accumulateZoneVP({ sideId: cond.sideId, points: cond.points }),
+        );
+    }
 
     const results: MoraleRollResult[] = [];
     const remaining = new Map<SideId, number>(sides.map((s) => [s.id, 0]));
@@ -451,6 +501,49 @@ export const rollMorale: Thunk =
         const winner = sides.find((s) => s.id === aliveSides[0]);
         if (winner) outcome = { type: "victory", who: winner };
       }
+    }
+
+    // Compute VP if conditions are present.
+    let vp: Partial<Record<SideId, VictoryPoints>> | undefined;
+    if (battle.victoryConditions.length > 0) {
+      const freshBattle = selectBattle(getState());
+      vp = computeVP(
+        battle.victoryConditions,
+        units,
+        sides,
+        battle.allianceMap,
+        battle.battleLog,
+        battle.exitedUnitIds,
+        freshBattle.accumulatedZoneVP,
+      );
+      if (outcome) outcome = { ...outcome, vp } as BattleOutcome;
+    }
+
+    // Turn limit check — overrides lack of traditional outcome.
+    if (
+      !outcome &&
+      battle.turnLimit !== undefined &&
+      battle.turn >= battle.turnLimit
+    ) {
+      if (!vp) {
+        const freshBattle = selectBattle(getState());
+        vp = computeVP(
+          battle.victoryConditions,
+          units,
+          sides,
+          battle.allianceMap,
+          battle.battleLog,
+          battle.exitedUnitIds,
+          freshBattle.accumulatedZoneVP,
+        );
+      }
+      const vpWinner = findVPWinner(vp, sides);
+      outcome = {
+        type: "timeout",
+        winner: vpWinner?.id ?? null,
+        winnerName: vpWinner?.name ?? null,
+        vp,
+      };
     }
 
     dispatch(moraleAction({ side, results, outcome }));

@@ -369,10 +369,9 @@ describe("selectCanPassNow", () => {
       units: unitsAdapter.setAll(unitsAdapter.getInitialState(), units),
       sides: sidesAdapter.setAll(sidesAdapter.getInitialState(), sideEntities),
       battle: {
-        activeUnitId: undefined,
+        ...defaultBattleState,
         canPass,
         mapId: "",
-        messages: [],
         phase: Phase.Move,
         sideOrder: [activeSideId],
         sideIndex: 0,
@@ -434,10 +433,9 @@ describe("selectCanPassNow", () => {
       ]),
       sides: sidesAdapter.setAll(sidesAdapter.getInitialState(), sideEntities),
       battle: {
-        activeUnitId: undefined,
+        ...defaultBattleState,
         canPass: true,
         mapId: "",
-        messages: [],
         phase: Phase.Melee, // not Move
         sideOrder: [0],
         sideIndex: 0,

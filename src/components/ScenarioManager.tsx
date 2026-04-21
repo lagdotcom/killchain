@@ -5,7 +5,6 @@ import type {
   Cells,
   MapId,
   ScenarioId,
-  SideId,
   UnitDefinitionId,
 } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
@@ -17,6 +16,7 @@ import { upsertDefinitions } from "../state/roster.js";
 import {
   addScenario,
   removeScenario,
+  type RuleOverrides,
   type Scenario,
   type ScenarioSideSetup,
   updateScenario,
@@ -58,10 +58,19 @@ interface SideForm {
   allianceId?: number;
 }
 
+interface RuleFormState {
+  turnLimit: string;
+  cavalryCharge: boolean;
+  archerMeleePenalty: boolean;
+  flanking: boolean;
+  meleeEngagement: boolean;
+}
+
 interface ScenarioForm {
   name: string;
   mapId: string;
   sides: SideForm[];
+  rules: RuleFormState;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,10 +84,19 @@ const blankSide = (n: number): SideForm => ({
   addDefId: "",
 });
 
+const defaultRules: RuleFormState = {
+  turnLimit: "",
+  cavalryCharge: true,
+  archerMeleePenalty: true,
+  flanking: true,
+  meleeEngagement: false,
+};
+
 const blankForm: ScenarioForm = {
   name: "",
   mapId: "",
   sides: [blankSide(1), blankSide(2)],
+  rules: defaultRules,
 };
 
 function scenarioToForm(s: Scenario): ScenarioForm {
@@ -104,6 +122,27 @@ function scenarioToForm(s: Scenario): ScenarioForm {
         ...(u.x !== undefined && u.y !== undefined ? { x: u.x, y: u.y } : {}),
       })),
     })),
+    rules: {
+      turnLimit:
+        s.rules?.turnLimit !== undefined ? String(s.rules.turnLimit) : "",
+      cavalryCharge: s.rules?.cavalryCharge ?? true,
+      archerMeleePenalty: s.rules?.archerMeleePenalty ?? true,
+      flanking: s.rules?.flanking ?? true,
+      meleeEngagement: s.rules?.meleeEngagement ?? false,
+    },
+  };
+}
+
+function ruleFormToOverrides(r: RuleFormState): RuleOverrides {
+  const parsed = r.turnLimit.trim() !== "" ? Number(r.turnLimit) : undefined;
+  return {
+    cavalryCharge: r.cavalryCharge,
+    archerMeleePenalty: r.archerMeleePenalty,
+    flanking: r.flanking,
+    meleeEngagement: r.meleeEngagement,
+    ...(parsed !== undefined &&
+      !isNaN(parsed) &&
+      parsed > 0 && { turnLimit: parsed }),
   };
 }
 
@@ -112,9 +151,9 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
     name: form.name.trim() || "Unnamed Scenario",
     mapId: form.mapId as MapId,
     sides: form.sides.map(
-      (side, i): ScenarioSideSetup => ({
-        id: i as SideId,
-        name: side.name.trim() || `Side ${i + 1}`,
+      (side, id): ScenarioSideSetup => ({
+        id,
+        name: side.name.trim() || `Side ${id + 1}`,
         colour: side.colour,
         ...(side.deploymentZone !== undefined && {
           deploymentZone: side.deploymentZone,
@@ -122,9 +161,7 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
         ...(side.aiPersonality !== undefined && {
           aiPersonality: side.aiPersonality,
         }),
-        ...(side.allianceId !== undefined && {
-          allianceId: side.allianceId,
-        }),
+        ...(side.allianceId !== undefined && { allianceId: side.allianceId }),
         units: side.units.map((u) => ({
           definitionId: u.definitionId,
           name: u.name.trim() || "Unit",
@@ -134,6 +171,7 @@ function formToScenarioData(form: ScenarioForm): Omit<Scenario, "id"> {
         })),
       }),
     ),
+    rules: ruleFormToOverrides(form.rules),
   };
 }
 
@@ -930,6 +968,70 @@ export function ScenarioManager({ onClose }: Props) {
                 </span>
               )}
             </div>
+          </div>
+
+          {/* Optional Rules */}
+          <div className="scenario-rules-section">
+            <fieldset>
+              <legend>Optional rules</legend>
+              <div className="scenario-rules-grid">
+                {(
+                  [
+                    [
+                      "cavalryCharge",
+                      "Cavalry charge bonus (+1 when mounted and moved)",
+                    ],
+                    [
+                      "archerMeleePenalty",
+                      "Archer melee penalty (-1 for missile units in melee)",
+                    ],
+                    ["flanking", "Flanking bonus (+1 against flanked units)"],
+                    [
+                      "meleeEngagement",
+                      "Melee engagement (restrict disengagement from melee)",
+                    ],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key} className="scenario-rule-check">
+                    <input
+                      type="checkbox"
+                      checked={form.rules[key]}
+                      onChange={(e) => {
+                        setForm((f) =>
+                          f
+                            ? {
+                                ...f,
+                                rules: { ...f.rules, [key]: e.target.checked },
+                              }
+                            : f,
+                        );
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+                <label className="scenario-rule-check">
+                  <span>Turn limit:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.rules.turnLimit}
+                    placeholder="none"
+                    onChange={(e) => {
+                      setForm((f) =>
+                        f
+                          ? {
+                              ...f,
+                              rules: { ...f.rules, turnLimit: e.target.value },
+                            }
+                          : f,
+                      );
+                    }}
+                    style={{ width: 64, marginLeft: 6 }}
+                  />
+                </label>
+              </div>
+            </fieldset>
           </div>
         </form>
       </div>

@@ -18,14 +18,7 @@ export function makeGridMap(
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const id = xyId(x, y);
-      terrain[id] = {
-        id,
-        x,
-        y,
-        type: "Open",
-        elevation: 0,
-        ...overrides[id],
-      };
+      terrain[id] = { id, x, y, type: "Open", elevation: 0, ...overrides[id] };
     }
   }
 
@@ -41,13 +34,21 @@ export function makeGridMap(
 
 export const defaultBattleState: BattleState = {
   activeUnitId: undefined,
+  allianceMap: {},
+  accumulatedZoneVP: {},
+  battleLog: [],
   canPass: false,
+  exitedUnitIds: [],
+  finalVP: undefined,
   mapId: undefined,
   messages: [],
   phase: Phase.Placement,
+  rules: {},
   sideOrder: [],
   sideIndex: NaN,
   turn: 0,
+  turnLimit: undefined,
+  victoryConditions: [],
 };
 
 let _uid = 0;
@@ -57,7 +58,7 @@ export function makeUnit(
   partial: Partial<UnitEntity> & XY & { side: SideId },
 ): UnitEntity {
   return {
-    id: `u${_uid++}` as UnitId,
+    id: `u${_uid++}`,
     name: "Unit",
     type: heavyFoot, // move=60ft at cellSize=10 → 6 cells per turn
     missile: false,
@@ -89,8 +90,5 @@ export function makeSide(
 
 /** Build a Record<UnitId, UnitEntity> from a list of units. */
 export function unitMap(...units: UnitEntity[]): Record<UnitId, UnitEntity> {
-  return Object.fromEntries(units.map((u) => [u.id, u])) as Record<
-    UnitId,
-    UnitEntity
-  >;
+  return Object.fromEntries(units.map((u) => [u.id, u]));
 }

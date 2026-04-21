@@ -115,3 +115,18 @@ export const selectActiveSideIsAI = createSelector(
   [selectActiveSide],
   (side) => side?.aiPersonality !== undefined,
 );
+
+export const selectFinalVP = createSelector(
+  [selectBattle],
+  (battle) => battle.finalVP,
+);
+
+export const selectTurnLimit = createSelector(
+  [selectBattle],
+  (battle) => battle.turnLimit,
+);
+
+export const selectRules = createSelector(
+  [selectBattle],
+  (battle) => battle.rules,
+);

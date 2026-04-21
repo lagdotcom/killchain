@@ -20,6 +20,7 @@ import {
   selectMap,
   selectPhase,
   selectPlacedUnits,
+  selectRules,
   selectSideEntities,
   selectUnitEntities,
 } from "../state/selectors.js";
@@ -97,6 +98,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const { centre, gotoCell } = usePanZoom(svgRef, gRef);
 
   const placedUnits = useSelector(selectPlacedUnits);
+  const rules = useSelector(selectRules);
 
   const handleDrop = useCallback(
     (x: Cells, y: Cells, unitId: UnitId, sideId: SideId) => {
@@ -133,8 +135,8 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   );
 
   const tints = useMemo(
-    () => (map ? getTints(activeUnit, phase, map, units, sides) : []),
-    [activeUnit, map, phase, units, sides],
+    () => (map ? getTints(activeUnit, phase, map, units, sides, rules) : []),
+    [activeUnit, map, phase, units, sides, rules],
   );
 
   const deploymentZones = useMemo((): ZoneInfo[] => {
@@ -159,11 +161,13 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
           const missile = g.getDistance(activeUnit, u) > map.cellSize;
           return [
             u.id,
-            applyAttackModifiers(getAttackModifiers(g, missile, activeUnit, u)),
+            applyAttackModifiers(
+              getAttackModifiers(g, missile, activeUnit, u, rules),
+            ),
           ];
         }),
     );
-  }, [activeUnit, map, phase, placedUnits, sides, units]);
+  }, [activeUnit, map, phase, placedUnits, rules, sides, units]);
 
   const handleClickTerrain = useCallback(
     (x: Cells, y: Cells) => {

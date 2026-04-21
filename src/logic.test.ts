@@ -4,7 +4,7 @@ import type { Cells, TerrainId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import { Phase } from "./killchain/rules.js";
 import type { DeploymentZone } from "./killchain/types.js";
-import { heavyFoot, heavyHorse } from "./killchain/units.js";
+import { heavyFoot, heavyHorse, lightHorse } from "./killchain/units.js";
 import { getTints, isInDeploymentZone } from "./logic.js";
 import type { MapEntity } from "./state/maps.js";
 import type { TerrainEntity } from "./state/terrain.js";
@@ -190,8 +190,8 @@ describe("getTints — flying unit", () => {
     // Non-flying: Woods costs 20ft/cell → 3 cells max → reaches (3,5).
     // Flying: flat 10ft/cell → 6 cells max → reaches (6,5).
     const overrides: Record<TerrainId, Partial<TerrainEntity>> = {};
-    for (let x = 1; x <= 9; x++)
-      overrides[xyId(x as Cells, 5 as Cells)] = { type: "Woods" };
+    for (let x: Cells = 1; x <= 9; x++)
+      overrides[xyId(x, 5)] = { type: "Woods" };
     const map = makeGridMap(10, 10, 10, overrides);
 
     const flyingType = { ...heavyFoot, flying: true };
@@ -209,7 +209,7 @@ describe("getTints — flying unit", () => {
 
   test("flying+mounted unit can enter Marsh that non-flying mounted unit cannot", () => {
     const overrides: Record<TerrainId, Partial<TerrainEntity>> = {
-      [xyId(6 as Cells, 5 as Cells)]: { type: "Marsh" },
+      [xyId(6, 5)]: { type: "Marsh" },
     };
     const map = makeGridMap(10, 10, 10, overrides);
 
@@ -231,65 +231,149 @@ describe("getTints — flying unit", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Optional rule: meleeEngagement
+// ---------------------------------------------------------------------------
+
+describe("getTints — meleeEngagement rule", () => {
+  test("disabled (default): Normal unit adjacent to infantry can move freely", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const enemy = makeUnit({ side: 1, x: 5, y: 6 }); // adjacent infantry
+
+    const coords = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, enemy),
+      {},
+    ).map(({ x, y }) => `${x},${y}`);
+
+    // Without meleeEngagement, unit can move to far cells
+    expect(coords).toContain("5,3");
+    expect(coords).toContain("3,5");
+  });
+
+  test("enabled + cavalry charge: unit is completely locked in place", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const cavalry = makeUnit({
+      side: 1,
+      x: 5,
+      y: 6,
+      type: lightHorse,
+      moved: 10,
+    });
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, cavalry),
+      {},
+      { meleeEngagement: true },
+    );
+    expect(tints).toHaveLength(0);
+  });
+
+  test("enabled + unmoved cavalry: not a charge, unit may withdraw", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const cavalry = makeUnit({
+      side: 1,
+      x: 5,
+      y: 6,
+      type: lightHorse,
+      moved: 0,
+    }); // hasn't moved → not a charge
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, cavalry),
+      {},
+      { meleeEngagement: true },
+    );
+    expect(tints.length).toBeGreaterThan(0);
+  });
+
+  test("enabled + infantry contact: only 1-cell moves available", () => {
+    const terrain = makeGridMap(10, 10);
+    const unit = makeUnit({ side: 0, x: 5, y: 5 });
+    const enemy = makeUnit({ side: 1, x: 5, y: 6 });
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, enemy),
+      {},
+      { meleeEngagement: true },
+    );
+    const coords = tints.map(({ x, y }) => `${x},${y}`);
+
+    expect(coords).toContain("5,4");
+    expect(coords).toContain("4,5");
+    expect(coords).toContain("6,5");
+    expect(coords).not.toContain("5,3");
+    expect(coords).not.toContain("3,5");
+  });
+
+  test("enabled + infantry contact: withdrawal cost equals full remaining move", () => {
+    const terrain = makeGridMap(10, 10);
+    // heavyFoot move=60, already moved 10 → remaining = 50
+    const unit = makeUnit({ side: 0, x: 5, y: 5, type: heavyFoot, moved: 10 });
+    const enemy = makeUnit({ side: 1, x: 5, y: 6 });
+
+    const tints = getTints(
+      unit,
+      Phase.Move,
+      terrain,
+      unitMap(unit, enemy),
+      {},
+      { meleeEngagement: true },
+    );
+
+    expect(tints.length).toBeGreaterThan(0);
+    expect(tints.every((t) => t.cost === 50)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Deployment zone helpers
 // ---------------------------------------------------------------------------
 
-function zone(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): DeploymentZone {
-  return {
-    x: x as Cells,
-    y: y as Cells,
-    width: width as Cells,
-    height: height as Cells,
-  };
-}
+const zone = (
+  x: Cells,
+  y: Cells,
+  width: Cells,
+  height: Cells,
+): DeploymentZone => ({ x, y, width, height });
 
 describe("isInDeploymentZone", () => {
   test("returns true for a cell inside the zone", () => {
-    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2 as Cells, 3 as Cells)).toBe(
-      true,
-    );
-    expect(isInDeploymentZone(zone(2, 3, 4, 3), 5 as Cells, 5 as Cells)).toBe(
-      true,
-    );
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2, 3)).toBe(true);
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 5, 5)).toBe(true);
   });
 
   test("returns false for a cell outside the zone", () => {
-    expect(isInDeploymentZone(zone(2, 3, 4, 3), 1 as Cells, 3 as Cells)).toBe(
-      false,
-    ); // x too low
-    expect(isInDeploymentZone(zone(2, 3, 4, 3), 6 as Cells, 3 as Cells)).toBe(
-      false,
-    ); // x == x+width
-    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2 as Cells, 2 as Cells)).toBe(
-      false,
-    ); // y too low
-    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2 as Cells, 6 as Cells)).toBe(
-      false,
-    ); // y == y+height
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 1, 3)).toBe(false); // x too low
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 6, 3)).toBe(false); // x == x+width
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2, 2)).toBe(false); // y too low
+    expect(isInDeploymentZone(zone(2, 3, 4, 3), 2, 6)).toBe(false); // y == y+height
   });
 
   test("boundary cells on the far edge are excluded (half-open interval)", () => {
     // zone(0,0,3,3) covers x in [0,3), y in [0,3)
-    expect(isInDeploymentZone(zone(0, 0, 3, 3), 2 as Cells, 2 as Cells)).toBe(
-      true,
-    );
-    expect(isInDeploymentZone(zone(0, 0, 3, 3), 3 as Cells, 0 as Cells)).toBe(
-      false,
-    );
-    expect(isInDeploymentZone(zone(0, 0, 3, 3), 0 as Cells, 3 as Cells)).toBe(
-      false,
-    );
+    expect(isInDeploymentZone(zone(0, 0, 3, 3), 2, 2)).toBe(true);
+    expect(isInDeploymentZone(zone(0, 0, 3, 3), 3, 0)).toBe(false);
+    expect(isInDeploymentZone(zone(0, 0, 3, 3), 0, 3)).toBe(false);
   });
 
   test("1×1 zone contains only its own cell", () => {
     const z = zone(5, 7, 1, 1);
-    expect(isInDeploymentZone(z, 5 as Cells, 7 as Cells)).toBe(true);
-    expect(isInDeploymentZone(z, 4 as Cells, 7 as Cells)).toBe(false);
-    expect(isInDeploymentZone(z, 5 as Cells, 8 as Cells)).toBe(false);
+    expect(isInDeploymentZone(z, 5, 7)).toBe(true);
+    expect(isInDeploymentZone(z, 4, 7)).toBe(false);
+    expect(isInDeploymentZone(z, 5, 8)).toBe(false);
   });
 });

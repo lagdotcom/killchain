@@ -1,14 +1,7 @@
 import SeedRandom from "seed-random";
 import { createNoise2D, type NoiseFunction2D } from "simplex-noise";
 
-import type {
-  Cells,
-  Feet,
-  MapId,
-  ScenarioId,
-  SideId,
-  UnitDefinitionId,
-} from "./flavours.js";
+import type { Cells, Feet, MapId, SideId } from "./flavours.js";
 import { xyId } from "./killchain/EuclideanEngine.js";
 import type {
   TerrainType,
@@ -70,61 +63,54 @@ export const defaultSides: SideSetup[] = [
 
 /** Initial roster pre-populated with the unit types used in the default battle. */
 export const defaultDefinitions: UnitDefinition[] = [
-  { id: "def-heavy-horse" as UnitDefinitionId, type: heavyHorse },
-  { id: "def-light-foot" as UnitDefinitionId, type: lightFoot },
-  { id: "def-medium-foot" as UnitDefinitionId, type: mediumFoot },
-  { id: "def-light-horse" as UnitDefinitionId, type: lightHorse },
+  { id: "def-heavy-horse", type: heavyHorse },
+  { id: "def-light-foot", type: lightFoot },
+  { id: "def-medium-foot", type: mediumFoot },
+  { id: "def-light-horse", type: lightHorse },
 ];
 
 /** Default scenario matching the hard-coded initial battle. */
 export const defaultScenario: Scenario = {
-  id: "default-scenario" as ScenarioId,
+  id: "default-scenario",
   name: "Default Scenario",
-  mapId: "default" as MapId,
+  mapId: "default",
   sides: [
     {
-      id: 0 as SideId,
+      id: 0,
       name: "Regnum-Fey Alliance",
       colour: "#49e",
       units: [
         {
-          definitionId: "def-heavy-horse" as UnitDefinitionId,
+          definitionId: "def-heavy-horse",
           name: "Heralds of Mikius",
           shortName: "HoM",
           missile: true,
         },
         {
-          definitionId: "def-light-foot" as UnitDefinitionId,
+          definitionId: "def-light-foot",
           name: "Bakhtavornery",
           missile: true,
         },
-        {
-          definitionId: "def-light-foot" as UnitDefinitionId,
-          name: "Eyin Eweko",
-          missile: true,
-        },
+        { definitionId: "def-light-foot", name: "Eyin Eweko", missile: true },
       ],
     },
     {
-      id: 1 as SideId,
+      id: 1,
       name: "Horde of Grund",
       colour: "#f66",
       aiPersonality: "aggressive",
       units: [
         {
-          definitionId: "def-medium-foot" as UnitDefinitionId,
+          definitionId: "def-medium-foot",
           name: "Chosen of Grund",
           missile: true,
         },
         {
-          definitionId: "def-medium-foot" as UnitDefinitionId,
+          definitionId: "def-medium-foot",
           name: "Beloved of Grund",
           missile: true,
         },
-        {
-          definitionId: "def-light-horse" as UnitDefinitionId,
-          name: "Outriders of Grund",
-        },
+        { definitionId: "def-light-horse", name: "Outriders of Grund" },
       ],
     },
   ],

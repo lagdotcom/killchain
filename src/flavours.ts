@@ -5,6 +5,7 @@ export type Cells = Flavour<number, "Cells">;
 export type Feet = Flavour<number, "Feet">;
 export type Pixels = Flavour<number, "Pixels">;
 export type SideId = Flavour<number, "Side">;
+export type VictoryPoints = Flavour<number, "VictoryPoints">;
 
 export type MapId = Flavour<string, "MapId">;
 export type ScenarioId = Flavour<string, "ScenarioId">;

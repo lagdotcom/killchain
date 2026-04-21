@@ -7,25 +7,71 @@ import type {
   ScenarioId,
   SideId,
   UnitDefinitionId,
+  UnitId,
+  VictoryPoints,
 } from "../flavours.js";
-import type { DeploymentZone } from "../killchain/types.js";
+import type { DeploymentZone, OptionalRules } from "../killchain/types.js";
 import type { AiPersonality } from "./sides.js";
 
 export type { DeploymentZone };
 
 // ---------------------------------------------------------------------------
-// Future-proof extension points — empty stubs until implemented.
+// Victory conditions
 // ---------------------------------------------------------------------------
 
-/** Future: a condition that causes a side to win or the battle to end.
- *  e.g. { type: "rout_all" | "occupy_cell" | "exit_unit"; sideId?: SideId } */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface VictoryCondition {}
+/** A rectangular map region used for zone-based victory conditions. */
+export interface VictoryZone {
+  x: Cells;
+  y: Cells;
+  width: Cells;
+  height: Cells;
+}
 
-/** Future: per-scenario overrides for optional rules.
- *  e.g. cavalryCharge?: boolean; morale12AlwaysFails?: boolean */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface RuleOverrides {}
+export type VictoryCondition =
+  // attrition
+  | { type: "surviving_units"; sideId: SideId; points: VictoryPoints }
+  | { type: "units_destroyed"; sideId: SideId; points: VictoryPoints }
+  | { type: "enemy_routed"; sideId: SideId; points: VictoryPoints }
+  // specific unit
+  | {
+      type: "unit_eliminated";
+      unitId: UnitId;
+      sideId: SideId;
+      points: VictoryPoints;
+    }
+  | {
+      type: "unit_survives";
+      unitId: UnitId;
+      sideId: SideId;
+      points: VictoryPoints;
+    }
+  | { type: "exit_unit"; unitId: UnitId; sideId: SideId; points: VictoryPoints }
+  // zone control
+  | {
+      type: "control_zone";
+      zone: VictoryZone;
+      sideId: SideId;
+      points: VictoryPoints;
+    }
+  | {
+      type: "zone_violated";
+      zone: VictoryZone;
+      sideId: SideId;
+      points: VictoryPoints;
+    }
+  | {
+      type: "zone_held_turns";
+      zone: VictoryZone;
+      sideId: SideId;
+      points: VictoryPoints;
+    }
+  // temporal
+  | { type: "turns_survived"; sideId: SideId; points: VictoryPoints };
+
+/** Per-scenario overrides for optional rules. */
+export interface RuleOverrides extends OptionalRules {
+  turnLimit?: number;
+}
 
 // ---------------------------------------------------------------------------
 // Core scenario types
