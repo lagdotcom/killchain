@@ -3,7 +3,8 @@ import SeedRandom from "seed-random";
 import type { Cells } from "./flavours.js";
 import type { XY } from "./killchain/EuclideanEngine.js";
 
-export const enumerate = (n: number) => Array.from({ length: n }, (_, i) => i);
+export const enumerate = (length: number) =>
+  Array.from({ length }, (_, i) => i);
 
 type ClassNameValue = string | Record<string, boolean> | undefined | null;
 
@@ -32,9 +33,10 @@ export function without<T>(data: T[], match: T) {
 }
 
 const generator = SeedRandom();
+export type Rng = typeof generator;
 
-export function rollDice(max: number) {
-  return Math.ceil(generator() * max);
+export function rollDice(max: number, rng: Rng = generator) {
+  return Math.ceil(rng() * max);
 }
 
 export function manhattanDistance(a: XY, b: XY): Cells {

@@ -234,18 +234,8 @@ describe("getTints — flying unit", () => {
 // Deployment zone helpers
 // ---------------------------------------------------------------------------
 
-function zone(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): DeploymentZone {
-  return {
-    x: x as Cells,
-    y: y as Cells,
-    width: width as Cells,
-    height: height as Cells,
-  };
+function zone(x: Cells, y: Cells, width: Cells, height: Cells): DeploymentZone {
+  return { x, y, width, height };
 }
 
 describe("isInDeploymentZone", () => {

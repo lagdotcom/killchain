@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
 
 import type { Cells, Feet, SideId, UnitId } from "../flavours.js";
-import { MapTool } from "../geometry/tool.js";
+import { useMapTool } from "../hooks/useMapTool.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
 import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import {
@@ -91,6 +91,7 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const phase = useSelector(selectPhase);
   const sides = useSelector(selectSideEntities);
   const map = useSelector(selectMap);
+  const tool = useMapTool();
   const units = useSelector(selectUnitEntities);
 
   const svgRef = useRef<SVGSVGElement>(null);
@@ -239,13 +240,14 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
           : getTerrainHexes(
               map.width,
               map.height,
+              tool,
               "cellClip",
               getTerrain,
               handleClickTerrain,
               handleDrop,
             )
         : [],
-    [getTerrain, handleClickTerrain, handleDrop, map],
+    [getTerrain, handleClickTerrain, handleDrop, map, tool],
   );
 
   useEffect(() => {
@@ -260,37 +262,26 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
       height="100%"
       className={`map${onEditCell ? " editMode" : ""}`}
     >
-      {map && (
-        <clipPath id="cellClip">
-          {new MapTool(map.layout).getPolygon(0, 0, false)}
-        </clipPath>
-      )}
+      {map && <clipPath id="cellClip">{tool.getPolygon(0, 0, false)}</clipPath>}
 
       <g ref={gRef}>
         {terrainCells}
         {map &&
           deploymentZones.map((zone) => (
-            <ZoneOverlay key={zone.key} zone={zone} layout={map.layout} />
+            <ZoneOverlay {...zone} key={zone.key} />
           ))}
 
         {map &&
           placedUnits.map((unit) => (
             <UnitToken
               key={unit.id}
-              layout={map.layout}
               unit={unit}
               cellSize={cellSize}
               attackTargetNumber={targetNumbers[unit.id]}
               onClick={canSelect(unit) ? handleClickUnit : undefined}
             />
           ))}
-        {map && (
-          <GridOverlay
-            layout={map.layout}
-            tints={tints}
-            logHoverCell={logHoverCell}
-          />
-        )}
+        {map && <GridOverlay tints={tints} logHoverCell={logHoverCell} />}
       </g>
     </svg>
   );

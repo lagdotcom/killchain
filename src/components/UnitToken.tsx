@@ -1,15 +1,13 @@
 import { useSelector } from "react-redux";
 
 import type { Pixels } from "../flavours.js";
-import { MapTool } from "../geometry/tool.js";
-import type { MapLayout } from "../state/maps.js";
+import { useMapTool } from "../hooks/useMapTool.js";
 import { selectActiveUnitId, selectSideEntities } from "../state/selectors.js";
 import type { UnitEntity } from "../state/units.js";
 import { classnames } from "../tools.js";
 import { armourAbbreviation, moraleColours } from "../ui.js";
 
 interface UnitTokenBaseProps {
-  layout: MapLayout;
   x: number;
   y: number;
   colour: string;
@@ -23,7 +21,6 @@ interface UnitTokenBaseProps {
 }
 
 export function UnitTokenBase({
-  layout,
   x,
   y,
   colour,
@@ -34,7 +31,8 @@ export function UnitTokenBase({
   onClick,
   children,
 }: UnitTokenBaseProps) {
-  const { x: cx, y: cy } = new MapTool(layout).getCentre(x, y);
+  const tool = useMapTool();
+  const { x: cx, y: cy } = tool.getCentre(x, y);
   const radius = cs * 0.4;
 
   return (
@@ -84,7 +82,6 @@ export function UnitTokenBase({
 interface UnitTokenProps {
   attackTargetNumber?: number | undefined;
   cellSize: Pixels;
-  layout: MapLayout;
   onClick: undefined | ((unit: UnitEntity) => void);
   unit: UnitEntity;
 }
@@ -92,7 +89,6 @@ interface UnitTokenProps {
 function UnitToken({
   attackTargetNumber,
   cellSize,
-  layout,
   onClick,
   unit,
 }: UnitTokenProps) {
@@ -119,7 +115,6 @@ function UnitToken({
 
   return (
     <UnitTokenBase
-      layout={layout}
       x={unit.x}
       y={unit.y}
       colour={sideColor}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Provider, useSelector } from "react-redux";
 
 import GameGrid from "./components/GameGrid.js";
@@ -9,7 +9,9 @@ import { ScenarioManager } from "./components/ScenarioManager.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { type EditBrush, TerrainPalette } from "./components/TerrainPalette.js";
 import type { Cells, TerrainId } from "./flavours.js";
+import { MapTool } from "./geometry/tool.js";
 import { useAiPlayer } from "./hooks/useAiPlayer.js";
+import { MapToolContext } from "./hooks/useMapTool.js";
 import { type XY, xyId } from "./killchain/EuclideanEngine.js";
 import {
   defaultDefinitions,
@@ -56,6 +58,11 @@ if (!persisted) {
 function AppContent() {
   const dispatch = useAppDispatch();
   const map = useSelector(selectMap);
+  const tool = useMemo(
+    () =>
+      map ? new MapTool(map.layout, map.width, map.height) : ({} as MapTool),
+    [map],
+  );
   useAiPlayer();
 
   const [panToCellFn, setPanToCellFn] = useState<
@@ -101,66 +108,68 @@ function AppContent() {
   );
 
   return (
-    <div className="app">
-      {view !== "game" ? (
-        view === "maps" ? (
-          <MapManager onClose={onBack} />
-        ) : view === "roster" ? (
-          <RosterManager onClose={onBack} />
+    <MapToolContext value={tool}>
+      <div className="app">
+        {view !== "game" ? (
+          view === "maps" ? (
+            <MapManager onClose={onBack} />
+          ) : view === "roster" ? (
+            <RosterManager onClose={onBack} />
+          ) : (
+            <ScenarioManager onClose={onBack} />
+          )
         ) : (
-          <ScenarioManager onClose={onBack} />
-        )
-      ) : (
-        <>
-          <div className="app-main">
-            <Sidebar
-              onOpenMapManager={() => {
-                setView("maps");
-              }}
-              onOpenRosterManager={() => {
-                setView("roster");
-              }}
-              onOpenScenarioManager={() => {
-                setView("scenarios");
-              }}
-              onToggleEditTerrain={() => {
-                setEditBrush((b) =>
-                  b ? null : { mode: "terrain", type: "Open" },
-                );
-              }}
-              isEditingTerrain={editBrush !== null}
-            />
-            <div className="map-container">
-              {editBrush && (
-                <TerrainPalette
-                  brush={editBrush}
-                  onBrushChange={setEditBrush}
-                  onDone={() => {
-                    setEditBrush(null);
-                  }}
-                />
-              )}
-              <GameGrid
-                onRegisterPan={(fn) => {
-                  setPanToCellFn(() => fn);
+          <>
+            <div className="app-main">
+              <Sidebar
+                onOpenMapManager={() => {
+                  setView("maps");
                 }}
-                onEditCell={editBrush ? handleEditCell : undefined}
-                logHoverCell={logHoverCell}
+                onOpenRosterManager={() => {
+                  setView("roster");
+                }}
+                onOpenScenarioManager={() => {
+                  setView("scenarios");
+                }}
+                onToggleEditTerrain={() => {
+                  setEditBrush((b) =>
+                    b ? null : { mode: "terrain", type: "Open" },
+                  );
+                }}
+                isEditingTerrain={editBrush !== null}
               />
+              <div className="map-container">
+                {editBrush && (
+                  <TerrainPalette
+                    brush={editBrush}
+                    onBrushChange={setEditBrush}
+                    onDone={() => {
+                      setEditBrush(null);
+                    }}
+                  />
+                )}
+                <GameGrid
+                  onRegisterPan={(fn) => {
+                    setPanToCellFn(() => fn);
+                  }}
+                  onEditCell={editBrush ? handleEditCell : undefined}
+                  logHoverCell={logHoverCell}
+                />
+              </div>
             </div>
-          </div>
-          <MessageLog
-            panToCell={(x, y) => panToCellFn?.(x, y)}
-            onHoverCell={(x, y) => {
-              setLogHoverCell({ x, y });
-            }}
-            onUnhoverCell={() => {
-              setLogHoverCell(undefined);
-            }}
-          />
-        </>
-      )}
-    </div>
+            <MessageLog
+              panToCell={(x, y) => panToCellFn?.(x, y)}
+              onHoverCell={(x, y) => {
+                setLogHoverCell({ x, y });
+              }}
+              onUnhoverCell={() => {
+                setLogHoverCell(undefined);
+              }}
+            />
+          </>
+        )}
+      </div>
+    </MapToolContext>
   );
 }
 

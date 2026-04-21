@@ -11,8 +11,6 @@ import type {
 import type { DeploymentZone } from "../killchain/types.js";
 import type { AiPersonality } from "./sides.js";
 
-export type { DeploymentZone };
-
 // ---------------------------------------------------------------------------
 // Future-proof extension points — empty stubs until implemented.
 // ---------------------------------------------------------------------------

@@ -107,13 +107,12 @@ export function TerrainHex({
 export function getTerrainHexes(
   width: Cells,
   height: Cells,
+  tool: MapTool,
   clipPathId: string,
   getTerrain: (x: Cells, y: Cells, e: number) => TerrainEntity,
   onClick?: TerrainHexProps["onClick"],
   onDrop?: TerrainHexProps["onDrop"],
 ) {
-  const tool = new MapTool("hex", width, height);
-
   return enumerate(height)
     .flatMap((y) => enumerate(width).map((x) => getTerrain(x, y, -1)))
     .map((data) => (

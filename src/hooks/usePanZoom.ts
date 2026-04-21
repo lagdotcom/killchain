@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import type { Cells, Pixels } from "../flavours.js";
-import { MapTool } from "../geometry/tool.js";
 import type { XY } from "../killchain/EuclideanEngine.js";
 import type { MapLayout } from "../state/maps.js";
+import { useMapTool } from "./useMapTool.js";
 
 class PanZoomController {
   svg!: SVGSVGElement;
@@ -120,7 +120,7 @@ export function usePanZoom(
   gRef: React.RefObject<SVGGElement | null>,
 ) {
   const controllerRef = useRef(new PanZoomController());
-  const tool = useMemo(() => new MapTool(layout), [layout]);
+  const tool = useMapTool();
 
   useEffect(() => {
     if (svgRef.current && gRef.current)

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import type { Cells } from "../flavours.js";
 import { MapTool } from "../geometry/tool.js";
+import { MapToolContext } from "../hooks/useMapTool.js";
 import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import type { DeploymentZone } from "../killchain/types.js";
 import type { MapEntity } from "../state/maps.js";
@@ -57,7 +58,10 @@ export function ScenarioMapEditor({
   const [dragOverCell, setDragOverCell] = useState<XY | null>(null);
   const [draftZone, setDraftZone] = useState<DraftZone | null>(null);
 
-  const tool = useMemo(() => new MapTool(map.layout), [map.layout]);
+  const tool = useMemo(
+    () => new MapTool(map.layout, map.width, map.height),
+    [map.height, map.layout, map.width],
+  );
   const svgWidth = map.width * cellSize;
   const svgHeight = map.height * cellSize;
 
@@ -145,68 +149,63 @@ export function ScenarioMapEditor({
   const terrainElements = useMemo(() => {
     return map.layout === "square"
       ? getTerrainSquares(map.width, map.height, getTerrain)
-      : getTerrainHexes(map.width, map.height, "cellClip", getTerrain);
-  }, [getTerrain, map]);
+      : getTerrainHexes(map.width, map.height, tool, "cellClip", getTerrain);
+  }, [getTerrain, map, tool]);
 
   return (
-    <div className="scenario-map-scroll">
-      <svg
-        width={svgWidth}
-        height={svgHeight}
-        style={{ cursor, display: "block" }}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      >
-        <clipPath id="cellClip">
-          {new MapTool(map.layout).getPolygon(0, 0, false)}
-        </clipPath>
+    <MapToolContext value={tool}>
+      <div className="scenario-map-scroll">
+        <svg
+          width={svgWidth}
+          height={svgHeight}
+          style={{ cursor, display: "block" }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        >
+          <clipPath id="cellClip">{tool.getPolygon(0, 0, false)}</clipPath>
 
-        {terrainElements}
+          {terrainElements}
 
-        {zones.map((zone) => (
-          <ZoneOverlay key={zone.key} zone={zone} layout={map.layout} />
-        ))}
+          {zones.map((zone) => (
+            <ZoneOverlay {...zone} key={zone.key} />
+          ))}
 
-        {visibleDraftZone && (
-          <rect
-            x={visibleDraftZone.x * cellSize}
-            y={visibleDraftZone.y * cellSize}
-            width={visibleDraftZone.width * cellSize}
-            height={visibleDraftZone.height * cellSize}
-            fill="white"
-            fillOpacity={0.3}
-            stroke="white"
-            strokeWidth={1}
-          />
-        )}
+          {visibleDraftZone && (
+            <rect
+              x={visibleDraftZone.x * cellSize}
+              y={visibleDraftZone.y * cellSize}
+              width={visibleDraftZone.width * cellSize}
+              height={visibleDraftZone.height * cellSize}
+              fill="white"
+              fillOpacity={0.3}
+              stroke="white"
+              strokeWidth={1}
+            />
+          )}
 
-        {placedUnits.map((pu) => (
-          <UnitTokenBase
-            key={`pu-${pu.sideIdx}-${pu.unitIdx}`}
-            layout={map.layout}
-            x={pu.x}
-            y={pu.y}
-            colour={pu.colour}
-            label={pu.label}
-            cs={cellSize}
-            onClick={() => {
-              onUnplace(pu.sideIdx, pu.unitIdx);
-            }}
-          />
-        ))}
+          {placedUnits.map((pu) => (
+            <UnitTokenBase
+              key={`pu-${pu.sideIdx}-${pu.unitIdx}`}
+              x={pu.x}
+              y={pu.y}
+              colour={pu.colour}
+              label={pu.label}
+              cs={cellSize}
+              onClick={() => {
+                onUnplace(pu.sideIdx, pu.unitIdx);
+              }}
+            />
+          ))}
 
-        {dragOverCell && (
-          <CellHighlight
-            layout={map.layout}
-            x={dragOverCell.x}
-            y={dragOverCell.y}
-          />
-        )}
-      </svg>
-    </div>
+          {dragOverCell && (
+            <CellHighlight x={dragOverCell.x} y={dragOverCell.y} />
+          )}
+        </svg>
+      </div>
+    </MapToolContext>
   );
 }

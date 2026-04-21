@@ -1,5 +1,3 @@
-export type { AiPersonality } from "../state/sides.js";
-
 export interface AiConfig {
   personality: string;
   holdBackIfDamaged: boolean;

@@ -1,7 +1,6 @@
 import type { Feet } from "../flavours.js";
-import { MapTool } from "../geometry/tool.js";
+import { useMapTool } from "../hooks/useMapTool.js";
 import type { XY } from "../killchain/EuclideanEngine.js";
-import type { MapLayout } from "../state/maps.js";
 import { CellHighlight } from "./MapOverlays.js";
 
 export type TintReason = "short" | "medium" | "long" | "reachable";
@@ -19,12 +18,8 @@ const reasonColours: Record<TintReason, string> = {
   reachable: "#fff",
 };
 
-export interface OverlayTintProps extends Tint {
-  layout: MapLayout;
-}
-
-function OverlayTint({ x, y, layout, reason }: OverlayTintProps) {
-  const tool = new MapTool(layout);
+function OverlayTint({ x, y, reason }: Tint) {
+  const tool = useMapTool();
   return tool.getPolygon(x, y, true, {
     className: "tint",
     fill: reasonColours[reason],
@@ -32,24 +27,18 @@ function OverlayTint({ x, y, layout, reason }: OverlayTintProps) {
 }
 
 interface GridOverlayProps {
-  layout: MapLayout;
   tints: Tint[];
   logHoverCell?: XY | undefined;
 }
 
-export function GridOverlay({ layout, tints, logHoverCell }: GridOverlayProps) {
+export function GridOverlay({ tints, logHoverCell }: GridOverlayProps) {
   return (
     <g>
       {tints.map((tint) => (
-        <OverlayTint key={tint.id} layout={layout} {...tint} />
+        <OverlayTint key={tint.id} {...tint} />
       ))}
       {logHoverCell && (
-        <CellHighlight
-          layout={layout}
-          x={logHoverCell.x}
-          y={logHoverCell.y}
-          stroke="#ffd"
-        />
+        <CellHighlight x={logHoverCell.x} y={logHoverCell.y} stroke="#ffd" />
       )}
     </g>
   );
