@@ -1,24 +1,19 @@
-import type { Cells, SideId, UnitId } from "../flavours.js";
-import type { Terrain } from "../killchain/types.js";
-import type { TerrainEntity } from "../state/terrain.js";
-import { enumerate } from "../tools.js";
-import { cellSize, shadowSize, terrainColours } from "../ui.js";
+import type { Cells } from "../../flavours.js";
+import type { Terrain } from "../../killchain/types.js";
+import type { TerrainEntity } from "../../state/terrain.js";
+import { enumerate } from "../../tools.js";
+import { cellSize, shadowSize, terrainColours } from "../../ui.js";
+import type { TerrainCellProps } from "./common.js";
+import { getTerrainIcon } from "./icons.js";
 
-export interface TerrainCellProps {
-  x: Cells;
-  y: Cells;
-  terrain: Terrain;
+interface TerrainSquareProps extends TerrainCellProps {
   north: Terrain;
   east: Terrain;
   south: Terrain;
   west: Terrain;
-  onClick: ((x: Cells, y: Cells) => void) | undefined;
-  onDrop:
-    | ((x: Cells, y: Cells, unitId: UnitId, sideId: SideId) => void)
-    | undefined;
 }
 
-function TerrainCell({
+function TerrainSquare({
   x,
   y,
   terrain,
@@ -28,7 +23,7 @@ function TerrainCell({
   west,
   onClick,
   onDrop,
-}: TerrainCellProps) {
+}: TerrainSquareProps) {
   const px = x * cellSize;
   const py = y * cellSize;
   const fill = terrainColours[terrain.type];
@@ -67,22 +62,7 @@ function TerrainCell({
         fill={fill}
       />
 
-      {terrain.type === "Woods" && (
-        <>
-          <path className="woodsIcon" d="M20,55 v-15 a10 10 360 1 1 0.1,0" />
-          <path className="woodsIcon" d="M45,45 v-15 a10 10 360 1 1 0.1,0" />
-        </>
-      )}
-
-      {terrain.type === "Marsh" && (
-        <>
-          <path className="marshIcon" d="M32,32 m-15,9 l-15,-12" />
-          <path className="marshIcon" d="M32,32 m-9,2 l-11,-17" />
-          <path className="marshIcon" d="M32,32 l0,-22" />
-          <path className="marshIcon" d="M32,32 m9,2 l11,-17" />
-          <path className="marshIcon" d="M32,32 m15,9 l15,-12" />
-        </>
-      )}
+      {getTerrainIcon(terrain.type)}
 
       {north.elevation > terrain.elevation && (
         <rect
@@ -138,19 +118,19 @@ function TerrainCell({
   );
 }
 
-export default TerrainCell;
+export default TerrainSquare;
 
-export function getTerrainCells(
+export function getTerrainSquares(
   width: Cells,
   height: Cells,
   getTerrain: (x: Cells, y: Cells, e: number) => TerrainEntity,
-  onClick?: TerrainCellProps["onClick"],
-  onDrop?: TerrainCellProps["onDrop"],
+  onClick?: TerrainSquareProps["onClick"],
+  onDrop?: TerrainSquareProps["onDrop"],
 ) {
   return enumerate(height)
     .flatMap((y) => enumerate(width).map((x) => getTerrain(x, y, -1)))
     .map((data) => (
-      <TerrainCell
+      <TerrainSquare
         key={data.id}
         x={data.x}
         y={data.y}

@@ -3,12 +3,17 @@ import { useSelector } from "react-redux";
 
 import type { Cells, Feet, MapId } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
-import { generateGridMap } from "../sampleData.js";
+import { generateMap } from "../sampleData.js";
 import { setMap } from "../state/battle.js";
-import { addMap, deleteMap, type MapEntity } from "../state/maps.js";
+import {
+  addMap,
+  deleteMap,
+  type MapEntity,
+  type MapLayout,
+} from "../state/maps.js";
 import { selectAllMaps, selectBattle, selectMap } from "../state/selectors.js";
 import { useAppDispatch } from "../state/store.js";
-import { terrainColours } from "../ui.js";
+import { MapPreview } from "./MapPreview.js";
 
 interface Props {
   onClose: () => void;
@@ -19,6 +24,7 @@ interface NewMapForm {
   width: string;
   height: string;
   cellSize: string;
+  layout: string;
   seed: string;
   useSeed: boolean;
 }
@@ -28,6 +34,7 @@ const defaultForm: NewMapForm = {
   width: "20",
   height: "20",
   cellSize: "10",
+  layout: "square",
   seed: "",
   useSeed: false,
 };
@@ -41,6 +48,7 @@ function parseForm(form: NewMapForm) {
     width: Math.max(4, Math.min(60, parseInt(form.width, 10) || 20)) as Cells,
     height: Math.max(4, Math.min(60, parseInt(form.height, 10) || 20)) as Cells,
     cellSize: (parseInt(form.cellSize, 10) || 10) as Feet,
+    layout: form.layout as MapLayout,
     seed: form.useSeed && form.seed ? parseInt(form.seed, 10) : undefined,
     name: form.name || "New Map",
   };
@@ -61,10 +69,11 @@ export function MapManager({ onClose }: Props) {
 
   const preview = useMemo(() => {
     if (!showCreate) return null;
-    const { width, height, cellSize, seed, name } = parseForm(form);
-    return generateGridMap(
+    const { width, height, cellSize, layout, seed, name } = parseForm(form);
+    return generateMap(
       "preview" as MapId,
       cellSize,
+      layout,
       width,
       height,
       seed,
@@ -77,6 +86,7 @@ export function MapManager({ onClose }: Props) {
     form.width,
     form.height,
     form.cellSize,
+    form.layout,
     form.useSeed,
     form.seed,
     randomNonce,
@@ -122,13 +132,13 @@ export function MapManager({ onClose }: Props) {
 
   function handleCreate(e: React.SyntheticEvent) {
     e.preventDefault();
-    const { width, height, cellSize, seed, name } = parseForm(form);
+    const { width, height, cellSize, layout, seed, name } = parseForm(form);
     const id = String(Date.now()) as MapId;
     // Reuse the already-rendered preview data (same seed → same map)
     const map =
       preview && preview.seed === seed
         ? { ...preview, id, name }
-        : generateGridMap(id, cellSize, width, height, seed, name);
+        : generateMap(id, cellSize, layout, width, height, seed, name);
     dispatch(addMap(map));
     setForm(defaultForm);
     setShowCreate(false);
@@ -159,7 +169,7 @@ export function MapManager({ onClose }: Props) {
                 <div className="map-item-info">
                   <span className="map-item-name">{mapDisplayName(map)}</span>
                   <span className="map-item-dims">
-                    {map.width}×{map.height}, {map.cellSize}ft cells
+                    {map.width}×{map.height}, {map.cellSize}ft {map.layout}
                   </span>
                 </div>
                 <div className="map-item-actions">
@@ -252,6 +262,18 @@ export function MapManager({ onClose }: Props) {
                     }}
                   />
                 </label>
+                <label>
+                  Layout
+                  <select
+                    value={form.layout}
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, layout: e.target.value }));
+                    }}
+                  >
+                    <option value="square">square</option>
+                    <option value="hex">hex</option>
+                  </select>
+                </label>
               </div>
               <label>
                 Cell size (ft)
@@ -289,24 +311,7 @@ export function MapManager({ onClose }: Props) {
 
               {preview && (
                 <div className="map-preview">
-                  <svg
-                    viewBox={`0 0 ${preview.width} ${preview.height}`}
-                    width={preview.width * 8}
-                    height={preview.height * 8}
-                    className="map-preview-svg"
-                    style={{ imageRendering: "pixelated" }}
-                  >
-                    {Object.values(preview.cells.entities).map((cell) => (
-                      <rect
-                        key={cell.id}
-                        x={cell.x}
-                        y={cell.y}
-                        width={1}
-                        height={1}
-                        fill={terrainColours[cell.type]}
-                      />
-                    ))}
-                  </svg>
+                  <MapPreview preview={preview} />
                   {!form.useSeed && (
                     <button
                       type="button"

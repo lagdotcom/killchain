@@ -1,23 +1,22 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { Cells } from "../flavours.js";
-import { xyId } from "../killchain/EuclideanEngine.js";
+import { MapTool } from "../geometry/tool.js";
+import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import type { DeploymentZone } from "../killchain/types.js";
 import type { MapEntity } from "../state/maps.js";
 import type { TerrainEntity } from "../state/terrain.js";
 import { cellSize } from "../ui.js";
 import { CellHighlight, type ZoneInfo, ZoneOverlay } from "./MapOverlays.js";
-import { getTerrainCells } from "./TerrainCell.js";
+import { getTerrainHexes } from "./terrain/TerrainHex.js";
+import { getTerrainSquares } from "./terrain/TerrainSquare.js";
 import { UnitTokenBase } from "./UnitToken.js";
-export type { ZoneInfo } from "./MapOverlays.js";
 
-export interface PlacedUnit {
+export interface PlacedUnit extends XY {
   sideIdx: number;
   unitIdx: number;
   colour: string;
   label: string;
-  x: Cells;
-  y: Cells;
 }
 
 interface ScenarioMapEditorProps {
@@ -32,10 +31,10 @@ interface ScenarioMapEditorProps {
 }
 
 interface DraftZone {
-  ax: number;
-  ay: number;
-  bx: number;
-  by: number;
+  ax: Cells;
+  ay: Cells;
+  bx: Cells;
+  by: Cells;
 }
 
 function computeZone(draft: DraftZone): DeploymentZone {
@@ -55,40 +54,41 @@ export function ScenarioMapEditor({
   onUnplace,
   onZoneDefined,
 }: ScenarioMapEditorProps) {
-  const [dragOverCell, setDragOverCell] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<XY | null>(null);
   const [draftZone, setDraftZone] = useState<DraftZone | null>(null);
 
+  const tool = useMemo(() => new MapTool(map.layout), [map.layout]);
   const svgWidth = map.width * cellSize;
   const svgHeight = map.height * cellSize;
 
-  function getTerrain(
-    x: Cells,
-    y: Cells,
-    defaultElevation: number = 0,
-  ): TerrainEntity {
-    return (
-      map.cells.entities[xyId(x, y)] ?? {
-        id: xyId(x, y),
-        x,
-        y,
-        type: "Open",
-        elevation: defaultElevation,
-      }
-    );
-  }
+  const getTerrain = useCallback(
+    (x: Cells, y: Cells, defaultElevation: number = 0): TerrainEntity => {
+      return (
+        map.cells.entities[xyId(x, y)] ?? {
+          id: xyId(x, y),
+          x,
+          y,
+          type: "Open",
+          elevation: defaultElevation,
+        }
+      );
+    },
+    [map.cells.entities],
+  );
 
-  function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): {
-    x: number;
-    y: number;
-  } {
+  function getCellFromEvent(e: React.MouseEvent<SVGSVGElement>): XY {
     const rect = e.currentTarget.getBoundingClientRect();
-    return {
-      x: Math.floor((e.clientX - rect.left) / cellSize),
-      y: Math.floor((e.clientY - rect.top) / cellSize),
-    };
+
+    if (map.layout === "square") {
+      return {
+        x: Math.floor((e.clientX - rect.left) / cellSize),
+        y: Math.floor((e.clientY - rect.top) / cellSize),
+      };
+    }
+
+    return tool.hexLayout
+      .toCell({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+      .toOddQ();
   }
 
   // ---- Drag-and-drop --------------------------------------------------------
@@ -114,7 +114,7 @@ export function ScenarioMapEditor({
     const unitIdx = parseInt(parts[1]!, 10);
     if (isNaN(sideIdx) || isNaN(unitIdx)) return;
     const { x, y } = getCellFromEvent(e);
-    onPlace(x as Cells, y as Cells, sideIdx, unitIdx);
+    onPlace(x, y, sideIdx, unitIdx);
   }
 
   // ---- Zone drawing ---------------------------------------------------------
@@ -142,6 +142,12 @@ export function ScenarioMapEditor({
   const cursor = zoneSideIdx >= 0 ? "crosshair" : "default";
   const visibleDraftZone = draftZone ? computeZone(draftZone) : null;
 
+  const terrainElements = useMemo(() => {
+    return map.layout === "square"
+      ? getTerrainSquares(map.width, map.height, getTerrain)
+      : getTerrainHexes(map.width, map.height, "cellClip", getTerrain);
+  }, [getTerrain, map]);
+
   return (
     <div className="scenario-map-scroll">
       <svg
@@ -155,10 +161,16 @@ export function ScenarioMapEditor({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       >
-        {getTerrainCells(map.width, map.height, getTerrain)}
-        <ZoneOverlay zones={zones} cs={cellSize} />
+        <clipPath id="cellClip">
+          {new MapTool(map.layout).getPolygon(0, 0, false)}
+        </clipPath>
 
-        {/* Draft zone while drawing */}
+        {terrainElements}
+
+        {zones.map((zone) => (
+          <ZoneOverlay key={zone.key} zone={zone} layout={map.layout} />
+        ))}
+
         {visibleDraftZone && (
           <rect
             x={visibleDraftZone.x * cellSize}
@@ -172,10 +184,10 @@ export function ScenarioMapEditor({
           />
         )}
 
-        {/* Placed units */}
         {placedUnits.map((pu) => (
           <UnitTokenBase
             key={`pu-${pu.sideIdx}-${pu.unitIdx}`}
+            layout={map.layout}
             x={pu.x}
             y={pu.y}
             colour={pu.colour}
@@ -187,9 +199,12 @@ export function ScenarioMapEditor({
           />
         ))}
 
-        {/* Drag-over highlight */}
         {dragOverCell && (
-          <CellHighlight x={dragOverCell.x} y={dragOverCell.y} cs={cellSize} />
+          <CellHighlight
+            layout={map.layout}
+            x={dragOverCell.x}
+            y={dragOverCell.y}
+          />
         )}
       </svg>
     </div>

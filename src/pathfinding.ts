@@ -14,46 +14,28 @@ export const squareAdjacency: AdjacencyFn = (x, y) => [
   { x, y: y - 1 },
 ];
 
-export const hexAdjacencyEvenQ: AdjacencyFn = (x, y) =>
-  x % 2 === 0
-    ? [
-        { x: x + 1, y: y - 1 },
-        { x: x + 1, y },
-        { x, y: y + 1 },
-        { x: x - 1, y },
-        { x: x - 1, y: y - 1 },
-        { x, y: y - 1 },
-      ]
-    : [
-        { x: x + 1, y },
-        { x: x + 1, y: y + 1 },
-        { x, y: y + 1 },
-        { x: x - 1, y: y + 1 },
-        { x: x - 1, y },
-        { x, y: y - 1 },
-      ];
-
 export const hexAdjacencyOddQ: AdjacencyFn = (x, y) =>
   x % 2 === 0
     ? [
-        { x: x + 1, y },
-        { x: x + 1, y: y + 1 },
-        { x, y: y + 1 },
-        { x: x - 1, y: y + 1 },
-        { x: x - 1, y },
-        { x, y: y - 1 },
-      ]
-    : [
         { x: x + 1, y: y - 1 },
         { x: x + 1, y },
         { x, y: y + 1 },
         { x: x - 1, y },
         { x: x - 1, y: y - 1 },
+        { x, y: y - 1 },
+      ]
+    : [
+        { x: x + 1, y },
+        { x: x + 1, y: y + 1 },
+        { x, y: y + 1 },
+        { x: x - 1, y: y + 1 },
+        { x: x - 1, y },
         { x, y: y - 1 },
       ];
 
 const adjacencyByLayout: Record<MapLayout, AdjacencyFn> = {
   square: squareAdjacency,
+  hex: hexAdjacencyOddQ,
 };
 
 export interface PathNode extends XY {

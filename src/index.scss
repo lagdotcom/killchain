@@ -146,7 +146,8 @@ body,
   }
 
   .shadow {
-    fill: black;
+    stroke: black;
+    stroke-linecap: square;
     opacity: 0.2;
   }
 }
@@ -323,12 +324,14 @@ body,
     padding: 4px 12px;
     cursor: pointer;
     font-size: var(--font-size);
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
     border: 1px solid #555;
     color: white;
     border-radius: var(--border-radius);
 
-    &:hover { background: rgba(255,255,255,0.14); }
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
   }
 
   .manager-header-actions {
@@ -336,12 +339,16 @@ body,
     gap: 6px;
     align-items: center;
 
-    button, .import-btn {
+    button,
+    .import-btn {
       font-size: var(--font-size);
       padding: 4px 10px;
       cursor: pointer;
 
-      &:disabled { opacity: 0.4; cursor: not-allowed; }
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
     }
   }
 }
@@ -439,7 +446,6 @@ body,
       }
     }
   }
-
 }
 
 .map-create-form {
@@ -586,7 +592,6 @@ body,
     padding-top: 6px;
     margin-top: 2px;
   }
-
 }
 
 .map-create-form.roster-form {
@@ -606,7 +611,6 @@ body,
   display: block;
   max-width: 100%;
   border: 1px solid #555;
-  border-radius: 4px;
 }
 
 .map-preview-reroll {
@@ -866,7 +870,9 @@ body,
     font-size: var(--font-size);
   }
 
-  .scenario-label-wide { flex: 1; }
+  .scenario-label-wide {
+    flex: 1;
+  }
 }
 
 .scenario-editor-main {
@@ -999,4 +1005,11 @@ body,
     padding: 2px 8px;
     cursor: pointer;
   }
+}
+
+.overlay {
+  fill-opacity: 0.25;
+  stroke-width: 1;
+  stroke-opacity: 0.6;
+  pointer-events: none;
 }

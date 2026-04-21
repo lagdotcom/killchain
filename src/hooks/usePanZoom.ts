@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import type { Cells, Pixels } from "../flavours.js";
-import { cellSize } from "../ui.js";
+import { MapTool } from "../geometry/tool.js";
+import type { XY } from "../killchain/EuclideanEngine.js";
+import type { MapLayout } from "../state/maps.js";
 
 class PanZoomController {
   svg!: SVGSVGElement;
   g!: SVGGElement;
 
   dragging: boolean;
-  start: Record<"x" | "y", Pixels>;
+  start: XY<Pixels>;
   ox: Pixels;
   oy: Pixels;
   zr: number;
@@ -113,10 +115,12 @@ class PanZoomController {
 }
 
 export function usePanZoom(
+  layout: MapLayout,
   svgRef: React.RefObject<SVGSVGElement | null>,
   gRef: React.RefObject<SVGGElement | null>,
 ) {
   const controllerRef = useRef(new PanZoomController());
+  const tool = useMemo(() => new MapTool(layout), [layout]);
 
   useEffect(() => {
     if (svgRef.current && gRef.current)
@@ -141,11 +145,10 @@ export function usePanZoom(
       if (!svg) return;
       const ctrl = controllerRef.current;
       const rect = svg.getBoundingClientRect();
-      const px = (x + 0.5) * cellSize;
-      const py = (y + 0.5) * cellSize;
+      const { x: px, y: py } = tool.getCentre(x, y);
       ctrl.goto(rect.width / 2 - px * ctrl.zr, rect.height / 2 - py * ctrl.zr);
     },
-    [svgRef],
+    [svgRef, tool],
   );
 
   return { centre, gotoCell };

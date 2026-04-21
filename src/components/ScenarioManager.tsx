@@ -10,9 +10,9 @@ import type {
 } from "../flavours.js";
 import { Phase } from "../killchain/rules.js";
 import type { DeploymentZone } from "../killchain/types.js";
-import { generateGridMap } from "../sampleData.js";
+import { generateMap } from "../sampleData.js";
 import { loadScenarioAction } from "../state/actions.js";
-import { upsertMap } from "../state/maps.js";
+import { type MapLayout, upsertMap } from "../state/maps.js";
 import { upsertDefinitions } from "../state/roster.js";
 import {
   addScenario,
@@ -30,6 +30,7 @@ import {
 } from "../state/selectors.js";
 import type { AiPersonality } from "../state/sides.js";
 import { useAppDispatch } from "../state/store.js";
+import { isDefined } from "../tools.js";
 import type { ZoneInfo } from "./MapOverlays.js";
 import type { PlacedUnit } from "./ScenarioMapEditor.js";
 import { ScenarioMapEditor } from "./ScenarioMapEditor.js";
@@ -289,9 +290,10 @@ export function ScenarioManager({ onClose }: Props) {
             if (m.seed !== undefined && !m.cells) {
               dispatch(
                 upsertMap(
-                  generateGridMap(
+                  generateMap(
                     m.id as string,
                     m.cellSize as number,
+                    m.layout as MapLayout,
                     m.width as number,
                     m.height as number,
                     m.seed as number,
@@ -446,7 +448,7 @@ export function ScenarioManager({ onClose }: Props) {
   if (form) {
     const selectedMap = maps.find((m) => m.id === form.mapId);
 
-    const placedUnits: PlacedUnit[] = form.sides.flatMap((side, si) =>
+    const placedUnits = form.sides.flatMap((side, si) =>
       side.units.flatMap((u, ui) =>
         u.x !== undefined && u.y !== undefined
           ? [
@@ -462,19 +464,23 @@ export function ScenarioManager({ onClose }: Props) {
                       .join(""),
                 x: u.x,
                 y: u.y,
-              } satisfies PlacedUnit,
+              } as PlacedUnit,
             ]
           : [],
       ),
     );
 
-    const zones: ZoneInfo[] = form.sides
+    const zones = form.sides
       .map((side, si) =>
         side.deploymentZone
-          ? { key: String(si), colour: side.colour, zone: side.deploymentZone }
-          : null,
+          ? ({
+              key: String(si),
+              colour: side.colour,
+              zone: side.deploymentZone,
+            } as ZoneInfo)
+          : undefined,
       )
-      .filter((z): z is ZoneInfo => z !== null);
+      .filter(isDefined);
 
     return (
       <div className="manager-page">

@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { generateGridMap } from "./sampleData.js";
+import { generateMap } from "./sampleData.js";
 
 describe("generateGridMap with seed", () => {
   test("same seed produces identical maps", () => {
-    const a = generateGridMap("map1", 10, 8, 8, 42);
-    const b = generateGridMap("map2", 10, 8, 8, 42);
+    const a = generateMap("map1", 10, "square", 8, 8, 42);
+    const b = generateMap("map2", 10, "square", 8, 8, 42);
 
     // Compare all cell terrain types
     for (const id of Object.keys(a.cells.entities)) {
@@ -17,8 +17,8 @@ describe("generateGridMap with seed", () => {
   });
 
   test("different seeds produce different maps", () => {
-    const a = generateGridMap("map1", 10, 8, 8, 1);
-    const b = generateGridMap("map2", 10, 8, 8, 2);
+    const a = generateMap("map1", 10, "square", 8, 8, 1);
+    const b = generateMap("map2", 10, "square", 8, 8, 2);
 
     const types_a = Object.values(a.cells.entities).map((c) => c.type);
     const types_b = Object.values(b.cells.entities).map((c) => c.type);
@@ -28,8 +28,8 @@ describe("generateGridMap with seed", () => {
   });
 
   test("unseeded map differs between calls (random)", () => {
-    const a = generateGridMap("map1", 10, 8, 8);
-    const b = generateGridMap("map2", 10, 8, 8);
+    const a = generateMap("map1", 10, "square", 8, 8);
+    const b = generateMap("map2", 10, "square", 8, 8);
 
     const types_a = Object.values(a.cells.entities).map((c) => c.type);
     const types_b = Object.values(b.cells.entities).map((c) => c.type);

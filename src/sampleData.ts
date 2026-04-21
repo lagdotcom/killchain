@@ -22,7 +22,7 @@ import {
   mediumFoot,
 } from "./killchain/units.js";
 import type { SideSetup } from "./state/actions.js";
-import type { MapEntity } from "./state/maps.js";
+import type { MapEntity, MapLayout } from "./state/maps.js";
 import type { Scenario } from "./state/scenarios.js";
 import { terrainAdapter, type TerrainEntity } from "./state/terrain.js";
 import type { UnitEntity } from "./state/units.js";
@@ -135,9 +135,10 @@ const noiseView =
   (x: number, y: number) =>
     noise(x / scale + offset, y / scale);
 
-export function generateGridMap(
+export function generateMap(
   id: MapId,
   cellSize: Feet,
+  layout: MapLayout,
   width: Cells,
   height: Cells,
   seed?: number,
@@ -171,7 +172,7 @@ export function generateGridMap(
     id,
     ...(name !== undefined && { name }),
     ...(seed !== undefined && { seed }),
-    layout: "square",
+    layout,
     cellSize,
     width,
     height,

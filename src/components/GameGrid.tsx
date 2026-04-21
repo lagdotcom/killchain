@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
 
 import type { Cells, Feet, SideId, UnitId } from "../flavours.js";
+import { MapTool } from "../geometry/tool.js";
 import { usePanZoom } from "../hooks/usePanZoom.js";
 import { type XY, xyId } from "../killchain/EuclideanEngine.js";
 import {
@@ -31,7 +32,8 @@ import { manhattanDistance } from "../tools.js";
 import { cellSize } from "../ui.js";
 import { GridOverlay } from "./GridOverlay.js";
 import { type ZoneInfo, ZoneOverlay } from "./MapOverlays.js";
-import { getTerrainCells } from "./TerrainCell.js";
+import { getTerrainHexes } from "./terrain/TerrainHex.js";
+import { getTerrainSquares } from "./terrain/TerrainSquare.js";
 import UnitToken from "./UnitToken.js";
 
 function canAttack(
@@ -94,7 +96,11 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
 
-  const { centre, gotoCell } = usePanZoom(svgRef, gRef);
+  const { centre, gotoCell } = usePanZoom(
+    map?.layout ?? "square",
+    svgRef,
+    gRef,
+  );
 
   const placedUnits = useSelector(selectPlacedUnits);
 
@@ -222,13 +228,22 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
   const terrainCells = useMemo(
     () =>
       map
-        ? getTerrainCells(
-            map.width,
-            map.height,
-            getTerrain,
-            handleClickTerrain,
-            handleDrop,
-          )
+        ? map.layout === "square"
+          ? getTerrainSquares(
+              map.width,
+              map.height,
+              getTerrain,
+              handleClickTerrain,
+              handleDrop,
+            )
+          : getTerrainHexes(
+              map.width,
+              map.height,
+              "cellClip",
+              getTerrain,
+              handleClickTerrain,
+              handleDrop,
+            )
         : [],
     [getTerrain, handleClickTerrain, handleDrop, map],
   );
@@ -245,19 +260,37 @@ function GameGrid({ onRegisterPan, onEditCell, logHoverCell }: GameGridProps) {
       height="100%"
       className={`map${onEditCell ? " editMode" : ""}`}
     >
+      {map && (
+        <clipPath id="cellClip">
+          {new MapTool(map.layout).getPolygon(0, 0, false)}
+        </clipPath>
+      )}
+
       <g ref={gRef}>
         {terrainCells}
-        <ZoneOverlay zones={deploymentZones} cs={cellSize} />
-        {placedUnits.map((unit) => (
-          <UnitToken
-            key={unit.id}
-            unit={unit}
-            cellSize={cellSize}
-            attackTargetNumber={targetNumbers[unit.id]}
-            onClick={canSelect(unit) ? handleClickUnit : undefined}
+        {map &&
+          deploymentZones.map((zone) => (
+            <ZoneOverlay key={zone.key} zone={zone} layout={map.layout} />
+          ))}
+
+        {map &&
+          placedUnits.map((unit) => (
+            <UnitToken
+              key={unit.id}
+              layout={map.layout}
+              unit={unit}
+              cellSize={cellSize}
+              attackTargetNumber={targetNumbers[unit.id]}
+              onClick={canSelect(unit) ? handleClickUnit : undefined}
+            />
+          ))}
+        {map && (
+          <GridOverlay
+            layout={map.layout}
+            tints={tints}
+            logHoverCell={logHoverCell}
           />
-        ))}
-        <GridOverlay tints={tints} logHoverCell={logHoverCell} />
+        )}
       </g>
     </svg>
   );

@@ -1,4 +1,5 @@
 import type { Pixels } from "./flavours.js";
+import { flatOrientation } from "./geometry/hex.js";
 import type { Armour, MoraleStatus, TerrainType } from "./killchain/types.js";
 
 export const armourAbbreviation: Record<Armour, string> = {
@@ -9,6 +10,7 @@ export const armourAbbreviation: Record<Armour, string> = {
 };
 
 export const cellSize: Pixels = 64;
+export const hexCellSize: Pixels = cellSize / flatOrientation.f3;
 export const shadowSize: Pixels = 8;
 
 export const terrainColours: Record<TerrainType, string> = {

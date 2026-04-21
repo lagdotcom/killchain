@@ -16,7 +16,7 @@ import {
   defaultScenario,
   defaultSides,
   defaultUnits,
-  generateGridMap,
+  generateMap,
 } from "./sampleData.js";
 import { setupBattleAction } from "./state/actions.js";
 import { mapsAdapter } from "./state/maps.js";
@@ -29,7 +29,7 @@ import { makeStore, useAppDispatch } from "./state/store.js";
 
 type AppView = "game" | "maps" | "roster" | "scenarios";
 
-const initialMap = generateGridMap("default", 10, 20, 20, undefined, "Default");
+const initialMap = generateMap("default", 10, "square", 20, 20, 1, "Default");
 const persisted = loadPersistedState();
 const store = makeStore({
   maps: persisted?.maps ?? mapsAdapter.getInitialState(undefined, [initialMap]),

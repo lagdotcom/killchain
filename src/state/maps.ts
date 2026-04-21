@@ -9,7 +9,7 @@ import type { Cells, Feet, MapId, TerrainId } from "../flavours.js";
 import type { TerrainType } from "../killchain/types.js";
 import type { TerrainEntity } from "./terrain.js";
 
-export type MapLayout = "square";
+export type MapLayout = "square" | "hex";
 
 export interface MapEntity {
   id: MapId;
