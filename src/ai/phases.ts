@@ -296,6 +296,13 @@ export const aiMove: Thunk =
           !isNaN(u.x),
       );
 
+      const adjacentEnemies = liveEnemies.filter(
+        (e) => manhattanDistance(unit, e) === 1,
+      );
+
+      // Cavalry charge: locked in place.
+      if (adjacentEnemies.some((e) => e.type.mounted && e.moved > 0)) continue;
+
       // Shaken units must retreat and may not advance toward any enemy.
       if (unit.status === "Shaken") {
         const currentDists = new Map(
@@ -359,7 +366,14 @@ export const aiMove: Thunk =
       const score = (cell: XY) =>
         scoreMoveCell(cell, liveEnemies, effectiveConfig, unit, map, vpContext);
 
-      const best = findBestMove(unit, unitEntities, map, score);
+      const inMelee = adjacentEnemies.length > 0;
+      const best = findBestMove(
+        unit,
+        unitEntities,
+        map,
+        score,
+        inMelee ? (cell) => manhattanDistance(cell, unit) === 1 : undefined,
+      );
       if (!best) continue;
 
       // Don't advance if standing still scores better (avoids pointless shuffling).
@@ -381,7 +395,14 @@ export const aiMove: Thunk =
       }
 
       dispatch(setActiveUnitId(unitId));
-      dispatch(moveAction({ unit, x: best.x, y: best.y, cost: best.cost }));
+      dispatch(
+        moveAction({
+          unit,
+          x: best.x,
+          y: best.y,
+          cost: inMelee ? unit.type.move - unit.moved : best.cost,
+        }),
+      );
     }
   };
 
